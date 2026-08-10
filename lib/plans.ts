@@ -92,3 +92,10 @@ export function subscriptionTierFor(planId: PlanId) {
   // profiles.subscription_tier agora aceita 'starter' | 'pro' | 'studio' diretamente.
   return planId;
 }
+
+/** Rótulo amigável pro cartão do usuário na sidebar, ex: "Pro · Mensal" ou "Plano gratuito". */
+export function planDisplayLabel(tier: "free" | PlanId, cycle: BillingCycle | null) {
+  if (tier === "free") return "Plano gratuito";
+  const plan = getPlan(tier);
+  return `${plan.name} · ${cycle === "yearly" ? "Anual" : "Mensal"}`;
+}

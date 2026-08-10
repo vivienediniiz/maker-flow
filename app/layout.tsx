@@ -1,24 +1,40 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { TrialBanner } from "@/components/dashboard/TrialBanner";
+import { createClient } from "@/lib/supabase/server";
+import { trialDaysRemaining } from "@/lib/trial";
+import type { SubscriptionTier, BillingCycle } from "@/lib/types";
 
-export const metadata: Metadata = {
-  title: "MakerFlow — Gestão para Makers e Estúdios 3D",
-  description:
-    "Precificação inteligente, gestão de pedidos e automação para a comunidade Maker e estúdios de Impressão 3D.",
-};
+async function getCurrentProfile() {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, subscription_tier, billing_cycle, trial_ends_at")
+    .eq("id", user.id)
+    .single();
+
+  return profile;
+}
+
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const profile = await getCurrentProfile();
+
+  const tier = (profile?.subscription_tier ?? "free") as SubscriptionTier;
+  const cycle = (profile?.billing_cycle ?? null) as BillingCycle | null;
+  const daysRemaining = trialDaysRemaining(profile?.trial_ends_at);
+
   return (
-    <html lang="pt-BR" className="dark">
-      <head>
-        {/* Exo 2 — headings (h1-h3, font-display) · Chakra Petch — numeric/KPI values (font-numeric)
-            Montserrat — body/UI text (font-sans) */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Exo+2:wght@500;600;700;800&family=Chakra+Petch:wght@500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body>{children}</body>
-    </html>
+    <div className="min-h-screen">
+      <Sidebar studioName={profile?.full_name} tier={tier} cycle={cycle} />
+      <div className="md:pl-64">
+        <TrialBanner tier={tier} daysRemaining={daysRemaining} />
+        {children}
+      </div>
+    </div>
   );
 }

@@ -9,6 +9,7 @@ export interface Profile {
   subscription_tier: SubscriptionTier;
   billing_cycle: BillingCycle | null;
   subscription_status: SubscriptionStatus;
+  trial_ends_at: string; // ISO timestamp — fim do período gratuito de 7 dias
   mp_customer_id: string | null;
   mp_subscription_id: string | null;
 }

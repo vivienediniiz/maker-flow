@@ -18,6 +18,7 @@ create table if not exists public.profiles (
     check (billing_cycle in ('monthly', 'yearly')),
   subscription_status text not null default 'inactive'
     check (subscription_status in ('inactive', 'active', 'paused', 'cancelled')),
+  trial_ends_at timestamptz not null default (now() + interval '7 days'),
   mp_customer_id text,
   mp_subscription_id text,
   created_at timestamptz not null default now(),
@@ -182,4 +183,10 @@ create trigger on_auth_user_created
 --   Redesigns subscription_tier to free|starter|pro|studio and adds
 --   billing_cycle + subscription_status. This file reflects that end state
 --   for anyone provisioning a fresh project from scratch.
+-- ---------------------------------------------------------
+
+-- ---------------------------------------------------------
+-- Migration log:
+--   2026-08-07  add_trial_period.sql
+--   Adiciona trial_ends_at (7 dias a partir do signup) em profiles.
 -- ---------------------------------------------------------

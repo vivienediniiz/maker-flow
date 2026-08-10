@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { planDisplayLabel } from "@/lib/plans";
+import type { SubscriptionTier, BillingCycle } from "@/lib/types";
 import {
   LayoutDashboard,
   Calculator,
@@ -28,8 +30,15 @@ const NAV = [
   { href: "/dashboard/settings", label: "Configurações", icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  studioName?: string;
+  tier: SubscriptionTier;
+  cycle: BillingCycle | null;
+}
+
+export function Sidebar({ studioName, tier, cycle }: SidebarProps) {
   const pathname = usePathname();
+  const planLabel = planDisplayLabel(tier, cycle);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border-glass bg-bg-raised/60 backdrop-blur-glass md:flex">
@@ -75,10 +84,16 @@ export function Sidebar() {
         <div className="glass-card flex items-center gap-3 px-3 py-3">
           <div className="h-8 w-8 shrink-0 rounded-full bg-neon-gradient" />
           <div className="min-w-0">
-            <p className="truncate text-xs font-medium text-text-primary">Studio Maker</p>
-            <p className="truncate text-[10px] text-text-muted">Plano Pro · Mensal</p>
+            <p className="truncate text-xs font-medium text-text-primary">{studioName || "Meu estúdio"}</p>
+            <p className="truncate text-[10px] text-text-muted">{planLabel}</p>
           </div>
         </div>
+        <Link
+          href="/pricing"
+          className="mt-2 block rounded-lg px-3 py-2 text-center text-[11px] font-medium text-neon-pink transition-colors hover:bg-white/5"
+        >
+          Ver todos os planos
+        </Link>
       </div>
     </aside>
   );
