@@ -1,0 +1,93 @@
+"use client";
+
+import { useState } from "react";
+import { Topbar } from "@/components/dashboard/Topbar";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { NeonButton } from "@/components/ui/NeonButton";
+import { cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
+
+const TABS = [
+  "Impressoras",
+  "Filamentos",
+  "Modelos 3D",
+  "Compras Extras",
+  "Marketplaces",
+  "Clientes",
+  "Filiais",
+  "Categorias",
+] as const;
+
+const MOCK_ROWS: Record<(typeof TABS)[number], { primary: string; secondary: string }[]> = {
+  Impressoras: [
+    { primary: "Farm 01 — Bambu Lab X1C", secondary: "350W · R$0,42/h" },
+    { primary: "Farm 02 — Prusa MK4", secondary: "220W · R$0,28/h" },
+  ],
+  Filamentos: [
+    { primary: "PLA Preto — Voolt3D", secondary: "R$89/kg · 820g restantes" },
+    { primary: "PETG Rosa — 3DFila", secondary: "R$105/kg · 140g restantes" },
+  ],
+  "Modelos 3D": [
+    { primary: "dragao_articulado_v2.stl", secondary: "42MB · Colecionável" },
+    { primary: "suporte_monitor.stl", secondary: "8MB · Escritório" },
+  ],
+  "Compras Extras": [
+    { primary: "Tinta acrílica set 12 cores", secondary: "R$68,00" },
+    { primary: "Imãs de neodímio 6x2mm (50un)", secondary: "R$24,90" },
+  ],
+  Marketplaces: [
+    { primary: "Elo7", secondary: "Taxa 12%" },
+    { primary: "Shopee", secondary: "Taxa 14%" },
+  ],
+  Clientes: [
+    { primary: "Ana Beatriz Costa", secondary: "(11) 99999-0000" },
+    { primary: "Loja Geek Center", secondary: "contato@geekcenter.com" },
+  ],
+  Filiais: [{ primary: "Estúdio Principal — Betim, MG", secondary: "Matriz" }],
+  Categorias: [
+    { primary: "Decoração", secondary: "8 produtos" },
+    { primary: "Gamer", secondary: "5 produtos" },
+  ],
+};
+
+export default function RegistrationsPage() {
+  const [tab, setTab] = useState<(typeof TABS)[number]>("Impressoras");
+
+  return (
+    <>
+      <Topbar title="Cadastros e Compras" />
+      <main className="space-y-6 px-6 py-8 md:px-8">
+        <div className="glass-card flex gap-1 overflow-x-auto p-1 scrollbar-glass">
+          {TABS.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={cn(
+                "shrink-0 rounded-pill px-4 py-2 text-xs font-medium transition-colors",
+                tab === t ? "bg-neon-gradient text-white shadow-neon-glow" : "text-text-secondary hover:text-text-primary"
+              )}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between">
+          <h3 className="font-display text-lg">{tab}</h3>
+          <NeonButton size="sm">
+            <Plus size={14} /> Novo em {tab}
+          </NeonButton>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {MOCK_ROWS[tab].map((row, i) => (
+            <GlassCard key={i} hover padding="md">
+              <p className="text-sm font-medium text-text-primary">{row.primary}</p>
+              <p className="text-xs text-text-muted">{row.secondary}</p>
+            </GlassCard>
+          ))}
+        </div>
+      </main>
+    </>
+  );
+}
