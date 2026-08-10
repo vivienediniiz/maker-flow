@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { NeonButton } from "@/components/ui/NeonButton";
 
 export default function SignupPage() {
+  const router = useRouter();
   const supabase = createClient();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -18,7 +20,7 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: fullName } },
@@ -28,6 +30,16 @@ export default function SignupPage() {
       setError(error.message);
       return;
     }
+
+    // Se a confirmação de e-mail estiver desativada no Supabase, signUp() já
+    // devolve uma sessão ativa — nesse caso pulamos direto pro dashboard em
+    // vez de mostrar a tela de "confirme seu e-mail", que nunca chegaria a lugar nenhum.
+    if (data.session) {
+      router.push("/dashboard");
+      router.refresh();
+      return;
+    }
+
     setDone(true);
   }
 
