@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   const amount = priceFor(plan, cycle);
 
   const preapprovalBody = {
-    reason: `MakerFlow — Plano ${plan.name} (${cycle === "monthly" ? "mensal" : "anual"})`,
+    reason: `MakerFlow - Plano ${plan.name} (${cycle === "monthly" ? "Mensal" : "Anual"})`,
     external_reference: encodeExternalReference(user.id, planId, cycle),
     payer_email: user.email,
     back_url: `${req.nextUrl.origin}/dashboard/settings?subscription=success`,
@@ -69,7 +69,16 @@ export async function POST(req: NextRequest) {
   if (!mpRes.ok) {
     const errBody = await mpRes.text();
     console.error("[mercadopago create-preapproval] falha", mpRes.status, errBody);
-    return NextResponse.json({ error: "Falha ao criar assinatura no Mercado Pago." }, { status: 502 });
+    let detail = errBody;
+    try {
+      detail = JSON.parse(errBody).message ?? errBody;
+    } catch {
+      // errBody não era JSON, usa como está
+    }
+    return NextResponse.json(
+      { error: `Falha ao criar assinatura no Mercado Pago: ${detail}` },
+      { status: 502 }
+    );
   }
 
   const preapproval = await mpRes.json();
