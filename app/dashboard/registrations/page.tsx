@@ -13,7 +13,6 @@ const TABS = [
   "Modelos 3D",
   "Compras Extras",
   "Marketplaces",
-  "Clientes",
   "Filiais",
   "Categorias",
 ] as const;
@@ -39,11 +38,7 @@ const MOCK_ROWS: Record<(typeof TABS)[number], { primary: string; secondary: str
     { primary: "Elo7", secondary: "Taxa 12%" },
     { primary: "Shopee", secondary: "Taxa 14%" },
   ],
-  Clientes: [
-    { primary: "Ana Beatriz Costa", secondary: "(11) 99999-0000" },
-    { primary: "Loja Geek Center", secondary: "contato@geekcenter.com" },
-  ],
-  Filiais: [{ primary: "Estúdio Principal — Betim, MG", secondary: "Matriz" }],
+  Filiais: [{ primary: "Estúdio Principal", secondary: "Matriz" }],
   Categorias: [
     { primary: "Decoração", secondary: "8 produtos" },
     { primary: "Gamer", secondary: "5 produtos" },

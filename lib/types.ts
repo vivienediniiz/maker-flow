@@ -56,6 +56,8 @@ export interface Filament {
   remaining_weight_g: number;
 }
 
+export type QuoteStatus = "sent" | "paid" | "in_production" | "shipped";
+
 export interface Quote {
   id: string;
   user_id: string;
@@ -67,6 +69,8 @@ export interface Quote {
   margin_percent: number;
   final_price: number;
   client_id: string | null;
+  status: QuoteStatus;
+  sent_at: string;
 }
 
 export type PaymentStatus = "pending" | "paid" | "refunded" | "failed";
@@ -106,6 +110,16 @@ export interface Category {
   id: string;
   user_id: string;
   name: string;
+}
+
+export interface Client {
+  id: string;
+  user_id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  address: string | null;
 }
 
 export interface Settings {

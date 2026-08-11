@@ -15,12 +15,14 @@ import {
   BarChart3,
   Settings,
   FolderCog,
+  Users,
   Zap,
 } from "lucide-react";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/calculator", label: "Calculadora", icon: Calculator },
+  { href: "/dashboard/clients", label: "Clientes", icon: Users },
   { href: "/dashboard/orders", label: "Pedidos", icon: ClipboardList },
   { href: "/dashboard/products", label: "Produtos", icon: Package },
   { href: "/dashboard/inventory", label: "Estoque 3D", icon: Boxes },
