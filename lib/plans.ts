@@ -1,5 +1,9 @@
 export type PlanId = "starter" | "pro" | "studio";
 export type BillingCycle = "monthly" | "yearly";
+export type PaymentMethod = "card" | "pix";
+
+// Dias de tolerância após o vencimento de um pagamento Pix antes de rebaixar pra Free.
+export const PIX_GRACE_PERIOD_DAYS = 3;
 
 export interface Plan {
   id: PlanId;
@@ -22,7 +26,7 @@ export const PLANS: Plan[] = [
     name: "Starter",
     tagline: "Para quem está formalizando o hobby.",
     priceMonthly: 29,
-    priceYearly: 24, // ~17% off, cobrado anual
+    priceYearly: 24,
     features: [
       "Até 2 impressoras no farm",
       "Calculadora inteligente de orçamentos",
@@ -77,23 +81,29 @@ export function priceFor(plan: Plan, cycle: BillingCycle) {
   return cycle === "monthly" ? plan.priceMonthly : plan.priceYearly;
 }
 
-// Codifica o vínculo usuário+plano+ciclo na external_reference do Mercado Pago,
-// já que uma preapproval não guarda metadata estruturada por padrão.
-export function encodeExternalReference(userId: string, planId: PlanId, cycle: BillingCycle) {
-  return `${userId}|${planId}|${cycle}`;
+export function encodeExternalReference(
+  userId: string,
+  planId: PlanId,
+  cycle: BillingCycle,
+  method: PaymentMethod = "card"
+) {
+  return `${userId}|${planId}|${cycle}|${method}`;
 }
 
 export function decodeExternalReference(ref: string) {
-  const [userId, planId, cycle] = ref.split("|");
-  return { userId, planId: planId as PlanId, cycle: cycle as BillingCycle };
+  const [userId, planId, cycle, method] = ref.split("|");
+  return {
+    userId,
+    planId: planId as PlanId,
+    cycle: cycle as BillingCycle,
+    method: (method as PaymentMethod) ?? "card",
+  };
 }
 
 export function subscriptionTierFor(planId: PlanId) {
-  // profiles.subscription_tier agora aceita 'starter' | 'pro' | 'studio' diretamente.
   return planId;
 }
 
-/** Rótulo amigável pro cartão do usuário na sidebar, ex: "Pro · Mensal" ou "Plano gratuito". */
 export function planDisplayLabel(tier: "free" | PlanId, cycle: BillingCycle | null) {
   if (tier === "free") return "Plano gratuito";
   const plan = getPlan(tier);

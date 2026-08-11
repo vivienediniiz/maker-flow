@@ -9,12 +9,14 @@ export function PlanCard({
   plan,
   cycle,
   loading,
-  onSubscribe,
+  onSubscribeCard,
+  onPayPix,
 }: {
   plan: Plan;
   cycle: BillingCycle;
   loading: boolean;
-  onSubscribe: () => void;
+  onSubscribeCard: () => void;
+  onPayPix: () => void;
 }) {
   const price = cycle === "monthly" ? plan.priceMonthly : plan.priceYearly;
 
@@ -53,14 +55,19 @@ export function PlanCard({
         ))}
       </ul>
 
-      <NeonButton
-        variant={plan.highlighted ? "primary" : "outline"}
-        className="mt-auto w-full"
-        onClick={onSubscribe}
-        disabled={loading}
-      >
-        {loading ? <Loader2 size={16} className="animate-spin" /> : `Assinar ${plan.name}`}
-      </NeonButton>
+      <div className="mt-auto space-y-2">
+        <NeonButton
+          variant={plan.highlighted ? "primary" : "outline"}
+          className="w-full"
+          onClick={onSubscribeCard}
+          disabled={loading}
+        >
+          {loading ? <Loader2 size={16} className="animate-spin" /> : `Assinar ${plan.name} (cartão)`}
+        </NeonButton>
+        <NeonButton variant="ghost" className="w-full" onClick={onPayPix} disabled={loading}>
+          Pagar com Pix (manual)
+        </NeonButton>
+      </div>
     </div>
   );
 }

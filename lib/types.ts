@@ -2,6 +2,8 @@ export type SubscriptionTier = "free" | "starter" | "pro" | "studio";
 export type BillingCycle = "monthly" | "yearly";
 export type SubscriptionStatus = "inactive" | "active" | "paused" | "cancelled";
 
+export type PaymentMethodType = "card" | "pix" | null;
+
 export interface Profile {
   id: string;
   email: string;
@@ -10,6 +12,8 @@ export interface Profile {
   billing_cycle: BillingCycle | null;
   subscription_status: SubscriptionStatus;
   trial_ends_at: string; // ISO timestamp — fim do período gratuito de 7 dias
+  payment_method: PaymentMethodType; // card (assinatura automática) | pix (renovação manual) | null
+  paid_until: string | null; // ISO timestamp — só relevante quando payment_method = pix
   mp_customer_id: string | null;
   mp_subscription_id: string | null;
 }

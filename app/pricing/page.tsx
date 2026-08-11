@@ -4,9 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Zap, Check } from "lucide-react";
-import { PLANS, type BillingCycle, type PlanId } from "@/lib/plans";
+import { PLANS, type BillingCycle, type PlanId, getPlan, priceFor } from "@/lib/plans";
 import { BillingToggle } from "@/components/marketing/BillingToggle";
 import { PlanCard } from "@/components/marketing/PlanCard";
+import { PixCheckoutModal } from "@/components/marketing/PixCheckoutModal";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { createClient } from "@/lib/supabase/client";
 
@@ -16,19 +17,23 @@ export default function PricingPage() {
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pixTarget, setPixTarget] = useState<PlanId | null>(null);
 
-  async function handleSubscribe(planId: PlanId) {
-    setError(null);
-    setLoadingPlan(planId);
-
+  async function requireSession() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-
     if (!user) {
       router.push(`/signup?next=/pricing`);
-      return;
+      return false;
     }
+    return true;
+  }
+
+  async function handleSubscribeCard(planId: PlanId) {
+    setError(null);
+    if (!(await requireSession())) return;
+    setLoadingPlan(planId);
 
     try {
       const res = await fetch("/api/mercadopago/create-preapproval", {
@@ -51,9 +56,21 @@ export default function PricingPage() {
     }
   }
 
+  async function handlePayPix(planId: PlanId) {
+    setError(null);
+    if (!(await requireSession())) return;
+    setPixTarget(planId);
+  }
+
+  function handlePixApproved() {
+    setTimeout(() => {
+      router.push("/dashboard");
+      router.refresh();
+    }, 1500);
+  }
+
   return (
     <div className="min-h-screen">
-      {/* Top nav */}
       <header className="flex items-center justify-between px-6 py-6 md:px-12">
         <Link href="/" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-gradient shadow-neon-glow">
@@ -72,8 +89,8 @@ export default function PricingPage() {
             Planos que crescem <span className="neon-text">com o seu farm</span>
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-text-secondary">
-            Comece grátis, evolua para Starter, Pro ou Studio conforme sua operação escala.
-            Cancele quando quiser, sem contrato de fidelidade.
+            Assine automaticamente pelo cartão, ou pague manualmente via Pix a cada ciclo —
+            sem depender de cartão de crédito. Cancele quando quiser.
           </p>
         </div>
 
@@ -92,12 +109,12 @@ export default function PricingPage() {
               plan={plan}
               cycle={cycle}
               loading={loadingPlan === plan.id}
-              onSubscribe={() => handleSubscribe(plan.id)}
+              onSubscribeCard={() => handleSubscribeCard(plan.id)}
+              onPayPix={() => handlePayPix(plan.id)}
             />
           ))}
         </div>
 
-        {/* Free tier callout */}
         <GlassCard padding="lg" className="mx-auto mt-8 flex max-w-5xl flex-wrap items-center justify-between gap-4">
           <div>
             <p className="font-display text-lg">Free</p>
@@ -110,7 +127,6 @@ export default function PricingPage() {
           </Link>
         </GlassCard>
 
-        {/* Comparison note */}
         <div className="mx-auto mt-16 max-w-3xl">
           <h2 className="mb-6 text-center font-display text-2xl">Todos os planos incluem</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -129,6 +145,18 @@ export default function PricingPage() {
           </div>
         </div>
       </main>
+
+      {pixTarget && (
+        <PixCheckoutModal
+          open={!!pixTarget}
+          onClose={() => setPixTarget(null)}
+          planId={pixTarget}
+          planName={getPlan(pixTarget).name}
+          cycle={cycle}
+          amount={priceFor(getPlan(pixTarget), cycle)}
+          onApproved={handlePixApproved}
+        />
+      )}
     </div>
   );
 }
