@@ -1,28 +1,53 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { CategorySelect } from "@/components/dashboard/CategorySelect";
+import { PriceTierEditor } from "@/components/dashboard/PriceTierEditor";
 import { createClient } from "@/lib/supabase/client";
-import type { Product } from "@/lib/types";
+import type { Product, PriceTier } from "@/lib/types";
+
+interface NewProductModalProps {
+  open: boolean;
+  onClose: () => void;
+  onCreated: (product: Product) => void;
+  initialName?: string;
+  initialDescription?: string;
+  initialCostPrice?: number;
+  initialSalePrice?: number;
+}
 
 export function NewProductModal({
   open,
   onClose,
   onCreated,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onCreated: (product: Product) => void;
-}) {
+  initialName = "",
+  initialDescription = "",
+  initialCostPrice,
+  initialSalePrice,
+}: NewProductModalProps) {
   const supabase = createClient();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialName);
   const [category, setCategory] = useState("");
-  const [costPrice, setCostPrice] = useState("");
-  const [salePrice, setSalePrice] = useState("");
-  const [stockQuantity, setStockQuantity] = useState("");
+  const [description, setDescription] = useState(initialDescription);
+  const [costPrice, setCostPrice] = useState(initialCostPrice != null ? String(initialCostPrice.toFixed(2)) : "");
+  const [salePrice, setSalePrice] = useState(initialSalePrice != null ? String(initialSalePrice.toFixed(2)) : "");
+  const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName(initialName);
+      setDescription(initialDescription);
+      setCostPrice(initialCostPrice != null ? String(initialCostPrice.toFixed(2)) : "");
+      setSalePrice(initialSalePrice != null ? String(initialSalePrice.toFixed(2)) : "");
+      setCategory("");
+      setPriceTiers([]);
+      setError(null);
+    }
+  }, [open, initialName, initialDescription, initialCostPrice, initialSalePrice]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,9 +70,11 @@ export function NewProductModal({
         user_id: user.id,
         name,
         category: category || null,
+        description: description || null,
         cost_price: Number(costPrice) || 0,
         sale_price: Number(salePrice) || 0,
-        stock_quantity: Number(stockQuantity) || 0,
+        stock_quantity: 0,
+        price_tiers: priceTiers.filter((t) => t.quantity > 0 && t.price > 0),
       })
       .select()
       .single();
@@ -60,17 +87,12 @@ export function NewProductModal({
     }
 
     onCreated(data as Product);
-    setName("");
-    setCategory("");
-    setCostPrice("");
-    setSalePrice("");
-    setStockQuantity("");
     onClose();
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Novo Produto">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal open={open} onClose={onClose} title="Cadastrar Produto">
+      <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto scrollbar-glass pr-1">
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Nome do produto</label>
           <input
@@ -81,16 +103,24 @@ export function NewProductModal({
             placeholder="Ex: Vaso Geométrico Torcido"
           />
         </div>
+
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Categoria</label>
-          <input
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="glass-input w-full"
-            placeholder="Ex: Decoração"
+          <CategorySelect value={category} onChange={setCategory} />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">Descrição</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            className="glass-input w-full resize-none"
+            placeholder="Detalhes do produto, material, acabamento..."
           />
         </div>
-        <div className="grid grid-cols-3 gap-3">
+
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Custo (R$)</label>
             <input
@@ -115,16 +145,13 @@ export function NewProductModal({
               className="glass-input w-full"
             />
           </div>
-          <div>
-            <label className="mb-1.5 block text-xs text-text-muted">Estoque</label>
-            <input
-              type="number"
-              min="0"
-              value={stockQuantity}
-              onChange={(e) => setStockQuantity(e.target.value)}
-              className="glass-input w-full"
-            />
-          </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">
+            Faixas de preço por quantidade <span className="text-text-muted/60">(opcional)</span>
+          </label>
+          <PriceTierEditor tiers={priceTiers} onChange={setPriceTiers} />
         </div>
 
         {error && <p className="text-xs text-red-400">{error}</p>}
@@ -134,7 +161,7 @@ export function NewProductModal({
             Cancelar
           </NeonButton>
           <NeonButton type="submit" disabled={saving}>
-            {saving ? "Salvando..." : "Criar Produto"}
+            {saving ? "Salvando..." : "Salvar Produto"}
           </NeonButton>
         </div>
       </form>

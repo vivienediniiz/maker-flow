@@ -7,8 +7,9 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { Toggle } from "@/components/ui/Toggle";
 import { NewOrderModal } from "@/components/dashboard/NewOrderModal";
 import { NewClientModal } from "@/components/dashboard/NewClientModal";
+import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { formatBRL, cn } from "@/lib/utils";
-import { Plus, Trash2, FileDown, Link2, Rocket, UserPlus } from "lucide-react";
+import { Plus, Trash2, FileDown, Link2, Rocket, UserPlus, PackagePlus } from "lucide-react";
 
 interface PrintBed {
   id: string;
@@ -39,6 +40,7 @@ export default function CalculatorPage() {
 
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [productModalOpen, setProductModalOpen] = useState(false);
 
   function addBed() {
     setBeds((b) => [...b, newBed(b.length + 1)]);
@@ -83,7 +85,6 @@ export default function CalculatorPage() {
     <>
       <Topbar title="Calculadora Inteligente" />
 
-      {/* Real-time cost preview header — sticky */}
       <div className="sticky top-[65px] z-20 border-b border-border-glass bg-bg/80 px-6 py-4 backdrop-blur-glass md:px-8">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <PreviewStat label="Energia" value={formatBRL(calc.energyCost)} />
@@ -95,7 +96,6 @@ export default function CalculatorPage() {
       </div>
 
       <main className="grid grid-cols-1 gap-6 px-6 py-8 md:px-8 xl:grid-cols-[1fr_360px]">
-        {/* Left column: inputs */}
         <div className="space-y-6">
           <GlassCard padding="lg">
             <label className="mb-1.5 block text-xs text-text-muted">Nome do projeto</label>
@@ -107,7 +107,6 @@ export default function CalculatorPage() {
             />
           </GlassCard>
 
-          {/* Print beds */}
           <GlassCard padding="lg" className="space-y-5">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
@@ -179,7 +178,6 @@ export default function CalculatorPage() {
             ))}
           </GlassCard>
 
-          {/* Costs & extras */}
           <GlassCard padding="lg" className="space-y-5">
             <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
               Custos e Consumíveis
@@ -215,7 +213,6 @@ export default function CalculatorPage() {
             </div>
           </GlassCard>
 
-          {/* Pricing */}
           <GlassCard padding="lg" className="space-y-5">
             <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
               Precificação
@@ -231,7 +228,6 @@ export default function CalculatorPage() {
           </GlassCard>
         </div>
 
-        {/* Right column: summary + actions */}
         <div className="space-y-6">
           <GlassCard padding="lg" className="sticky top-[140px] space-y-5">
             <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">Resumo</h3>
@@ -259,6 +255,9 @@ export default function CalculatorPage() {
               <NeonButton className="w-full" onClick={() => setOrderModalOpen(true)}>
                 <Rocket size={16} /> Iniciar Projeto / Criar Pedido
               </NeonButton>
+              <NeonButton variant="outline" className="w-full" onClick={() => setProductModalOpen(true)}>
+                <PackagePlus size={16} /> Cadastrar Produto
+              </NeonButton>
               <NeonButton variant="outline" className="w-full">
                 <FileDown size={16} /> Gerar PDF de Orçamento
               </NeonButton>
@@ -280,6 +279,14 @@ export default function CalculatorPage() {
         finalPrice={calc.finalPrice}
       />
       <NewClientModal open={clientModalOpen} onClose={() => setClientModalOpen(false)} />
+      <NewProductModal
+        open={productModalOpen}
+        onClose={() => setProductModalOpen(false)}
+        onCreated={() => {}}
+        initialName={projectName}
+        initialCostPrice={calc.baseCost}
+        initialSalePrice={calc.pricePerPiece}
+      />
     </>
   );
 }
