@@ -83,7 +83,11 @@ export default function OrdersPage() {
   const filtered = !searchLower
     ? statusFiltered
     : (() => {
-        const byNumber = statusFiltered.filter((q) => String(q.order_number).includes(searchLower));
+        const byNumber = statusFiltered.filter((q) => {
+          const raw = String(q.order_number);
+          const padded = raw.padStart(4, "0");
+          return raw.includes(searchLower) || padded.includes(searchLower);
+        });
         if (byNumber.length > 0) return byNumber;
         return statusFiltered.filter(
           (q) =>
