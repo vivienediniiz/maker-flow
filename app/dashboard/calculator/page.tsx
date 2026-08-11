@@ -8,6 +8,7 @@ import { Toggle } from "@/components/ui/Toggle";
 import { NewOrderModal } from "@/components/dashboard/NewOrderModal";
 import { NewClientModal } from "@/components/dashboard/NewClientModal";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
+import { GenerateQuoteModal } from "@/components/dashboard/GenerateQuoteModal";
 import { formatBRL, cn } from "@/lib/utils";
 import { Plus, Trash2, FileDown, Link2, Rocket, UserPlus, PackagePlus } from "lucide-react";
 
@@ -41,6 +42,7 @@ export default function CalculatorPage() {
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [productModalOpen, setProductModalOpen] = useState(false);
+  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
 
   function addBed() {
     setBeds((b) => [...b, newBed(b.length + 1)]);
@@ -258,7 +260,7 @@ export default function CalculatorPage() {
               <NeonButton variant="outline" className="w-full" onClick={() => setProductModalOpen(true)}>
                 <PackagePlus size={16} /> Cadastrar Produto
               </NeonButton>
-              <NeonButton variant="outline" className="w-full">
+              <NeonButton variant="outline" className="w-full" onClick={() => setQuoteModalOpen(true)}>
                 <FileDown size={16} /> Gerar PDF de Orçamento
               </NeonButton>
               <NeonButton variant="outline" className="w-full">
@@ -286,6 +288,16 @@ export default function CalculatorPage() {
         initialName={projectName}
         initialCostPrice={calc.baseCost}
         initialSalePrice={calc.pricePerPiece}
+      />
+      <GenerateQuoteModal
+        open={quoteModalOpen}
+        onClose={() => setQuoteModalOpen(false)}
+        summary={{
+          projectName,
+          quantity,
+          finalPrice: calc.finalPrice,
+          pricePerPiece: calc.pricePerPiece,
+        }}
       />
     </>
   );
