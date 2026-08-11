@@ -119,6 +119,7 @@ export interface Product {
   name: string;
   category: string;
   description: string | null;
+  image_url: string | null;
   cost_price: number;
   sale_price: number;
   stock_quantity: number;

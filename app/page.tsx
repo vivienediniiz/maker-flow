@@ -1,147 +1,178 @@
-import Link from "next/link";
-import {
-  Zap,
-  Gauge,
-  Calculator,
-  ClipboardList,
-  Boxes,
-  BarChart3,
-  Truck,
-  ArrowRight,
-} from "lucide-react";
+"use client";
+
+import { useEffect, useState } from "react";
+import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { NeonButton } from "@/components/ui/NeonButton";
+import { NewProductModal } from "@/components/dashboard/NewProductModal";
+import { ProductDetailModal } from "@/components/dashboard/ProductDetailModal";
+import { createClient } from "@/lib/supabase/client";
+import { formatBRL, cn } from "@/lib/utils";
+import { SlidersHorizontal, PackagePlus, Sparkles, Loader2 } from "lucide-react";
+import type { Product } from "@/lib/types";
 
-const FEATURES = [
-  {
-    icon: Gauge,
-    title: "Farm em tempo real",
-    description: "Acompanhe todas as suas impressoras, progresso e temperaturas em um só painel.",
-  },
-  {
-    icon: Calculator,
-    title: "Calculadora inteligente",
-    description: "Precifique por peso, tempo, energia e mão de obra — com múltiplas mesas de uma vez.",
-  },
-  {
-    icon: ClipboardList,
-    title: "Gestão de pedidos",
-    description: "Do orçamento à entrega, com alertas de prazo e atualização direto pelo WhatsApp.",
-  },
-  {
-    icon: Boxes,
-    title: "Estoque 3D",
-    description: "Controle peças prontas por localização física, com baixa rápida de vendas.",
-  },
-  {
-    icon: BarChart3,
-    title: "Insights & BI",
-    description: "Descubra seu produto mais lucrativo, cliente top e filamento mais usado.",
-  },
-  {
-    icon: Truck,
-    title: "Frete integrado",
-    description: "Cote Correios, Jadlog e Loggi sem sair da plataforma via Melhor Envio.",
-  },
-];
+export default function ProductsPage() {
+  const supabase = createClient();
+  const [showFilters, setShowFilters] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-export default function HomePage() {
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  async function loadProducts() {
+    setLoading(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const { data } = await supabase
+      .from("products")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    setProducts((data as Product[]) ?? []);
+    setLoading(false);
+  }
+
+  const categories = Array.from(new Set(products.map((p) => p.category).filter(Boolean))) as string[];
+  const filtered = categoryFilter ? products.filter((p) => p.category === categoryFilter) : products;
+
   return (
-    <div className="min-h-screen">
-      <header className="flex items-center justify-between px-6 py-6 md:px-12">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-gradient shadow-neon-glow">
-            <Zap size={18} className="text-white" />
-          </div>
-          <span className="font-display text-lg tracking-wide">MakerFlow</span>
-        </div>
-        <nav className="flex items-center gap-6">
-          <Link href="/pricing" className="hidden text-sm text-text-secondary hover:text-text-primary sm:block">
-            Planos
-          </Link>
-          <Link href="/login" className="text-sm text-text-secondary hover:text-text-primary">
-            Entrar
-          </Link>
-          <Link
-            href="/signup"
-            className="rounded-pill border border-border-glassStrong px-4 py-2 text-sm font-medium hover:bg-white/5"
-          >
-            Criar conta
-          </Link>
-        </nav>
-      </header>
-
-      <main className="px-6 pt-16 text-center md:px-12 md:pt-24">
-        <h1 className="mx-auto max-w-3xl font-display text-4xl leading-tight md:text-6xl">
-          Precifique, produza e venda —{" "}
-          <span className="neon-text">tudo em um farm de dados só seu</span>
-        </h1>
-        <p className="mx-auto mt-6 max-w-xl text-text-secondary">
-          Gestão completa para estúdios de impressão 3D: orçamentos inteligentes, pedidos,
-          estoque e insights financeiros em tempo real.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-          <Link href="/pricing" className="neon-btn">
-            Ver planos <ArrowRight size={16} />
-          </Link>
-          <Link
-            href="/signup"
-            className="rounded-pill border border-border-glassStrong px-6 py-3 text-sm font-semibold hover:bg-white/5"
-          >
-            Começar grátis
-          </Link>
-        </div>
-
-        <div className="mx-auto mt-16 max-w-4xl">
-          <GlassCard padding="lg" className="text-left shadow-neon-glow">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {[
-                { label: "Faturamento Mensal", value: "R$ 8.320" },
-                { label: "Lucro Líquido", value: "R$ 5.210" },
-                { label: "Filamento em Kg", value: "14.6 kg" },
-                { label: "Status do Farm", value: "2/4 ativas" },
-              ].map((kpi) => (
-                <div key={kpi.label} className="glass-card p-4">
-                  <p className="text-[10px] uppercase tracking-wider text-text-muted">{kpi.label}</p>
-                  <p className="font-numeric mt-1 text-lg font-semibold">{kpi.value}</p>
+    <>
+      <Topbar title="Produtos e Catálogo" />
+      <main className="space-y-6 px-6 py-8 md:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h3 className="font-display text-lg">Catálogo de Produtos</h3>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <NeonButton variant="outline" size="sm" onClick={() => setShowFilters((s) => !s)}>
+                <SlidersHorizontal size={14} /> Filtros
+              </NeonButton>
+              {showFilters && (
+                <div className="glass-card absolute right-0 top-12 z-20 w-56 space-y-3 p-4 shadow-neon-glow">
+                  <p className="text-xs text-text-muted">Categoria</p>
+                  {categories.length === 0 && <p className="text-xs text-text-muted">Nenhuma categoria ainda.</p>}
+                  <label className="flex items-center gap-2 text-sm text-text-secondary">
+                    <input
+                      type="radio"
+                      name="category"
+                      checked={categoryFilter === null}
+                      onChange={() => setCategoryFilter(null)}
+                      className="accent-[#FF4EDF]"
+                    />
+                    Todas
+                  </label>
+                  {categories.map((c) => (
+                    <label key={c} className="flex items-center gap-2 text-sm text-text-secondary">
+                      <input
+                        type="radio"
+                        name="category"
+                        checked={categoryFilter === c}
+                        onChange={() => setCategoryFilter(c)}
+                        className="accent-[#FF4EDF]"
+                      />
+                      {c}
+                    </label>
+                  ))}
                 </div>
-              ))}
+              )}
+            </div>
+            <NeonButton size="sm" onClick={() => setModalOpen(true)}>
+              <PackagePlus size={14} /> Novo Produto
+            </NeonButton>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-16 text-text-muted">
+            <Loader2 size={20} className="animate-spin" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <EmptyState onAdd={() => setModalOpen(true)} />
+        ) : (
+          <GlassCard padding="none" className="overflow-hidden">
+            <div className="overflow-x-auto scrollbar-glass">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
+                    <th className="px-6 py-4 font-medium">Produto</th>
+                    <th className="px-6 py-4 font-medium">Categoria</th>
+                    <th className="px-6 py-4 font-medium">Custo</th>
+                    <th className="px-6 py-4 font-medium">Venda</th>
+                    <th className="px-6 py-4 font-medium">Margem</th>
+                    <th className="px-6 py-4 font-medium">Estoque</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((p) => {
+                    const profit = p.sale_price - p.cost_price;
+                    const margin = p.sale_price > 0 ? (profit / p.sale_price) * 100 : 0;
+                    return (
+                      <tr
+                        key={p.id}
+                        onClick={() => setSelectedProduct(p)}
+                        className="cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neon-gradient-soft">
+                              {p.image_url ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={p.image_url} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                <span className="text-base">🧩</span>
+                              )}
+                            </div>
+                            <span className="font-medium text-text-primary">{p.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-text-secondary">{p.category || "—"}</td>
+                        <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(p.cost_price)}</td>
+                        <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(p.sale_price)}</td>
+                        <td className="px-6 py-4 font-numeric text-neon-pink">{margin.toFixed(0)}%</td>
+                        <td className="px-6 py-4 text-text-secondary">{p.stock_quantity}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </GlassCard>
-        </div>
+        )}
       </main>
 
-      <section className="mx-auto mt-24 max-w-5xl px-6 md:px-12">
-        <h2 className="text-center font-display text-3xl">
-          Feito para quem vive de <span className="neon-text">impressão 3D</span>
-        </h2>
-        <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f) => (
-            <GlassCard key={f.title} hover padding="md" className="space-y-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">
-                <f.icon size={18} />
-              </div>
-              <p className="font-display text-base">{f.title}</p>
-              <p className="text-sm text-text-secondary">{f.description}</p>
-            </GlassCard>
-          ))}
-        </div>
-      </section>
+      <NewProductModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onCreated={(product) => setProducts((prev) => [product, ...prev])}
+      />
+      <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+    </>
+  );
+}
 
-      <section className="mx-auto my-24 max-w-4xl px-6 md:px-12">
-        <GlassCard padding="lg" className="flex flex-col items-center gap-4 py-14 text-center shadow-neon-glow">
-          <h2 className="font-display text-3xl">Pronto pra organizar seu farm?</h2>
-          <p className="max-w-md text-text-secondary">
-            Planos a partir de R$ 29/mês. Sem fidelidade, cancele quando quiser.
-          </p>
-          <Link href="/pricing" className="neon-btn">
-            Ver planos e assinar <ArrowRight size={16} />
-          </Link>
-        </GlassCard>
-      </section>
-
-      <footer className="border-t border-border-glass px-6 py-8 text-center text-xs text-text-muted md:px-12">
-        © 2026 MakerFlow. Feito para a comunidade Maker.
-      </footer>
-    </div>
+function EmptyState({ onAdd }: { onAdd: () => void }) {
+  return (
+    <GlassCard padding="lg" className="flex flex-col items-center gap-4 py-16 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-neon-gradient shadow-neon-glow">
+        <Sparkles size={22} className="text-white" />
+      </div>
+      <div>
+        <p className="font-display text-lg">Seu catálogo está vazio</p>
+        <p className="text-sm text-text-muted">Adicione seu primeiro produto pra começar.</p>
+      </div>
+      <NeonButton onClick={onAdd}>Adicionar Produto</NeonButton>
+    </GlassCard>
   );
 }

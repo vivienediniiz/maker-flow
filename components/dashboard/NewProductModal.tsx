@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Camera, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { CategorySelect } from "@/components/dashboard/CategorySelect";
@@ -12,13 +13,10 @@ interface NewProductModalProps {
   open: boolean;
   onClose: () => void;
   onCreated: (product: Product) => void;
-  // Pré-preenchimento opcional, usado quando vem da Calculadora.
   initialName?: string;
   initialDescription?: string;
   initialCostPrice?: number;
   initialSalePrice?: number;
-  // Snapshot dos parâmetros da calculadora, salvo junto pra permitir
-  // reconstruir o cálculo depois ao selecionar esse produto de novo.
   calcInputs?: CalcInputs;
 }
 
@@ -39,6 +37,8 @@ export function NewProductModal({
   const [costPrice, setCostPrice] = useState(initialCostPrice != null ? String(initialCostPrice.toFixed(2)) : "");
   const [salePrice, setSalePrice] = useState(initialSalePrice != null ? String(initialSalePrice.toFixed(2)) : "");
   const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -50,9 +50,41 @@ export function NewProductModal({
       setSalePrice(initialSalePrice != null ? String(initialSalePrice.toFixed(2)) : "");
       setCategory("");
       setPriceTiers([]);
+      setImageUrl(null);
       setError(null);
     }
   }, [open, initialName, initialDescription, initialCostPrice, initialSalePrice]);
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    setError(null);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setUploadingImage(false);
+      return;
+    }
+
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage.from("products").upload(path, file);
+
+    if (uploadError) {
+      setError(uploadError.message);
+      setUploadingImage(false);
+      return;
+    }
+
+    const { data } = supabase.storage.from("products").getPublicUrl(path);
+    setImageUrl(data.publicUrl);
+    setUploadingImage(false);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -76,9 +108,10 @@ export function NewProductModal({
         name,
         category: category || null,
         description: description || null,
+        image_url: imageUrl,
         cost_price: Number(costPrice) || 0,
         sale_price: Number(salePrice) || 0,
-        stock_quantity: 0, // estoque é gerenciado depois, na aba Estoque 3D
+        stock_quantity: 0,
         price_tiers: priceTiers.filter((t) => t.quantity > 0 && t.price > 0),
         calc_inputs: calcInputs ?? null,
       })
@@ -99,6 +132,25 @@ export function NewProductModal({
   return (
     <Modal open={open} onClose={onClose} title="Cadastrar Produto">
       <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto scrollbar-glass pr-1">
+        {/* Foto do produto */}
+        <div className="flex flex-col items-center gap-2">
+          <div className="relative h-28 w-28 overflow-hidden rounded-xl border border-border-glass bg-white/[0.03]">
+            {imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-text-muted">
+                <Camera size={22} />
+              </div>
+            )}
+            <label className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/0 text-transparent transition-colors hover:bg-black/40 hover:text-white">
+              {uploadingImage ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
+              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+            </label>
+          </div>
+          <p className="text-[11px] text-text-muted">Clique na imagem pra adicionar uma foto</p>
+        </div>
+
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Nome do produto</label>
           <input
@@ -162,8 +214,8 @@ export function NewProductModal({
 
         {calcInputs && (
           <p className="text-[11px] text-neon-green">
-            ✓ Os parâmetros da calculadora (mesas, custos, margem) serão salvos junto —
-            ao selecionar este produto na Calculadora depois, tudo volta preenchido.
+            ✓ Os parâmetros da calculadora serão salvos junto — ao selecionar este produto na
+            Calculadora depois, tudo volta preenchido.
           </p>
         )}
 
