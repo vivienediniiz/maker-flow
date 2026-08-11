@@ -143,6 +143,18 @@ export interface Client {
   address: string | null;
 }
 
+export interface Sale {
+  id: string;
+  user_id: string;
+  product_id: string | null;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  channel: "presencial" | "whatsapp" | "marketplace" | "site";
+  sold_at: string;
+}
+
 export interface Settings {
   user_id: string;
   electricity_kwh_rate: number;

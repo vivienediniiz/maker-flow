@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 
 export function QuickSaleModal({
   open,
   onClose,
+  productId,
   itemName,
   unitPrice,
   maxQuantity,
@@ -15,16 +17,71 @@ export function QuickSaleModal({
 }: {
   open: boolean;
   onClose: () => void;
+  productId: string;
   itemName: string;
   unitPrice: number;
   maxQuantity: number;
   onConfirm?: (data: { quantity: number; channel: string }) => void;
 }) {
+  const supabase = createClient();
   const [quantity, setQuantity] = useState(1);
   const [channel, setChannel] = useState("presencial");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
+
+    if (quantity <= 0 || quantity > maxQuantity) {
+      setError("Quantidade inválida.");
+      return;
+    }
+
+    setSaving(true);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setError("Sessão expirada — faça login de novo.");
+      setSaving(false);
+      return;
+    }
+
+    const total = unitPrice * quantity;
+
+    // Registra a venda no histórico...
+    const { error: saleError } = await supabase.from("sales").insert({
+      user_id: user.id,
+      product_id: productId,
+      product_name: itemName,
+      quantity,
+      unit_price: unitPrice,
+      total,
+      channel,
+    });
+
+    if (saleError) {
+      setSaving(false);
+      setError(saleError.message);
+      return;
+    }
+
+    // ...e desconta do estoque do produto.
+    const { error: stockError } = await supabase
+      .from("products")
+      .update({ stock_quantity: maxQuantity - quantity })
+      .eq("id", productId);
+
+    setSaving(false);
+
+    if (stockError) {
+      setError(stockError.message);
+      return;
+    }
+
     onConfirm?.({ quantity, channel });
     onClose();
   }
@@ -65,9 +122,11 @@ export function QuickSaleModal({
           <span className="neon-text font-numeric text-xl font-semibold">{formatBRL(unitPrice * quantity)}</span>
         </div>
 
+        {error && <p className="text-xs text-red-400">{error}</p>}
+
         <div className="flex justify-end gap-3 pt-2">
           <NeonButton type="button" variant="ghost" onClick={onClose}>Cancelar</NeonButton>
-          <NeonButton type="submit">Confirmar Venda</NeonButton>
+          <NeonButton type="submit" disabled={saving}>{saving ? "Salvando..." : "Confirmar Venda"}</NeonButton>
         </div>
       </form>
     </Modal>

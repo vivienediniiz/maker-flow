@@ -1,99 +1,121 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { NeonButton } from "@/components/ui/NeonButton";
+import { AddStockModal } from "@/components/dashboard/AddStockModal";
 import { QuickSaleModal } from "@/components/dashboard/QuickSaleModal";
+import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
-import { MapPin, Minus, Plus, ShoppingBag } from "lucide-react";
-
-interface StockItem {
-  id: string;
-  name: string;
-  location: string;
-  price: number;
-  quantity: number;
-}
-
-const initialStock: StockItem[] = [
-  { id: "1", name: "Vaso Geométrico Torcido", location: "Gaveta A2", price: 42, quantity: 12 },
-  { id: "2", name: "Suporte de Headset RGB", location: "Prateleira 3", price: 69, quantity: 5 },
-  { id: "3", name: "Miniatura Dragão Articulado", location: "Gaveta B1", price: 129, quantity: 3 },
-  { id: "4", name: "Organizador de Mesa Modular", location: "Prateleira 1", price: 58, quantity: 20 },
-];
-
-const SALES_HISTORY = [
-  { id: "1", name: "Suporte de Headset RGB", date: "05/08/2026", qty: 2, total: 138 },
-  { id: "2", name: "Vaso Geométrico Torcido", date: "03/08/2026", qty: 1, total: 42 },
-  { id: "3", name: "Organizador de Mesa Modular", date: "01/08/2026", qty: 4, total: 232 },
-];
+import { PackagePlus, ShoppingBag, Loader2 } from "lucide-react";
+import type { Product, Sale } from "@/lib/types";
 
 export default function InventoryPage() {
+  const supabase = createClient();
   const [tab, setTab] = useState<"stock" | "history">("stock");
-  const [items, setItems] = useState(initialStock);
-  const [saleTarget, setSaleTarget] = useState<StockItem | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [addStockOpen, setAddStockOpen] = useState(false);
+  const [saleTarget, setSaleTarget] = useState<Product | null>(null);
 
-  function bump(id: string, delta: number) {
-    setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, quantity: Math.max(0, i.quantity + delta) } : i))
-    );
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    setLoading(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const [{ data: productsData }, { data: salesData }] = await Promise.all([
+      supabase.from("products").select("*").eq("user_id", user.id).order("name"),
+      supabase.from("sales").select("*").eq("user_id", user.id).order("sold_at", { ascending: false }),
+    ]);
+
+    setProducts((productsData as Product[]) ?? []);
+    setSales((salesData as Sale[]) ?? []);
+    setLoading(false);
   }
+
+  // Estoque é pra quem trabalha com pronta entrega — só mostra produtos com estoque > 0
+  // (ou que já tiveram estoque lançado). Produtos feitos só sob encomenda não aparecem aqui.
+  const inStock = products.filter((p) => p.stock_quantity > 0);
 
   return (
     <>
       <Topbar title="Estoque 3D & Vendas" />
       <main className="space-y-6 px-6 py-8 md:px-8">
-        <SegmentedControl
-          value={tab}
-          onChange={setTab}
-          options={[
-            { value: "stock", label: "Produtos em Estoque" },
-            { value: "history", label: "Histórico de Vendas" },
-          ]}
-        />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <SegmentedControl
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: "stock", label: "Produtos em Estoque" },
+              { value: "history", label: "Histórico de Vendas" },
+            ]}
+          />
+          {tab === "stock" && (
+            <NeonButton onClick={() => setAddStockOpen(true)}>
+              <PackagePlus size={16} /> Adicionar Estoque
+            </NeonButton>
+          )}
+        </div>
 
-        {tab === "stock" ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {items.map((item) => (
-              <GlassCard key={item.id} hover padding="md" className="space-y-3">
-                <div className="flex h-24 items-center justify-center rounded-xl bg-neon-gradient-soft text-2xl">
-                  📦
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-text-primary">{item.name}</p>
-                  <p className="flex items-center gap-1 text-xs text-text-muted">
-                    <MapPin size={11} /> {item.location}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="font-numeric text-sm font-semibold text-neon-pink">{formatBRL(item.price)}</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => bump(item.id, -1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-text-secondary hover:bg-white/10"
-                    >
-                      <Minus size={12} />
-                    </button>
-                    <span className="w-6 text-center text-sm">{item.quantity}</span>
-                    <button
-                      onClick={() => bump(item.id, 1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-text-secondary hover:bg-white/10"
-                    >
-                      <Plus size={12} />
-                    </button>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSaleTarget(item)}
-                  className="neon-btn w-full py-2 text-xs"
-                  disabled={item.quantity === 0}
-                >
-                  <ShoppingBag size={13} /> Registrar venda
-                </button>
-              </GlassCard>
-            ))}
+        {loading ? (
+          <div className="flex justify-center py-16 text-text-muted">
+            <Loader2 size={20} className="animate-spin" />
           </div>
+        ) : tab === "stock" ? (
+          inStock.length === 0 ? (
+            <GlassCard padding="lg" className="text-center text-sm text-text-muted">
+              Nenhum produto com estoque lançado ainda. Clique em &quot;Adicionar Estoque&quot; e
+              selecione um produto já cadastrado no catálogo.
+            </GlassCard>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {inStock.map((p) => (
+                <GlassCard key={p.id} hover padding="md" className="space-y-3">
+                  <div className="flex h-24 items-center justify-center overflow-hidden rounded-xl bg-neon-gradient-soft">
+                    {p.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.image_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-2xl">📦</span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">{p.name}</p>
+                    <p className="text-xs text-text-muted">{p.category || "Sem categoria"}</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-numeric text-sm font-semibold text-neon-pink">
+                      {formatBRL(p.sale_price)}
+                    </span>
+                    <span className="text-xs text-text-secondary">{p.stock_quantity} disponíveis</span>
+                  </div>
+                  <button
+                    onClick={() => setSaleTarget(p)}
+                    className="neon-btn w-full py-2 text-xs"
+                    disabled={p.stock_quantity === 0}
+                  >
+                    <ShoppingBag size={13} /> Registrar venda
+                  </button>
+                </GlassCard>
+              ))}
+            </div>
+          )
+        ) : sales.length === 0 ? (
+          <GlassCard padding="lg" className="text-center text-sm text-text-muted">
+            Nenhuma venda registrada ainda.
+          </GlassCard>
         ) : (
           <GlassCard padding="none" className="overflow-hidden">
             <table className="w-full text-left text-sm">
@@ -102,16 +124,22 @@ export default function InventoryPage() {
                   <th className="px-6 py-4 font-medium">Produto</th>
                   <th className="px-6 py-4 font-medium">Data</th>
                   <th className="px-6 py-4 font-medium">Qtd.</th>
+                  <th className="px-6 py-4 font-medium">Canal</th>
                   <th className="px-6 py-4 text-right font-medium">Total</th>
                 </tr>
               </thead>
               <tbody>
-                {SALES_HISTORY.map((s) => (
+                {sales.map((s) => (
                   <tr key={s.id} className="border-b border-border-glass/60">
-                    <td className="px-6 py-4 text-text-primary">{s.name}</td>
-                    <td className="px-6 py-4 text-text-secondary">{s.date}</td>
-                    <td className="px-6 py-4 text-text-secondary">{s.qty}</td>
-                    <td className="px-6 py-4 text-right font-numeric font-medium text-text-primary">{formatBRL(s.total)}</td>
+                    <td className="px-6 py-4 text-text-primary">{s.product_name}</td>
+                    <td className="px-6 py-4 text-text-secondary">
+                      {new Date(s.sold_at).toLocaleDateString("pt-BR")}
+                    </td>
+                    <td className="px-6 py-4 text-text-secondary">{s.quantity}</td>
+                    <td className="px-6 py-4 capitalize text-text-secondary">{s.channel}</td>
+                    <td className="px-6 py-4 text-right font-numeric font-medium text-text-primary">
+                      {formatBRL(s.total)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -120,14 +148,33 @@ export default function InventoryPage() {
         )}
       </main>
 
+      <AddStockModal
+        open={addStockOpen}
+        onClose={() => setAddStockOpen(false)}
+        onUpdated={(updated) => {
+          setProducts((prev) => {
+            const exists = prev.some((p) => p.id === updated.id);
+            return exists ? prev.map((p) => (p.id === updated.id ? updated : p)) : [...prev, updated];
+          });
+        }}
+      />
+
       {saleTarget && (
         <QuickSaleModal
           open={!!saleTarget}
           onClose={() => setSaleTarget(null)}
+          productId={saleTarget.id}
           itemName={saleTarget.name}
-          unitPrice={saleTarget.price}
-          maxQuantity={saleTarget.quantity}
-          onConfirm={({ quantity }) => bump(saleTarget.id, -quantity)}
+          unitPrice={saleTarget.sale_price}
+          maxQuantity={saleTarget.stock_quantity}
+          onConfirm={({ quantity }) => {
+            setProducts((prev) =>
+              prev.map((p) =>
+                p.id === saleTarget.id ? { ...p, stock_quantity: p.stock_quantity - quantity } : p
+              )
+            );
+            loadData(); // recarrega pra atualizar o histórico de vendas também
+          }}
         />
       )}
     </>
