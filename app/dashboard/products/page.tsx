@@ -1,24 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { NewProductModal } from "@/components/dashboard/NewProductModal";
+import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
-import { SlidersHorizontal, PackagePlus, Sparkles } from "lucide-react";
+import { SlidersHorizontal, PackagePlus, Sparkles, Loader2 } from "lucide-react";
 import type { Product } from "@/lib/types";
 
-const PRODUCTS: Product[] = [
-  { id: "1", user_id: "u1", name: "Vaso Geométrico Torcido", category: "Decoração", cost_price: 8.4, sale_price: 42, stock_quantity: 12 },
-  { id: "2", user_id: "u1", name: "Suporte de Headset RGB", category: "Gamer", cost_price: 14.2, sale_price: 69, stock_quantity: 5 },
-  { id: "3", user_id: "u1", name: "Miniatura Dragão Articulado", category: "Colecionável", cost_price: 22.0, sale_price: 129, stock_quantity: 3 },
-  { id: "4", user_id: "u1", name: "Organizador de Mesa Modular", category: "Escritório", cost_price: 11.5, sale_price: 58, stock_quantity: 20 },
-];
-
 export default function ProductsPage() {
+  const supabase = createClient();
   const [tab, setTab] = useState<"catalog" | "projects">("catalog");
   const [showFilters, setShowFilters] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  async function loadProducts() {
+    setLoading(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const { data } = await supabase
+      .from("products")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    setProducts((data as Product[]) ?? []);
+    setLoading(false);
+  }
+
+  const categories = Array.from(new Set(products.map((p) => p.category).filter(Boolean))) as string[];
+  const filtered = categoryFilter ? products.filter((p) => p.category === categoryFilter) : products;
 
   return (
     <>
@@ -41,26 +69,50 @@ export default function ProductsPage() {
               {showFilters && (
                 <div className="glass-card absolute right-0 top-12 z-20 w-56 space-y-3 p-4 shadow-neon-glow">
                   <p className="text-xs text-text-muted">Categoria</p>
-                  {["Decoração", "Gamer", "Colecionável", "Escritório"].map((c) => (
+                  {categories.length === 0 && (
+                    <p className="text-xs text-text-muted">Nenhuma categoria ainda.</p>
+                  )}
+                  <label className="flex items-center gap-2 text-sm text-text-secondary">
+                    <input
+                      type="radio"
+                      name="category"
+                      checked={categoryFilter === null}
+                      onChange={() => setCategoryFilter(null)}
+                      className="accent-[#FF4EDF]"
+                    />
+                    Todas
+                  </label>
+                  {categories.map((c) => (
                     <label key={c} className="flex items-center gap-2 text-sm text-text-secondary">
-                      <input type="checkbox" className="accent-[#FF4EDF]" /> {c}
+                      <input
+                        type="radio"
+                        name="category"
+                        checked={categoryFilter === c}
+                        onChange={() => setCategoryFilter(c)}
+                        className="accent-[#FF4EDF]"
+                      />
+                      {c}
                     </label>
                   ))}
                 </div>
               )}
             </div>
-            <NeonButton size="sm">
+            <NeonButton size="sm" onClick={() => setModalOpen(true)}>
               <PackagePlus size={14} /> Novo Produto
             </NeonButton>
           </div>
         </div>
 
         {tab === "catalog" ? (
-          PRODUCTS.length > 0 ? (
+          loading ? (
+            <div className="flex items-center justify-center py-20 text-text-muted">
+              <Loader2 size={20} className="animate-spin" />
+            </div>
+          ) : filtered.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {PRODUCTS.map((p) => {
+              {filtered.map((p) => {
                 const profit = p.sale_price - p.cost_price;
-                const margin = (profit / p.sale_price) * 100;
+                const margin = p.sale_price > 0 ? (profit / p.sale_price) * 100 : 0;
                 return (
                   <GlassCard key={p.id} hover padding="md" className="space-y-3">
                     <div className="flex h-28 items-center justify-center rounded-xl bg-neon-gradient-soft">
@@ -68,7 +120,7 @@ export default function ProductsPage() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-text-primary">{p.name}</p>
-                      <p className="text-xs text-text-muted">{p.category}</p>
+                      <p className="text-xs text-text-muted">{p.category || "Sem categoria"}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <Stat label="Custo médio" value={formatBRL(p.cost_price)} />
@@ -76,12 +128,13 @@ export default function ProductsPage() {
                       <Stat label="Lucro" value={formatBRL(profit)} accent="green" />
                       <Stat label="Margem" value={`${margin.toFixed(0)}%`} accent="pink" />
                     </div>
+                    <p className="text-[11px] text-text-muted">{p.stock_quantity} em estoque</p>
                   </GlassCard>
                 );
               })}
             </div>
           ) : (
-            <EmptyState />
+            <EmptyState onAdd={() => setModalOpen(true)} />
           )
         ) : (
           <GlassCard padding="lg" className="text-sm text-text-secondary">
@@ -89,6 +142,12 @@ export default function ProductsPage() {
           </GlassCard>
         )}
       </main>
+
+      <NewProductModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onCreated={(product) => setProducts((prev) => [product, ...prev])}
+      />
     </>
   );
 }
@@ -104,7 +163,7 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
-function EmptyState() {
+function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <GlassCard padding="lg" className="flex flex-col items-center gap-4 py-16 text-center">
       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-neon-gradient shadow-neon-glow">
@@ -112,12 +171,9 @@ function EmptyState() {
       </div>
       <div>
         <p className="font-display text-lg">Seu catálogo está vazio</p>
-        <p className="text-sm text-text-muted">Adicione seu primeiro produto ou explore com dados de demonstração.</p>
+        <p className="text-sm text-text-muted">Adicione seu primeiro produto pra começar.</p>
       </div>
-      <div className="flex gap-3">
-        <NeonButton>Adicionar Produto</NeonButton>
-        <NeonButton variant="outline">Ativar Modo Demo</NeonButton>
-      </div>
+      <NeonButton onClick={onAdd}>Adicionar Produto</NeonButton>
     </GlassCard>
   );
 }
