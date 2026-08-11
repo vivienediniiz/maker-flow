@@ -366,7 +366,7 @@ export default function CalculatorPage() {
             </div>
           </GlassCard>
 
-         {/* Cadastrar Produto — logo abaixo dos campos preenchidos, destacado */}
+          {/* Cadastrar Produto — logo abaixo dos campos preenchidos, destacado */}
           <NeonButton size="lg" className="w-full" onClick={() => setProductModalOpen(true)}>
             <PackagePlus size={18} /> Cadastrar Produto
           </NeonButton>
@@ -416,6 +416,11 @@ export default function CalculatorPage() {
         onClose={() => setOrderModalOpen(false)}
         projectName={projectName}
         finalPrice={calc.finalPrice}
+        weightG={calc.totalWeightG}
+        printTimeMin={calc.totalHours * 60}
+        energyCost={calc.energyCost}
+        filamentCost={calc.filamentCost}
+        marginPercent={marginPercent}
       />
       <NewProductModal
         open={productModalOpen}
@@ -446,6 +451,11 @@ export default function CalculatorPage() {
           quantity,
           finalPrice: calc.finalPrice,
           pricePerPiece: calc.pricePerPiece,
+          weightG: calc.totalWeightG,
+          printTimeMin: calc.totalHours * 60,
+          energyCost: calc.energyCost,
+          filamentCost: calc.filamentCost,
+          marginPercent,
         }}
       />
     </>

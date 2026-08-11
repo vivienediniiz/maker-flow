@@ -61,6 +61,7 @@ export type QuoteStatus = "sent" | "paid" | "in_production" | "shipped" | "expir
 export interface Quote {
   id: string;
   user_id: string;
+  order_number: number;
   project_name: string;
   weight_g: number;
   print_time_min: number;

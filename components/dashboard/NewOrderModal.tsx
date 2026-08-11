@@ -12,10 +12,26 @@ interface NewOrderModalProps {
   onClose: () => void;
   projectName: string;
   finalPrice: number;
+  weightG?: number;
+  printTimeMin?: number;
+  energyCost?: number;
+  filamentCost?: number;
+  marginPercent?: number;
   onCreated?: () => void;
 }
 
-export function NewOrderModal({ open, onClose, projectName, finalPrice, onCreated }: NewOrderModalProps) {
+export function NewOrderModal({
+  open,
+  onClose,
+  projectName,
+  finalPrice,
+  weightG = 0,
+  printTimeMin = 0,
+  energyCost = 0,
+  filamentCost = 0,
+  marginPercent = 0,
+  onCreated,
+}: NewOrderModalProps) {
   const supabase = createClient();
   const [mode, setMode] = useState<"select" | "new">("select");
   const [clients, setClients] = useState<Client[]>([]);
@@ -95,11 +111,11 @@ export function NewOrderModal({ open, onClose, projectName, finalPrice, onCreate
     const { error: quoteError } = await supabase.from("quotes").insert({
       user_id: user.id,
       project_name: projectName || "Projeto sem nome",
-      weight_g: 0,
-      print_time_min: 0,
-      energy_cost: 0,
-      filament_cost: 0,
-      margin_percent: 0,
+      weight_g: weightG,
+      print_time_min: printTimeMin,
+      energy_cost: energyCost,
+      filament_cost: filamentCost,
+      margin_percent: marginPercent,
       final_price: finalPrice,
       client_id: clientId,
       status: "paid",

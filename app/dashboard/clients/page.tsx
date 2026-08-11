@@ -38,8 +38,7 @@ export default function ClientsPage() {
     setLoading(false);
   }
 
-  async function handleDelete(id: string, e: React.MouseEvent) {
-    e.stopPropagation();
+  async function handleDelete(id: string) {
     if (!confirm("Remover este cliente?")) return;
     await supabase.from("clients").delete().eq("id", id);
     setClients((prev) => prev.filter((c) => c.id !== id));
@@ -84,22 +83,42 @@ export default function ClientsPage() {
               : "Nenhum cliente encontrado para essa busca."}
           </GlassCard>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((c) => (
-              <GlassCard key={c.id} hover padding="md" className="group relative space-y-1">
-                <p className="text-sm font-medium text-text-primary">{c.name}</p>
-                <p className="text-xs text-text-muted">{c.phone || c.email || "Sem contato"}</p>
-                {c.address && <p className="truncate text-[11px] text-text-muted/70">{c.address}</p>}
-                <button
-                  onClick={(e) => handleDelete(c.id, e)}
-                  className="absolute right-3 top-3 text-text-muted opacity-0 hover:text-red-400 group-hover:opacity-100"
-                  aria-label="Remover cliente"
-                >
-                  <Trash2 size={13} />
-                </button>
-              </GlassCard>
-            ))}
-          </div>
+          <GlassCard padding="none" className="overflow-hidden">
+            <div className="overflow-x-auto scrollbar-glass">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
+                    <th className="px-6 py-4 font-medium">Nome</th>
+                    <th className="px-6 py-4 font-medium">Telefone</th>
+                    <th className="px-6 py-4 font-medium">E-mail</th>
+                    <th className="px-6 py-4 font-medium">Endereço</th>
+                    <th className="px-6 py-4 font-medium">Observações</th>
+                    <th className="w-12 px-4 py-4" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((c) => (
+                    <tr key={c.id} className="border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]">
+                      <td className="px-6 py-4 font-medium text-text-primary">{c.name}</td>
+                      <td className="px-6 py-4 text-text-secondary">{c.phone || "—"}</td>
+                      <td className="px-6 py-4 text-text-secondary">{c.email || "—"}</td>
+                      <td className="max-w-[220px] truncate px-6 py-4 text-text-secondary">{c.address || "—"}</td>
+                      <td className="max-w-[220px] truncate px-6 py-4 text-text-muted">{c.notes || "—"}</td>
+                      <td className="px-4 py-4">
+                        <button
+                          onClick={() => handleDelete(c.id)}
+                          className="text-text-muted hover:text-red-400"
+                          aria-label="Remover cliente"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </GlassCard>
         )}
       </main>
 

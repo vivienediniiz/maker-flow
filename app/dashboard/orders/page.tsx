@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { QuoteStatusStepper } from "@/components/dashboard/QuoteStatusStepper";
+import { QuoteDetailModal } from "@/components/dashboard/QuoteDetailModal";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
-import { QUOTE_STATUS_LABELS, isQuoteSentExpired } from "@/lib/quotes";
+import { QUOTE_STATUS_LABELS, isQuoteSentExpired, formatOrderNumber } from "@/lib/quotes";
 import { Loader2 } from "lucide-react";
 import type { QuoteWithClient, QuoteStatus } from "@/lib/types";
 
@@ -15,7 +15,7 @@ const FILTERS: { key: "all" | QuoteStatus; label: string }[] = [
   { key: "sent", label: QUOTE_STATUS_LABELS.sent },
   { key: "paid", label: QUOTE_STATUS_LABELS.paid },
   { key: "in_production", label: QUOTE_STATUS_LABELS.in_production },
-  { key: "shipped", label: QUOTE_STATUS_LABELS.shipped },
+  { key: "shipped", label: "Pedido Concluído" },
   { key: "expired", label: QUOTE_STATUS_LABELS.expired },
 ];
 
@@ -24,6 +24,7 @@ export default function OrdersPage() {
   const [quotes, setQuotes] = useState<QuoteWithClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
+  const [selectedQuote, setSelectedQuote] = useState<QuoteWithClient | null>(null);
 
   useEffect(() => {
     loadQuotes();
@@ -43,11 +44,10 @@ export default function OrdersPage() {
       .from("quotes")
       .select("*, clients(name, phone)")
       .eq("user_id", user.id)
-      .order("sent_at", { ascending: false });
+      .order("order_number", { ascending: false });
 
     let rows = (data as QuoteWithClient[]) ?? [];
 
-    // Expiração preguiçosa: qualquer orçamento "sent" há mais de 15 dias vira "expired" agora.
     const toExpire = rows.filter((q) => isQuoteSentExpired(q.status, q.sent_at));
     if (toExpire.length > 0) {
       await supabase
@@ -63,6 +63,7 @@ export default function OrdersPage() {
 
   async function handleStatusChange(quoteId: string, status: QuoteStatus) {
     setQuotes((prev) => prev.map((q) => (q.id === quoteId ? { ...q, status } : q)));
+    setSelectedQuote((prev) => (prev && prev.id === quoteId ? { ...prev, status } : prev));
     await supabase.from("quotes").update({ status }).eq("id", quoteId);
   }
 
@@ -96,28 +97,76 @@ export default function OrdersPage() {
             Nenhum pedido nessa categoria ainda.
           </GlassCard>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((q) => (
-              <GlassCard key={q.id} padding="md" className="space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-text-primary">{q.project_name}</p>
-                    <p className="truncate text-xs text-text-muted">{q.clients?.name ?? "Cliente não informado"}</p>
-                  </div>
-                  <span className="shrink-0 font-numeric text-sm font-semibold text-neon-pink">
-                    {formatBRL(q.final_price)}
-                  </span>
-                </div>
-                <QuoteStatusStepper
-                  status={q.status}
-                  sentAt={q.sent_at}
-                  onChange={(status) => handleStatusChange(q.id, status)}
-                />
-              </GlassCard>
-            ))}
-          </div>
+          <GlassCard padding="none" className="overflow-hidden">
+            <div className="overflow-x-auto scrollbar-glass">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
+                    <th className="px-6 py-4 font-medium">Nº</th>
+                    <th className="px-6 py-4 font-medium">Cliente</th>
+                    <th className="px-6 py-4 font-medium">Produto</th>
+                    <th className="px-6 py-4 font-medium">Status</th>
+                    <th className="px-6 py-4 font-medium">Data</th>
+                    <th className="px-6 py-4 text-right font-medium">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((q) => (
+                    <tr
+                      key={q.id}
+                      onClick={() => setSelectedQuote(q)}
+                      className="cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]"
+                    >
+                      <td className="px-6 py-4 font-numeric text-text-muted">{formatOrderNumber(q.order_number)}</td>
+                      <td className="px-6 py-4 font-medium text-text-primary">
+                        {q.clients?.name ?? "Cliente não informado"}
+                      </td>
+                      <td className="max-w-[200px] truncate px-6 py-4 text-text-secondary">{q.project_name}</td>
+                      <td className="px-6 py-4">
+                        <StatusPill status={q.status} />
+                      </td>
+                      <td className="px-6 py-4 text-text-secondary">
+                        {new Date(q.sent_at).toLocaleDateString("pt-BR")}
+                      </td>
+                      <td className="px-6 py-4 text-right font-numeric font-medium text-text-primary">
+                        {formatBRL(q.final_price)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </GlassCard>
         )}
       </main>
+
+      <QuoteDetailModal
+        quote={selectedQuote}
+        onClose={() => setSelectedQuote(null)}
+        onStatusChange={handleStatusChange}
+      />
     </>
+  );
+}
+
+function StatusPill({ status }: { status: QuoteStatus }) {
+  const styles: Record<QuoteStatus, string> = {
+    sent: "bg-neon-orange/15 text-neon-orange border-neon-orange/30",
+    paid: "bg-neon-green/15 text-neon-green border-neon-green/30",
+    in_production: "bg-neon-pink/15 text-neon-pink border-neon-pink/30",
+    shipped: "bg-neon-purple/15 text-neon-purple border-neon-purple/30",
+    expired: "bg-red-500/15 text-red-400 border-red-500/30",
+  };
+  const labels: Record<QuoteStatus, string> = {
+    sent: "Orçamento Enviado",
+    paid: "Pago",
+    in_production: "Em Produção",
+    shipped: "Concluído",
+    expired: "Expirado",
+  };
+  return (
+    <span className={cn("inline-flex items-center rounded-pill border px-2.5 py-1 text-[11px] font-medium", styles[status])}>
+      {labels[status]}
+    </span>
   );
 }

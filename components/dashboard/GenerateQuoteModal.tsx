@@ -12,6 +12,11 @@ interface CalculatorSummary {
   quantity: number;
   finalPrice: number;
   pricePerPiece: number;
+  weightG: number;
+  printTimeMin: number;
+  energyCost: number;
+  filamentCost: number;
+  marginPercent: number;
 }
 
 interface StudioInfo {
@@ -270,11 +275,11 @@ export function GenerateQuoteModal({
     const { error: quoteError } = await supabase.from("quotes").insert({
       user_id: user.id,
       project_name: summary.projectName || "Projeto sem nome",
-      weight_g: 0,
-      print_time_min: 0,
-      energy_cost: 0,
-      filament_cost: 0,
-      margin_percent: 0,
+      weight_g: summary.weightG,
+      print_time_min: summary.printTimeMin,
+      energy_cost: summary.energyCost,
+      filament_cost: summary.filamentCost,
+      margin_percent: summary.marginPercent,
       final_price: summary.finalPrice,
       client_id: clientId,
       status: "sent",
