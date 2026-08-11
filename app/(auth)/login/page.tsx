@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -54,12 +55,10 @@ export default function LoginPage() {
               Esqueceu?
             </Link>
           </div>
-          <input
-            type="password"
+          <PasswordInput
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="glass-input w-full"
             placeholder="••••••••"
           />
         </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -31,9 +32,6 @@ export default function SignupPage() {
       return;
     }
 
-    // Se a confirmação de e-mail estiver desativada no Supabase, signUp() já
-    // devolve uma sessão ativa — nesse caso pulamos direto pro dashboard em
-    // vez de mostrar a tela de "confirme seu e-mail", que nunca chegaria a lugar nenhum.
     if (data.session) {
       router.push("/dashboard");
       router.refresh();
@@ -72,7 +70,7 @@ export default function SignupPage() {
         </div>
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Senha</label>
-          <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="glass-input w-full" />
+          <PasswordInput required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
 
         {error && <p className="text-xs text-red-400">{error}</p>}
