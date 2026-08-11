@@ -8,7 +8,7 @@ import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { ProductDetailModal } from "@/components/dashboard/ProductDetailModal";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
-import { SlidersHorizontal, PackagePlus, Sparkles, Loader2 } from "lucide-react";
+import { SlidersHorizontal, PackagePlus, Sparkles, Loader2, Search } from "lucide-react";
 import type { Product } from "@/lib/types";
 
 export default function ProductsPage() {
@@ -18,6 +18,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
@@ -46,14 +47,27 @@ export default function ProductsPage() {
   }
 
   const categories = Array.from(new Set(products.map((p) => p.category).filter(Boolean))) as string[];
-  const filtered = categoryFilter ? products.filter((p) => p.category === categoryFilter) : products;
+  const filtered = products
+    .filter((p) => (categoryFilter ? p.category === categoryFilter : true))
+    .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <>
       <Topbar title="Produtos e Catálogo" />
       <main className="space-y-6 px-6 py-8 md:px-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h3 className="font-display text-lg">Catálogo de Produtos</h3>
+          <div className="flex flex-wrap items-center gap-4">
+            <h3 className="font-display text-lg">Catálogo de Produtos</h3>
+            <div className="glass-card flex items-center gap-2 px-4 py-2.5 sm:w-72">
+              <Search size={15} className="text-text-muted" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar produto por nome..."
+                className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
+              />
+            </div>
+          </div>
           <div className="flex items-center gap-3">
             <div className="relative">
               <NeonButton variant="outline" size="sm" onClick={() => setShowFilters((s) => !s)}>
@@ -99,7 +113,13 @@ export default function ProductsPage() {
             <Loader2 size={20} className="animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <EmptyState onAdd={() => setModalOpen(true)} />
+          products.length === 0 ? (
+            <EmptyState onAdd={() => setModalOpen(true)} />
+          ) : (
+            <GlassCard padding="lg" className="text-center text-sm text-text-muted">
+              Nenhum produto encontrado para essa busca/filtro.
+            </GlassCard>
+          )
         ) : (
           <GlassCard padding="none" className="overflow-hidden">
             <div className="overflow-x-auto scrollbar-glass">
