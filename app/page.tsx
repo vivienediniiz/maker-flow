@@ -1,151 +1,319 @@
-import Link from "next/link";
-import {
-  Zap,
-  Gauge,
-  Calculator,
-  ClipboardList,
-  Boxes,
-  BarChart3,
-  Truck,
-  ArrowRight,
-} from "lucide-react";
+"use client";
+
+import { useMemo, useState } from "react";
+import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { NeonButton } from "@/components/ui/NeonButton";
+import { Toggle } from "@/components/ui/Toggle";
+import { NewOrderModal } from "@/components/dashboard/NewOrderModal";
+import { NewClientModal } from "@/components/dashboard/NewClientModal";
+import { NewProductModal } from "@/components/dashboard/NewProductModal";
+import { formatBRL, cn } from "@/lib/utils";
+import { Plus, Trash2, FileDown, Link2, Rocket, UserPlus, PackagePlus } from "lucide-react";
 
-const FEATURES = [
-  {
-    icon: Gauge,
-    title: "Farm em tempo real",
-    description: "Acompanhe todas as suas impressoras, progresso e temperaturas em um só painel.",
-  },
-  {
-    icon: Calculator,
-    title: "Calculadora inteligente",
-    description: "Precifique por peso, tempo, energia e mão de obra — com múltiplas mesas de uma vez.",
-  },
-  {
-    icon: ClipboardList,
-    title: "Gestão de pedidos",
-    description: "Do orçamento à entrega, com alertas de prazo e atualização direto pelo WhatsApp.",
-  },
-  {
-    icon: Boxes,
-    title: "Estoque 3D",
-    description: "Controle peças prontas por localização física, com baixa rápida de vendas.",
-  },
-  {
-    icon: BarChart3,
-    title: "Insights & BI",
-    description: "Descubra seu produto mais lucrativo, cliente top e filamento mais usado.",
-  },
-  {
-    icon: Truck,
-    title: "Frete integrado",
-    description: "Cote Correios, Jadlog e Loggi sem sair da plataforma via Melhor Envio.",
-  },
-];
+interface PrintBed {
+  id: string;
+  name: string;
+  weightG: number;
+  timeH: number;
+  timeM: number;
+  watts: number;
+}
 
-export default function HomePage() {
+function newBed(index: number): PrintBed {
+  return { id: crypto.randomUUID(), name: `Mesa ${index}`, weightG: 0, timeH: 0, timeM: 0, watts: 200 };
+}
+
+export default function CalculatorPage() {
+  const [projectName, setProjectName] = useState("");
+  const [beds, setBeds] = useState<PrintBed[]>([newBed(1)]);
+  const [filamentPricePerKg, setFilamentPricePerKg] = useState(120);
+  const [kwhRate, setKwhRate] = useState(0.95);
+  const [laborHours, setLaborHours] = useState(0.5);
+  const [hourlyRate, setHourlyRate] = useState(25);
+  const [extras, setExtras] = useState(0);
+  const [paintedByHand, setPaintedByHand] = useState(false);
+  const [paintCost, setPaintCost] = useState(35);
+  const [marketplaceFee, setMarketplaceFee] = useState(16);
+  const [marginPercent, setMarginPercent] = useState(180);
+  const [quantity, setQuantity] = useState(1);
+
+  const [orderModalOpen, setOrderModalOpen] = useState(false);
+  const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [productModalOpen, setProductModalOpen] = useState(false);
+
+  function addBed() {
+    setBeds((b) => [...b, newBed(b.length + 1)]);
+  }
+  function removeBed(id: string) {
+    setBeds((b) => (b.length > 1 ? b.filter((bed) => bed.id !== id) : b));
+  }
+  function updateBed(id: string, patch: Partial<PrintBed>) {
+    setBeds((b) => b.map((bed) => (bed.id === id ? { ...bed, ...patch } : bed)));
+  }
+
+  const calc = useMemo(() => {
+    const totalWeightG = beds.reduce((sum, b) => sum + (b.weightG || 0), 0);
+    const totalHours = beds.reduce((sum, b) => sum + (b.timeH || 0) + (b.timeM || 0) / 60, 0);
+    const energyCost = beds.reduce((sum, b) => {
+      const hours = (b.timeH || 0) + (b.timeM || 0) / 60;
+      return sum + (b.watts / 1000) * hours * kwhRate;
+    }, 0);
+    const filamentCost = (totalWeightG / 1000) * filamentPricePerKg;
+    const laborCost = laborHours * hourlyRate;
+    const paint = paintedByHand ? paintCost : 0;
+
+    const baseCost = filamentCost + energyCost + laborCost + extras + paint;
+    const priceWithMargin = baseCost * (1 + marginPercent / 100);
+    const finalPrice = marketplaceFee > 0 ? priceWithMargin / (1 - marketplaceFee / 100) : priceWithMargin;
+    const pricePerPiece = finalPrice / Math.max(quantity, 1);
+
+    return {
+      totalWeightG,
+      totalHours,
+      energyCost,
+      filamentCost,
+      laborCost,
+      paint,
+      baseCost,
+      finalPrice,
+      pricePerPiece,
+    };
+  }, [beds, filamentPricePerKg, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, marketplaceFee, marginPercent, quantity]);
+
   return (
-    <div className="min-h-screen">
-      <header className="flex items-center justify-between px-6 py-6 md:px-12">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-gradient shadow-neon-glow">
-            <Zap size={18} className="text-white" />
-          </div>
-          <span className="font-display text-lg tracking-wide">MakerFlow</span>
-        </div>
-        <nav className="flex items-center gap-6">
-          <Link href="/pricing" className="hidden text-sm text-text-secondary hover:text-text-primary sm:block">
-            Planos
-          </Link>
-          <Link href="/login" className="text-sm text-text-secondary hover:text-text-primary">
-            Entrar
-          </Link>
-          <Link
-            href="/signup"
-            className="rounded-pill border border-border-glassStrong px-4 py-2 text-sm font-medium hover:bg-white/5"
-          >
-            Criar conta
-          </Link>
-        </nav>
-      </header>
+    <>
+      <Topbar title="Calculadora Inteligente" />
 
-      {/* Hero */}
-      <main className="px-6 pt-16 text-center md:px-12 md:pt-24">
-        <h1 className="mx-auto max-w-3xl font-display text-4xl leading-tight md:text-6xl">
-          Precifique, produza e venda —{" "}
-          <span className="neon-text">tudo em um farm de dados só seu</span>
-        </h1>
-        <p className="mx-auto mt-6 max-w-xl text-text-secondary">
-          Gestão completa para estúdios de impressão 3D: orçamentos inteligentes, pedidos,
-          estoque e insights financeiros em tempo real.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-          <Link href="/pricing" className="neon-btn">
-            Ver planos <ArrowRight size={16} />
-          </Link>
-          <Link
-            href="/signup"
-            className="rounded-pill border border-border-glassStrong px-6 py-3 text-sm font-semibold hover:bg-white/5"
-          >
-            Começar grátis
-          </Link>
+      <div className="sticky top-[65px] z-20 border-b border-border-glass bg-bg/80 px-6 py-4 backdrop-blur-glass md:px-8">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <PreviewStat label="Energia" value={formatBRL(calc.energyCost)} />
+          <PreviewStat label="Filamento" value={formatBRL(calc.filamentCost)} />
+          <PreviewStat label="Extras" value={formatBRL(extras + calc.paint)} />
+          <PreviewStat label="Custo Total" value={formatBRL(calc.baseCost)} />
+          <PreviewStat label="Preço / Peça" value={formatBRL(calc.pricePerPiece)} highlight />
         </div>
+      </div>
 
-        {/* Dashboard preview frame */}
-        <div className="mx-auto mt-16 max-w-4xl">
-          <GlassCard padding="lg" className="text-left shadow-neon-glow">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {[
-                { label: "Faturamento Mensal", value: "R$ 8.320" },
-                { label: "Lucro Líquido", value: "R$ 5.210" },
-                { label: "Filamento em Kg", value: "14.6 kg" },
-                { label: "Status do Farm", value: "2/4 ativas" },
-              ].map((kpi) => (
-                <div key={kpi.label} className="glass-card p-4">
-                  <p className="text-[10px] uppercase tracking-wider text-text-muted">{kpi.label}</p>
-                  <p className="font-numeric mt-1 text-lg font-semibold">{kpi.value}</p>
+      <main className="grid grid-cols-1 gap-6 px-6 py-8 md:px-8 xl:grid-cols-[1fr_360px]">
+        <div className="space-y-6">
+          <GlassCard padding="lg">
+            <label className="mb-1.5 block text-xs text-text-muted">Nome do projeto</label>
+            <input
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              placeholder="Ex: Miniatura Dragão Articulado"
+              className="glass-input w-full text-base"
+            />
+          </GlassCard>
+
+          <GlassCard padding="lg" className="space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
+                Mesas de Impressão
+              </h3>
+              <NeonButton variant="outline" size="sm" onClick={addBed}>
+                <Plus size={14} /> Adicionar mesa
+              </NeonButton>
+            </div>
+
+            {beds.map((bed, i) => (
+              <div key={bed.id} className="glass-card space-y-3 p-4">
+                <div className="flex items-center justify-between">
+                  <input
+                    value={bed.name}
+                    onChange={(e) => updateBed(bed.id, { name: e.target.value })}
+                    className="bg-transparent text-sm font-medium text-text-primary focus:outline-none"
+                  />
+                  {beds.length > 1 && (
+                    <button
+                      onClick={() => removeBed(bed.id)}
+                      className="text-text-muted hover:text-red-400"
+                      aria-label="Remover mesa"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
-              ))}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <Field label="Peso (g)">
+                    <input
+                      type="number"
+                      min={0}
+                      value={bed.weightG || ""}
+                      onChange={(e) => updateBed(bed.id, { weightG: Number(e.target.value) })}
+                      className="glass-input w-full"
+                    />
+                  </Field>
+                  <Field label="Tempo (h)">
+                    <input
+                      type="number"
+                      min={0}
+                      value={bed.timeH || ""}
+                      onChange={(e) => updateBed(bed.id, { timeH: Number(e.target.value) })}
+                      className="glass-input w-full"
+                    />
+                  </Field>
+                  <Field label="Tempo (min)">
+                    <input
+                      type="number"
+                      min={0}
+                      max={59}
+                      value={bed.timeM || ""}
+                      onChange={(e) => updateBed(bed.id, { timeM: Number(e.target.value) })}
+                      className="glass-input w-full"
+                    />
+                  </Field>
+                  <Field label="Potência (W)">
+                    <input
+                      type="number"
+                      min={0}
+                      value={bed.watts || ""}
+                      onChange={(e) => updateBed(bed.id, { watts: Number(e.target.value) })}
+                      className="glass-input w-full"
+                    />
+                  </Field>
+                </div>
+              </div>
+            ))}
+          </GlassCard>
+
+          <GlassCard padding="lg" className="space-y-5">
+            <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
+              Custos e Consumíveis
+            </h3>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <Field label="Filamento (R$/kg)">
+                <input type="number" value={filamentPricePerKg} onChange={(e) => setFilamentPricePerKg(Number(e.target.value))} className="glass-input w-full" />
+              </Field>
+              <Field label="Tarifa energia (R$/kWh)">
+                <input type="number" step="0.01" value={kwhRate} onChange={(e) => setKwhRate(Number(e.target.value))} className="glass-input w-full" />
+              </Field>
+              <Field label="Mão de obra (h)">
+                <input type="number" step="0.1" value={laborHours} onChange={(e) => setLaborHours(Number(e.target.value))} className="glass-input w-full" />
+              </Field>
+              <Field label="Valor hora (R$)">
+                <input type="number" value={hourlyRate} onChange={(e) => setHourlyRate(Number(e.target.value))} className="glass-input w-full" />
+              </Field>
+              <Field label="Consumíveis extras (R$)">
+                <input type="number" value={extras} onChange={(e) => setExtras(Number(e.target.value))} className="glass-input w-full" />
+              </Field>
+              <Field label="Quantidade de peças">
+                <input type="number" min={1} value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="glass-input w-full" />
+              </Field>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border-glass pt-4">
+              <Toggle checked={paintedByHand} onChange={setPaintedByHand} label="Pintado à mão" />
+              {paintedByHand && (
+                <Field label="Custo de pintura (R$)">
+                  <input type="number" value={paintCost} onChange={(e) => setPaintCost(Number(e.target.value))} className="glass-input w-32" />
+                </Field>
+              )}
+            </div>
+          </GlassCard>
+
+          <GlassCard padding="lg" className="space-y-5">
+            <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
+              Precificação
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Margem de lucro (%)">
+                <input type="number" value={marginPercent} onChange={(e) => setMarginPercent(Number(e.target.value))} className="glass-input w-full" />
+              </Field>
+              <Field label="Taxa de marketplace (%)">
+                <input type="number" value={marketplaceFee} onChange={(e) => setMarketplaceFee(Number(e.target.value))} className="glass-input w-full" />
+              </Field>
+            </div>
+          </GlassCard>
+        </div>
+
+        <div className="space-y-6">
+          <GlassCard padding="lg" className="sticky top-[140px] space-y-5">
+            <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">Resumo</h3>
+            <div className="space-y-2 text-sm">
+              <SummaryRow label="Peso total" value={`${calc.totalWeightG.toFixed(0)} g`} />
+              <SummaryRow label="Tempo total" value={`${calc.totalHours.toFixed(1)} h`} />
+              <SummaryRow label="Filamento" value={formatBRL(calc.filamentCost)} />
+              <SummaryRow label="Energia" value={formatBRL(calc.energyCost)} />
+              <SummaryRow label="Mão de obra" value={formatBRL(calc.laborCost)} />
+              {paintedByHand && <SummaryRow label="Pintura" value={formatBRL(calc.paint)} />}
+              <SummaryRow label="Extras" value={formatBRL(extras)} />
+              <div className="my-2 h-px bg-border-glass" />
+              <SummaryRow label="Custo total" value={formatBRL(calc.baseCost)} />
+            </div>
+
+            <div className="glass-card space-y-1 p-4 text-center">
+              <p className="text-xs text-text-muted">Preço final sugerido</p>
+              <p className="neon-text font-numeric text-3xl font-semibold">{formatBRL(calc.finalPrice)}</p>
+              {quantity > 1 && (
+                <p className="font-numeric text-xs text-text-muted">{formatBRL(calc.pricePerPiece)} / peça</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <NeonButton className="w-full" onClick={() => setOrderModalOpen(true)}>
+                <Rocket size={16} /> Iniciar Projeto / Criar Pedido
+              </NeonButton>
+              <NeonButton variant="outline" className="w-full" onClick={() => setProductModalOpen(true)}>
+                <PackagePlus size={16} /> Cadastrar Produto
+              </NeonButton>
+              <NeonButton variant="outline" className="w-full">
+                <FileDown size={16} /> Gerar PDF de Orçamento
+              </NeonButton>
+              <NeonButton variant="outline" className="w-full">
+                <Link2 size={16} /> Gerar Link de Cobrança
+              </NeonButton>
+              <NeonButton variant="ghost" className="w-full" onClick={() => setClientModalOpen(true)}>
+                <UserPlus size={16} /> Cadastrar novo cliente
+              </NeonButton>
             </div>
           </GlassCard>
         </div>
       </main>
 
-      {/* Features grid */}
-      <section className="mx-auto mt-24 max-w-5xl px-6 md:px-12">
-        <h2 className="text-center font-display text-3xl">
-          Feito para quem vive de <span className="neon-text">impressão 3D</span>
-        </h2>
-        <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f) => (
-            <GlassCard key={f.title} hover padding="md" className="space-y-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">
-                <f.icon size={18} />
-              </div>
-              <p className="font-display text-base">{f.title}</p>
-              <p className="text-sm text-text-secondary">{f.description}</p>
-            </GlassCard>
-          ))}
-        </div>
-      </section>
+      <NewOrderModal
+        open={orderModalOpen}
+        onClose={() => setOrderModalOpen(false)}
+        projectName={projectName}
+        finalPrice={calc.finalPrice}
+      />
+      <NewClientModal open={clientModalOpen} onClose={() => setClientModalOpen(false)} />
+      <NewProductModal
+        open={productModalOpen}
+        onClose={() => setProductModalOpen(false)}
+        onCreated={() => {}}
+        initialName={projectName}
+        initialCostPrice={calc.baseCost}
+        initialSalePrice={calc.pricePerPiece}
+      />
+    </>
+  );
+}
 
-      {/* CTA banner */}
-      <section className="mx-auto my-24 max-w-4xl px-6 md:px-12">
-        <GlassCard padding="lg" className="flex flex-col items-center gap-4 py-14 text-center shadow-neon-glow">
-          <h2 className="font-display text-3xl">Pronto pra organizar seu farm?</h2>
-          <p className="max-w-md text-text-secondary">
-            Planos a partir de R$ 29/mês. Sem fidelidade, cancele quando quiser.
-          </p>
-          <Link href="/pricing" className="neon-btn">
-            Ver planos e assinar <ArrowRight size={16} />
-          </Link>
-        </GlassCard>
-      </section>
+function PreviewStat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className={cn("glass-card px-3 py-2.5", highlight && "border-neon-pink/40 shadow-neon-glow")}>
+      <p className="text-[10px] uppercase tracking-wide text-text-muted">{label}</p>
+      <p className={cn("font-numeric text-sm font-semibold", highlight && "neon-text")}>{value}</p>
+    </div>
+  );
+}
 
-      <footer className="border-t border-border-glass px-6 py-8 text-center text-xs text-text-muted md:px-12">
-        © 2026 MakerFlow. Feito para a comunidade Maker.
-      </footer>
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-[11px] text-text-muted">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between text-text-secondary">
+      <span>{label}</span>
+      <span className="font-numeric text-text-primary">{value}</span>
     </div>
   );
 }
