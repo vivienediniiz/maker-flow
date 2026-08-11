@@ -8,7 +8,7 @@ import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { ProductDetailModal } from "@/components/dashboard/ProductDetailModal";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
-import { SlidersHorizontal, PackagePlus, Sparkles, Loader2, Search } from "lucide-react";
+import { SlidersHorizontal, PackagePlus, Sparkles, Loader2, Trash2 } from "lucide-react";
 import type { Product } from "@/lib/types";
 
 export default function ProductsPage() {
@@ -47,27 +47,28 @@ export default function ProductsPage() {
   }
 
   const categories = Array.from(new Set(products.map((p) => p.category).filter(Boolean))) as string[];
+
+  async function handleDelete(productId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("Excluir este produto? Essa ação não pode ser desfeita.")) return;
+    setProducts((prev) => prev.filter((p) => p.id !== productId));
+    await supabase.from("products").delete().eq("id", productId);
+  }
   const filtered = products
     .filter((p) => (categoryFilter ? p.category === categoryFilter : true))
     .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <>
-      <Topbar title="Produtos e Catálogo" />
+      <Topbar
+        title="Produtos e Catálogo"
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar produto por nome..."
+      />
       <main className="space-y-6 px-6 py-8 md:px-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <h3 className="font-display text-lg">Catálogo de Produtos</h3>
-            <div className="glass-card flex items-center gap-2 px-4 py-2.5 sm:w-72">
-              <Search size={15} className="text-text-muted" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar produto por nome..."
-                className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
-              />
-            </div>
-          </div>
+          <h3 className="font-display text-lg">Catálogo de Produtos</h3>
           <div className="flex items-center gap-3">
             <div className="relative">
               <NeonButton variant="outline" size="sm" onClick={() => setShowFilters((s) => !s)}>
@@ -132,6 +133,7 @@ export default function ProductsPage() {
                     <th className="px-6 py-4 font-medium">Venda</th>
                     <th className="px-6 py-4 font-medium">Margem</th>
                     <th className="px-6 py-4 font-medium">Estoque</th>
+                    <th className="w-12 px-4 py-4" />
                   </tr>
                 </thead>
                 <tbody>
@@ -162,6 +164,15 @@ export default function ProductsPage() {
                         <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(p.sale_price)}</td>
                         <td className="px-6 py-4 font-numeric text-neon-pink">{margin.toFixed(0)}%</td>
                         <td className="px-6 py-4 text-text-secondary">{p.stock_quantity}</td>
+                        <td className="px-4 py-4">
+                          <button
+                            onClick={(e) => handleDelete(p.id, e)}
+                            className="text-text-muted hover:text-red-400"
+                            aria-label="Excluir produto"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}

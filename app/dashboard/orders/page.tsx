@@ -7,7 +7,7 @@ import { QuoteDetailModal } from "@/components/dashboard/QuoteDetailModal";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { QUOTE_STATUS_LABELS, isQuoteSentExpired, formatOrderNumber } from "@/lib/quotes";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import type { QuoteWithClient, QuoteStatus } from "@/lib/types";
 
 const FILTERS: { key: "all" | QuoteStatus; label: string }[] = [
@@ -24,6 +24,7 @@ export default function OrdersPage() {
   const [quotes, setQuotes] = useState<QuoteWithClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
+  const [search, setSearch] = useState("");
   const [selectedQuote, setSelectedQuote] = useState<QuoteWithClient | null>(null);
 
   useEffect(() => {
@@ -67,11 +68,38 @@ export default function OrdersPage() {
     await supabase.from("quotes").update({ status }).eq("id", quoteId);
   }
 
-  const filtered = filter === "all" ? quotes : quotes.filter((q) => q.status === filter);
+  async function handleDelete(quoteId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm("Excluir este pedido? Essa ação não pode ser desfeita.")) return;
+    setQuotes((prev) => prev.filter((q) => q.id !== quoteId));
+    await supabase.from("quotes").delete().eq("id", quoteId);
+  }
+
+  const statusFiltered = filter === "all" ? quotes : quotes.filter((q) => q.status === filter);
+
+  // Prioriza número do pedido: se o texto buscado bate com o número
+  // (com ou sem #), mostra só isso. Senão, busca por cliente/produto também.
+  const searchLower = search.trim().toLowerCase().replace(/^#/, "");
+  const filtered = !searchLower
+    ? statusFiltered
+    : (() => {
+        const byNumber = statusFiltered.filter((q) => String(q.order_number).includes(searchLower));
+        if (byNumber.length > 0) return byNumber;
+        return statusFiltered.filter(
+          (q) =>
+            (q.clients?.name ?? "").toLowerCase().includes(searchLower) ||
+            q.project_name.toLowerCase().includes(searchLower)
+        );
+      })();
 
   return (
     <>
-      <Topbar title="Pedidos" />
+      <Topbar
+        title="Pedidos"
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por nº do pedido, cliente..."
+      />
       <main className="space-y-6 px-6 py-8 md:px-8">
         <div className="glass-card flex flex-wrap gap-1 p-1">
           {FILTERS.map((f) => (
@@ -94,7 +122,7 @@ export default function OrdersPage() {
           </div>
         ) : filtered.length === 0 ? (
           <GlassCard padding="lg" className="text-center text-sm text-text-muted">
-            Nenhum pedido nessa categoria ainda.
+            Nenhum pedido encontrado.
           </GlassCard>
         ) : (
           <GlassCard padding="none" className="overflow-hidden">
@@ -108,6 +136,7 @@ export default function OrdersPage() {
                     <th className="px-6 py-4 font-medium">Status</th>
                     <th className="px-6 py-4 font-medium">Data</th>
                     <th className="px-6 py-4 text-right font-medium">Valor</th>
+                    <th className="w-12 px-4 py-4" />
                   </tr>
                 </thead>
                 <tbody>
@@ -130,6 +159,15 @@ export default function OrdersPage() {
                       </td>
                       <td className="px-6 py-4 text-right font-numeric font-medium text-text-primary">
                         {formatBRL(q.final_price)}
+                      </td>
+                      <td className="px-4 py-4">
+                        <button
+                          onClick={(e) => handleDelete(q.id, e)}
+                          className="text-text-muted hover:text-red-400"
+                          aria-label="Excluir pedido"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </td>
                     </tr>
                   ))}
