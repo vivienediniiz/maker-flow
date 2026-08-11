@@ -11,11 +11,19 @@ export interface Profile {
   subscription_tier: SubscriptionTier;
   billing_cycle: BillingCycle | null;
   subscription_status: SubscriptionStatus;
-  trial_ends_at: string; // ISO timestamp — fim do período gratuito de 7 dias
-  payment_method: PaymentMethodType; // card (assinatura automática) | pix (renovação manual) | null
-  paid_until: string | null; // ISO timestamp — só relevante quando payment_method = pix
+  trial_ends_at: string;
+  payment_method: PaymentMethodType;
+  paid_until: string | null;
   mp_customer_id: string | null;
   mp_subscription_id: string | null;
+  studio_name: string | null;
+  phone: string | null;
+  document: string | null;
+  address: string | null;
+  instagram: string | null;
+  website: string | null;
+  bio: string | null;
+  avatar_url: string | null;
 }
 
 export type PrinterStatus = "idle" | "printing" | "paused" | "error" | "offline";

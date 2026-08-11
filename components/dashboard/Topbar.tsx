@@ -5,11 +5,13 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Bell, Search, LogOut, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { CompanyProfileModal } from "./CompanyProfileModal";
 
 export function Topbar({ title }: { title: string }) {
   const router = useRouter();
   const supabase = createClient();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
   const avatarRef = useRef<HTMLButtonElement>(null);
 
@@ -63,7 +65,7 @@ export function Topbar({ title }: { title: string }) {
               <button
                 onClick={() => {
                   setMenuOpen(false);
-                  router.push("/dashboard/settings");
+                  setProfileModalOpen(true);
                 }}
                 className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-text-secondary hover:bg-white/5 hover:text-text-primary"
               >
@@ -79,6 +81,8 @@ export function Topbar({ title }: { title: string }) {
           </>,
           document.body
         )}
+
+      <CompanyProfileModal open={profileModalOpen} onClose={() => setProfileModalOpen(false)} />
     </header>
   );
 }
