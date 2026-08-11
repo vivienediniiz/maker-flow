@@ -94,6 +94,20 @@ export interface PriceTier {
   price: number;
 }
 
+export interface CalcInputs {
+  beds: { name: string; weightG: number; timeH: number; timeM: number; watts: number }[];
+  filamentPricePerKg: number;
+  kwhRate: number;
+  laborHours: number;
+  hourlyRate: number;
+  extras: number;
+  paintedByHand: boolean;
+  paintCost: number;
+  marketplaceFee: number;
+  marginPercent: number;
+  quantity: number;
+}
+
 export interface Product {
   id: string;
   user_id: string;
@@ -104,6 +118,7 @@ export interface Product {
   sale_price: number;
   stock_quantity: number;
   price_tiers: PriceTier[];
+  calc_inputs: CalcInputs | null;
 }
 
 export interface Category {

@@ -1,16 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { Toggle } from "@/components/ui/Toggle";
 import { NewOrderModal } from "@/components/dashboard/NewOrderModal";
-import { NewClientModal } from "@/components/dashboard/NewClientModal";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { GenerateQuoteModal } from "@/components/dashboard/GenerateQuoteModal";
+import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
-import { Plus, Trash2, FileDown, Link2, Rocket, UserPlus, PackagePlus } from "lucide-react";
+import { Plus, Trash2, FileDown, Link2, Rocket, PackagePlus } from "lucide-react";
+import type { Product } from "@/lib/types";
 
 interface PrintBed {
   id: string;
@@ -26,7 +27,10 @@ function newBed(index: number): PrintBed {
 }
 
 export default function CalculatorPage() {
+  const supabase = createClient();
+  const [productMode, setProductMode] = useState<"select" | "new">("new");
   const [projectName, setProjectName] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
   const [beds, setBeds] = useState<PrintBed[]>([newBed(1)]);
   const [filamentPricePerKg, setFilamentPricePerKg] = useState(120);
   const [kwhRate, setKwhRate] = useState(0.95);
@@ -40,9 +44,43 @@ export default function CalculatorPage() {
   const [quantity, setQuantity] = useState(1);
 
   const [orderModalOpen, setOrderModalOpen] = useState(false);
-  const [clientModalOpen, setClientModalOpen] = useState(false);
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [quoteModalOpen, setQuoteModalOpen] = useState(false);
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  async function loadProducts() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from("products").select("*").eq("user_id", user.id).order("name");
+    setProducts((data as Product[]) ?? []);
+  }
+
+  function handleSelectProduct(productId: string) {
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+
+    setProjectName(product.name);
+
+    const ci = product.calc_inputs;
+    if (ci) {
+      setBeds(ci.beds.map((b) => ({ ...b, id: crypto.randomUUID() })));
+      setFilamentPricePerKg(ci.filamentPricePerKg);
+      setKwhRate(ci.kwhRate);
+      setLaborHours(ci.laborHours);
+      setHourlyRate(ci.hourlyRate);
+      setExtras(ci.extras);
+      setPaintedByHand(ci.paintedByHand);
+      setPaintCost(ci.paintCost);
+      setMarketplaceFee(ci.marketplaceFee);
+      setMarginPercent(ci.marginPercent);
+      setQuantity(ci.quantity);
+    }
+  }
 
   function addBed() {
     setBeds((b) => [...b, newBed(b.length + 1)]);
@@ -87,6 +125,7 @@ export default function CalculatorPage() {
     <>
       <Topbar title="Calculadora Inteligente" />
 
+      {/* Real-time cost preview header — sticky */}
       <div className="sticky top-[65px] z-20 border-b border-border-glass bg-bg/80 px-6 py-4 backdrop-blur-glass md:px-8">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <PreviewStat label="Energia" value={formatBRL(calc.energyCost)} />
@@ -98,17 +137,67 @@ export default function CalculatorPage() {
       </div>
 
       <main className="grid grid-cols-1 gap-6 px-6 py-8 md:px-8 xl:grid-cols-[1fr_360px]">
+        {/* Left column: inputs */}
         <div className="space-y-6">
-          <GlassCard padding="lg">
-            <label className="mb-1.5 block text-xs text-text-muted">Nome do projeto</label>
-            <input
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              placeholder="Ex: Miniatura Dragão Articulado"
-              className="glass-input w-full text-base"
-            />
+          <GlassCard padding="lg" className="space-y-3">
+            <label className="block text-xs text-text-muted">Nome do produto</label>
+
+            <div className="glass-card flex gap-1 p-1">
+              <button
+                type="button"
+                onClick={() => setProductMode("select")}
+                className={cn(
+                  "flex-1 rounded-pill py-2 text-xs font-medium transition-colors",
+                  productMode === "select" ? "bg-neon-gradient text-white" : "text-text-secondary"
+                )}
+              >
+                Selecionar produto já cadastrado
+              </button>
+              <button
+                type="button"
+                onClick={() => setProductMode("new")}
+                className={cn(
+                  "flex-1 rounded-pill py-2 text-xs font-medium transition-colors",
+                  productMode === "new" ? "bg-neon-gradient text-white" : "text-text-secondary"
+                )}
+              >
+                Digitar novo produto
+              </button>
+            </div>
+
+            {productMode === "select" ? (
+              <>
+                <select
+                  onChange={(e) => handleSelectProduct(e.target.value)}
+                  className="glass-input w-full text-base"
+                  defaultValue=""
+                >
+                  <option value="" className="bg-bg-raised">
+                    {products.length === 0 ? "Nenhum produto cadastrado ainda" : "Selecione..."}
+                  </option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id} className="bg-bg-raised">
+                      {p.name} {!p.calc_inputs && "(sem dados de cálculo salvos)"}
+                    </option>
+                  ))}
+                </select>
+                {projectName && (
+                  <p className="text-[11px] text-text-muted">
+                    Produto selecionado: <span className="text-text-secondary">{projectName}</span>
+                  </p>
+                )}
+              </>
+            ) : (
+              <input
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                placeholder="Ex: Miniatura Dragão Articulado"
+                className="glass-input w-full text-base"
+              />
+            )}
           </GlassCard>
 
+          {/* Print beds */}
           <GlassCard padding="lg" className="space-y-5">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
@@ -180,6 +269,7 @@ export default function CalculatorPage() {
             ))}
           </GlassCard>
 
+          {/* Costs & extras */}
           <GlassCard padding="lg" className="space-y-5">
             <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
               Custos e Consumíveis
@@ -215,6 +305,7 @@ export default function CalculatorPage() {
             </div>
           </GlassCard>
 
+          {/* Pricing */}
           <GlassCard padding="lg" className="space-y-5">
             <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
               Precificação
@@ -230,6 +321,7 @@ export default function CalculatorPage() {
           </GlassCard>
         </div>
 
+        {/* Right column: summary + actions */}
         <div className="space-y-6">
           <GlassCard padding="lg" className="sticky top-[140px] space-y-5">
             <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">Resumo</h3>
@@ -266,9 +358,6 @@ export default function CalculatorPage() {
               <NeonButton variant="outline" className="w-full">
                 <Link2 size={16} /> Gerar Link de Cobrança
               </NeonButton>
-              <NeonButton variant="ghost" className="w-full" onClick={() => setClientModalOpen(true)}>
-                <UserPlus size={16} /> Cadastrar novo cliente
-              </NeonButton>
             </div>
           </GlassCard>
         </div>
@@ -280,14 +369,26 @@ export default function CalculatorPage() {
         projectName={projectName}
         finalPrice={calc.finalPrice}
       />
-      <NewClientModal open={clientModalOpen} onClose={() => setClientModalOpen(false)} />
       <NewProductModal
         open={productModalOpen}
         onClose={() => setProductModalOpen(false)}
-        onCreated={() => {}}
+        onCreated={(p) => setProducts((prev) => [...prev, p])}
         initialName={projectName}
         initialCostPrice={calc.baseCost}
         initialSalePrice={calc.pricePerPiece}
+        calcInputs={{
+          beds: beds.map(({ name, weightG, timeH, timeM, watts }) => ({ name, weightG, timeH, timeM, watts })),
+          filamentPricePerKg,
+          kwhRate,
+          laborHours,
+          hourlyRate,
+          extras,
+          paintedByHand,
+          paintCost,
+          marketplaceFee,
+          marginPercent,
+          quantity,
+        }}
       />
       <GenerateQuoteModal
         open={quoteModalOpen}

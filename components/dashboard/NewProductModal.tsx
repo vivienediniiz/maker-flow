@@ -6,16 +6,20 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { CategorySelect } from "@/components/dashboard/CategorySelect";
 import { PriceTierEditor } from "@/components/dashboard/PriceTierEditor";
 import { createClient } from "@/lib/supabase/client";
-import type { Product, PriceTier } from "@/lib/types";
+import type { Product, PriceTier, CalcInputs } from "@/lib/types";
 
 interface NewProductModalProps {
   open: boolean;
   onClose: () => void;
   onCreated: (product: Product) => void;
+  // Pré-preenchimento opcional, usado quando vem da Calculadora.
   initialName?: string;
   initialDescription?: string;
   initialCostPrice?: number;
   initialSalePrice?: number;
+  // Snapshot dos parâmetros da calculadora, salvo junto pra permitir
+  // reconstruir o cálculo depois ao selecionar esse produto de novo.
+  calcInputs?: CalcInputs;
 }
 
 export function NewProductModal({
@@ -26,6 +30,7 @@ export function NewProductModal({
   initialDescription = "",
   initialCostPrice,
   initialSalePrice,
+  calcInputs,
 }: NewProductModalProps) {
   const supabase = createClient();
   const [name, setName] = useState(initialName);
@@ -73,8 +78,9 @@ export function NewProductModal({
         description: description || null,
         cost_price: Number(costPrice) || 0,
         sale_price: Number(salePrice) || 0,
-        stock_quantity: 0,
+        stock_quantity: 0, // estoque é gerenciado depois, na aba Estoque 3D
         price_tiers: priceTiers.filter((t) => t.quantity > 0 && t.price > 0),
+        calc_inputs: calcInputs ?? null,
       })
       .select()
       .single();
@@ -153,6 +159,13 @@ export function NewProductModal({
           </label>
           <PriceTierEditor tiers={priceTiers} onChange={setPriceTiers} />
         </div>
+
+        {calcInputs && (
+          <p className="text-[11px] text-neon-green">
+            ✓ Os parâmetros da calculadora (mesas, custos, margem) serão salvos junto —
+            ao selecionar este produto na Calculadora depois, tudo volta preenchido.
+          </p>
+        )}
 
         {error && <p className="text-xs text-red-400">{error}</p>}
 
