@@ -32,11 +32,12 @@ const NAV = [
 
 interface SidebarProps {
   studioName?: string;
+  avatarUrl?: string | null;
   tier: SubscriptionTier;
   cycle: BillingCycle | null;
 }
 
-export function Sidebar({ studioName, tier, cycle }: SidebarProps) {
+export function Sidebar({ studioName, avatarUrl, tier, cycle }: SidebarProps) {
   const pathname = usePathname();
   const planLabel = planDisplayLabel(tier, cycle);
 
@@ -81,18 +82,25 @@ export function Sidebar({ studioName, tier, cycle }: SidebarProps) {
       </nav>
 
       <div className="border-t border-border-glass p-4">
-        <div className="glass-card flex items-center gap-3 px-3 py-3">
-          <div className="h-8 w-8 shrink-0 rounded-full bg-neon-gradient" />
-          <div className="min-w-0">
-            <p className="truncate text-xs font-medium text-text-primary">{studioName || "Meu estúdio"}</p>
-            <p className="truncate text-[10px] text-text-muted">{planLabel}</p>
-          </div>
-        </div>
         <Link
           href="/pricing"
-          className="mt-2 block rounded-lg px-3 py-2 text-center text-[11px] font-medium text-neon-pink transition-colors hover:bg-white/5"
+          className="glass-card block space-y-2.5 px-3 py-3 transition-colors hover:border-neon-pink/40 hover:bg-white/[0.04]"
         >
-          Ver todos os planos
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-neon-gradient">
+              {avatarUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-medium text-text-primary">{studioName || "Meu estúdio"}</p>
+              <p className="truncate text-[10px] text-text-muted">{planLabel}</p>
+            </div>
+          </div>
+          <p className="text-center text-[11px] font-semibold text-neon-pink">
+            {tier === "free" ? "Assine agora →" : "Conheça os planos →"}
+          </p>
         </Link>
       </div>
     </aside>

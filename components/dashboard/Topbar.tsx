@@ -13,7 +13,19 @@ export function Topbar({ title }: { title: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const avatarRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("avatar_url").eq("id", user.id).single();
+      if (data?.avatar_url) setAvatarUrl(data.avatar_url);
+    })();
+  }, []);
 
   useEffect(() => {
     if (menuOpen && avatarRef.current) {
@@ -48,9 +60,14 @@ export function Topbar({ title }: { title: string }) {
         <button
           ref={avatarRef}
           onClick={() => setMenuOpen((o) => !o)}
-          className="h-9 w-9 rounded-full bg-neon-gradient"
+          className="h-9 w-9 overflow-hidden rounded-full bg-neon-gradient"
           aria-label="Menu da conta"
-        />
+        >
+          {avatarUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+          )}
+        </button>
       </div>
 
       {menuOpen &&
@@ -82,7 +99,13 @@ export function Topbar({ title }: { title: string }) {
           document.body
         )}
 
-      <CompanyProfileModal open={profileModalOpen} onClose={() => setProfileModalOpen(false)} />
+      <CompanyProfileModal
+        open={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        onSaved={(profile) => {
+          if (profile.avatar_url !== undefined) setAvatarUrl(profile.avatar_url ?? null);
+        }}
+      />
     </header>
   );
 }

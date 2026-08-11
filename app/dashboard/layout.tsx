@@ -16,12 +16,10 @@ async function getCurrentProfile() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, subscription_tier, billing_cycle, trial_ends_at, payment_method, paid_until")
+    .select("full_name, avatar_url, subscription_tier, billing_cycle, trial_ends_at, payment_method, paid_until")
     .eq("id", user.id)
     .single();
 
-  // Rebaixamento preguiçoso: se o pagamento era via Pix e passou da tolerância
-  // sem renovar, volta pro Free agora, na hora que o dashboard carrega.
   if (profile && profile.payment_method === "pix" && pixBillingState(profile.paid_until) === "expired") {
     await supabase
       .from("profiles")
@@ -47,7 +45,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="min-h-screen">
-      <Sidebar studioName={profile?.full_name} tier={tier} cycle={cycle} />
+      <Sidebar studioName={profile?.full_name} avatarUrl={profile?.avatar_url} tier={tier} cycle={cycle} />
       <div className="md:pl-64">
         {isPix && pixState === "grace" ? (
           <PixRenewalBanner paidUntil={profile!.paid_until} />
