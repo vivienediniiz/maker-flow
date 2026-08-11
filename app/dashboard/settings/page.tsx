@@ -59,12 +59,18 @@ export default function SettingsPage() {
       .eq("user_id", user.id)
       .single();
 
-    const feesObj: Record<string, number> =
-      data?.marketplace_fees_json && Object.keys(data.marketplace_fees_json).length > 0
-        ? data.marketplace_fees_json
-        : DEFAULT_MARKETPLACES;
+    const hasExisting = data?.marketplace_fees_json && Object.keys(data.marketplace_fees_json).length > 0;
+    const feesObj: Record<string, number> = hasExisting ? data!.marketplace_fees_json : DEFAULT_MARKETPLACES;
 
     setMarketplaces(Object.entries(feesObj).map(([name, fee]) => ({ name, fee: Number(fee) })));
+
+    // Se ainda não havia nada salvo, grava os padrões agora — assim outras
+    // telas (Calculadora) já encontram os marketplaces sem precisar que o
+    // usuário clique em "Salvar alterações" primeiro.
+    if (!hasExisting) {
+      await supabase.from("settings").update({ marketplace_fees_json: feesObj }).eq("user_id", user.id);
+    }
+
     setLoading(false);
   }
 
