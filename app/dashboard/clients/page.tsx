@@ -5,7 +5,6 @@ import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { NewClientModal } from "@/components/dashboard/NewClientModal";
-import { ClientDetailModal } from "@/components/dashboard/ClientDetailModal";
 import { createClient } from "@/lib/supabase/client";
 import { Search, Plus, Loader2, Trash2 } from "lucide-react";
 import type { Client } from "@/lib/types";
@@ -16,7 +15,6 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   useEffect(() => {
     loadClients();
@@ -88,13 +86,7 @@ export default function ClientsPage() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((c) => (
-              <GlassCard
-                key={c.id}
-                hover
-                padding="md"
-                className="group relative cursor-pointer space-y-1"
-                onClick={() => setSelectedClient(c)}
-              >
+              <GlassCard key={c.id} hover padding="md" className="group relative space-y-1">
                 <p className="text-sm font-medium text-text-primary">{c.name}</p>
                 <p className="text-xs text-text-muted">{c.phone || c.email || "Sem contato"}</p>
                 {c.address && <p className="truncate text-[11px] text-text-muted/70">{c.address}</p>}
@@ -116,7 +108,6 @@ export default function ClientsPage() {
         onClose={() => setModalOpen(false)}
         onCreated={(client) => setClients((prev) => [client, ...prev])}
       />
-      <ClientDetailModal client={selectedClient} onClose={() => setSelectedClient(null)} />
     </>
   );
 }

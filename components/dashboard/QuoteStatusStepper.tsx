@@ -1,15 +1,9 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { QUOTE_STATUS_ORDER, QUOTE_STATUS_LABELS, quoteDaysUntilExpiry } from "@/lib/quotes";
 import type { QuoteStatus } from "@/lib/types";
-
-const STAGES: { key: QuoteStatus; label: string }[] = [
-  { key: "sent", label: "Orçamento Enviado" },
-  { key: "paid", label: "Pago" },
-  { key: "in_production", label: "Em Produção" },
-  { key: "shipped", label: "Pedido Enviado" },
-];
 
 export function QuoteStatusStepper({
   status,
@@ -20,22 +14,42 @@ export function QuoteStatusStepper({
   sentAt: string;
   onChange?: (status: QuoteStatus) => void;
 }) {
-  const currentIndex = STAGES.findIndex((s) => s.key === status);
+  if (status === "expired") {
+    return (
+      <div className="flex items-center justify-between rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-xs text-red-300">
+        <span className="flex items-center gap-1.5">
+          <AlertTriangle size={13} /> Orçamento expirado
+        </span>
+        {onChange && (
+          <button
+            type="button"
+            onClick={() => onChange("sent")}
+            className="rounded-pill bg-red-500 px-3 py-1 text-[11px] font-semibold text-white hover:bg-red-400"
+          >
+            Reabrir
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  const currentIndex = QUOTE_STATUS_ORDER.indexOf(status);
+  const daysLeft = status === "sent" ? quoteDaysUntilExpiry(sentAt) : null;
 
   return (
     <div className="space-y-2">
       <div className="flex items-center">
-        {STAGES.map((stage, i) => {
+        {QUOTE_STATUS_ORDER.map((stageKey, i) => {
           const done = i < currentIndex;
           const active = i === currentIndex;
           const clickable = !!onChange;
 
           return (
-            <div key={stage.key} className="flex flex-1 items-center last:flex-none">
+            <div key={stageKey} className="flex flex-1 items-center last:flex-none">
               <button
                 type="button"
                 disabled={!clickable}
-                onClick={() => onChange?.(stage.key)}
+                onClick={() => onChange?.(stageKey)}
                 className={cn(
                   "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold transition-colors",
                   done && "border-neon-green bg-neon-green/20 text-neon-green",
@@ -43,11 +57,11 @@ export function QuoteStatusStepper({
                   !done && !active && "border-border-glass bg-white/[0.03] text-text-muted",
                   clickable && "cursor-pointer hover:opacity-80"
                 )}
-                title={stage.label}
+                title={QUOTE_STATUS_LABELS[stageKey]}
               >
                 {done ? <Check size={12} /> : i + 1}
               </button>
-              {i < STAGES.length - 1 && (
+              {i < QUOTE_STATUS_ORDER.length - 1 && (
                 <div
                   className={cn(
                     "mx-1 h-0.5 flex-1 rounded-full",
@@ -60,8 +74,10 @@ export function QuoteStatusStepper({
         })}
       </div>
       <div className="flex justify-between text-[10px] text-text-muted">
-        <span>{STAGES[currentIndex]?.label}</span>
-        <span className="font-numeric">{new Date(sentAt).toLocaleDateString("pt-BR")}</span>
+        <span>{QUOTE_STATUS_LABELS[status]}</span>
+        <span className="font-numeric">
+          {daysLeft !== null ? `vence em ${daysLeft}d` : new Date(sentAt).toLocaleDateString("pt-BR")}
+        </span>
       </div>
     </div>
   );

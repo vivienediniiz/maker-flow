@@ -1,39 +1,118 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
+import type { Client } from "@/lib/types";
 
 interface NewOrderModalProps {
   open: boolean;
   onClose: () => void;
   projectName: string;
   finalPrice: number;
-  onConfirm?: (data: { clientName: string; channel: string; deadline: string }) => void;
+  onCreated?: () => void;
 }
 
-const CHANNELS = [
-  { value: "site", label: "Site" },
-  { value: "whatsapp", label: "WhatsApp" },
-  { value: "marketplace", label: "Marketplace" },
-  { value: "presencial", label: "Presencial" },
-];
+export function NewOrderModal({ open, onClose, projectName, finalPrice, onCreated }: NewOrderModalProps) {
+  const supabase = createClient();
+  const [mode, setMode] = useState<"select" | "new">("select");
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-export function NewOrderModal({
-  open,
-  onClose,
-  projectName,
-  finalPrice,
-  onConfirm,
-}: NewOrderModalProps) {
-  const [clientName, setClientName] = useState("");
-  const [channel, setChannel] = useState("whatsapp");
-  const [deadline, setDeadline] = useState("");
+  useEffect(() => {
+    if (!open) return;
+    loadClients();
+    setMode("select");
+    setSelectedClientId("");
+    setNewName("");
+    setNewPhone("");
+    setNewEmail("");
+    setError(null);
+  }, [open]);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function loadClients() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from("clients").select("*").eq("user_id", user.id).order("name");
+    setClients((data as Client[]) ?? []);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onConfirm?.({ clientName, channel, deadline });
+    setSaving(true);
+    setError(null);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setError("Sessão expirada — faça login de novo.");
+      setSaving(false);
+      return;
+    }
+
+    let clientId = selectedClientId;
+
+    if (mode === "new") {
+      if (!newName.trim()) {
+        setError("Informe o nome do cliente.");
+        setSaving(false);
+        return;
+      }
+      const { data: newClient, error: clientError } = await supabase
+        .from("clients")
+        .insert({ user_id: user.id, name: newName, phone: newPhone || null, email: newEmail || null })
+        .select()
+        .single();
+
+      if (clientError || !newClient) {
+        setError(clientError?.message ?? "Falha ao criar cliente.");
+        setSaving(false);
+        return;
+      }
+      clientId = newClient.id;
+    }
+
+    if (!clientId) {
+      setError("Selecione ou cadastre um cliente.");
+      setSaving(false);
+      return;
+    }
+
+    // Entra direto na aba Pedidos já como "Pago" — é um projeto que o cliente
+    // já confirmou/pagou na hora, diferente do fluxo de Gerar Orçamento (que
+    // entra como "Orçamento Enviado" e pode expirar em 15 dias).
+    const { error: quoteError } = await supabase.from("quotes").insert({
+      user_id: user.id,
+      project_name: projectName || "Projeto sem nome",
+      weight_g: 0,
+      print_time_min: 0,
+      energy_cost: 0,
+      filament_cost: 0,
+      margin_percent: 0,
+      final_price: finalPrice,
+      client_id: clientId,
+      status: "paid",
+    });
+
+    setSaving(false);
+
+    if (quoteError) {
+      setError(quoteError.message);
+      return;
+    }
+
+    onCreated?.();
     onClose();
   }
 
@@ -43,54 +122,83 @@ export function NewOrderModal({
         <div className="glass-card flex items-center justify-between px-4 py-3">
           <div>
             <p className="text-sm font-medium text-text-primary">{projectName || "Projeto sem nome"}</p>
-            <p className="text-xs text-text-muted">Orçamento gerado na calculadora</p>
+            <p className="text-xs text-text-muted">Entra em Pedidos já como Pago</p>
           </div>
           <span className="neon-text font-numeric text-lg font-semibold">{formatBRL(finalPrice)}</span>
         </div>
 
-        <div>
-          <label className="mb-1.5 block text-xs text-text-muted">Cliente</label>
-          <input
-            required
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            className="glass-input w-full"
-            placeholder="Nome do cliente"
-          />
+        <div className="glass-card flex gap-1 p-1">
+          <button
+            type="button"
+            onClick={() => setMode("select")}
+            className={`flex-1 rounded-pill py-2 text-xs font-medium transition-colors ${
+              mode === "select" ? "bg-neon-gradient text-white" : "text-text-secondary"
+            }`}
+          >
+            Cliente existente
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("new")}
+            className={`flex-1 rounded-pill py-2 text-xs font-medium transition-colors ${
+              mode === "new" ? "bg-neon-gradient text-white" : "text-text-secondary"
+            }`}
+          >
+            Novo cliente
+          </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="mb-1.5 block text-xs text-text-muted">Canal</label>
-            <select
-              value={channel}
-              onChange={(e) => setChannel(e.target.value)}
-              className="glass-input w-full"
-            >
-              {CHANNELS.map((c) => (
-                <option key={c.value} value={c.value} className="bg-bg-raised">
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs text-text-muted">Prazo de entrega</label>
+        {mode === "select" ? (
+          <select
+            value={selectedClientId}
+            onChange={(e) => setSelectedClientId(e.target.value)}
+            className="glass-input w-full"
+          >
+            <option value="" className="bg-bg-raised">
+              {clients.length === 0 ? "Nenhum cliente cadastrado" : "Selecione..."}
+            </option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id} className="bg-bg-raised">
+                {c.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <div className="space-y-3">
             <input
-              type="date"
               required
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
               className="glass-input w-full"
+              placeholder="Nome completo"
             />
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                value={newPhone}
+                onChange={(e) => setNewPhone(e.target.value)}
+                className="glass-input w-full"
+                placeholder="WhatsApp"
+              />
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="glass-input w-full"
+                placeholder="E-mail"
+              />
+            </div>
           </div>
-        </div>
+        )}
+
+        {error && <p className="text-xs text-red-400">{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">
           <NeonButton type="button" variant="ghost" onClick={onClose}>
             Cancelar
           </NeonButton>
-          <NeonButton type="submit">Criar Pedido</NeonButton>
+          <NeonButton type="submit" disabled={saving}>
+            {saving ? "Salvando..." : "Criar Pedido"}
+          </NeonButton>
         </div>
       </form>
     </Modal>

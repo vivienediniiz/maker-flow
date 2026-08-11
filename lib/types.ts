@@ -56,7 +56,7 @@ export interface Filament {
   remaining_weight_g: number;
 }
 
-export type QuoteStatus = "sent" | "paid" | "in_production" | "shipped";
+export type QuoteStatus = "sent" | "paid" | "in_production" | "shipped" | "expired";
 
 export interface Quote {
   id: string;
@@ -71,6 +71,10 @@ export interface Quote {
   client_id: string | null;
   status: QuoteStatus;
   sent_at: string;
+}
+
+export interface QuoteWithClient extends Quote {
+  clients: { name: string; phone: string | null } | null;
 }
 
 export type PaymentStatus = "pending" | "paid" | "refunded" | "failed";
