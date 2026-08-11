@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { Save } from "lucide-react";
+import { Save, Plus, Trash2, Loader2 } from "lucide-react";
 
 const SECTIONS = [
   { id: "energy", label: "Tarifa de Luz" },
@@ -17,12 +18,96 @@ const SECTIONS = [
   { id: "locale", label: "Idioma / Moeda" },
 ];
 
+const DEFAULT_MARKETPLACES: Record<string, number> = {
+  "TikTok Shop": 12,
+  Shopee: 14,
+  "Mercado Livre": 16,
+  "Loja Própria": 0,
+};
+
+interface MarketplaceRow {
+  name: string;
+  fee: number;
+}
+
 export default function SettingsPage() {
+  const supabase = createClient();
   const [active, setActive] = useState("energy");
   const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [marketplaces, setMarketplaces] = useState<MarketplaceRow[]>([]);
+  const [newName, setNewName] = useState("");
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  async function loadSettings() {
+    setLoading(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const { data } = await supabase
+      .from("settings")
+      .select("marketplace_fees_json")
+      .eq("user_id", user.id)
+      .single();
+
+    const feesObj: Record<string, number> =
+      data?.marketplace_fees_json && Object.keys(data.marketplace_fees_json).length > 0
+        ? data.marketplace_fees_json
+        : DEFAULT_MARKETPLACES;
+
+    setMarketplaces(Object.entries(feesObj).map(([name, fee]) => ({ name, fee: Number(fee) })));
+    setLoading(false);
+  }
 
   function markDirty() {
     if (!dirty) setDirty(true);
+  }
+
+  function updateFee(index: number, fee: number) {
+    setMarketplaces((prev) => prev.map((m, i) => (i === index ? { ...m, fee } : m)));
+    markDirty();
+  }
+
+  function removeMarketplace(index: number) {
+    setMarketplaces((prev) => prev.filter((_, i) => i !== index));
+    markDirty();
+  }
+
+  function addMarketplace() {
+    if (!newName.trim()) return;
+    setMarketplaces((prev) => [...prev, { name: newName.trim(), fee: 0 }]);
+    setNewName("");
+    markDirty();
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setSaving(false);
+      return;
+    }
+
+    const feesObj: Record<string, number> = {};
+    marketplaces.forEach((m) => {
+      feesObj[m.name] = m.fee;
+    });
+
+    await supabase.from("settings").update({ marketplace_fees_json: feesObj }).eq("user_id", user.id);
+
+    setSaving(false);
+    setDirty(false);
   }
 
   return (
@@ -62,14 +147,53 @@ export default function SettingsPage() {
 
           <GlassCard id="marketplaces" padding="lg" className="scroll-mt-24 space-y-4">
             <h3 className="font-display text-lg">Tabela Dinâmica de Taxas de Marketplaces</h3>
-            <div className="space-y-2">
-              {["Elo7", "Shopee", "Mercado Livre", "Loja própria"].map((mp) => (
-                <div key={mp} className="flex items-center justify-between gap-4">
-                  <span className="text-sm text-text-secondary">{mp}</span>
-                  <input type="number" defaultValue={12} onChange={markDirty} className="glass-input w-24" />
+
+            {loading ? (
+              <div className="flex justify-center py-6 text-text-muted">
+                <Loader2 size={18} className="animate-spin" />
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  {marketplaces.map((mp, i) => (
+                    <div key={mp.name + i} className="flex items-center justify-between gap-4">
+                      <span className="text-sm text-text-secondary">{mp.name}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={mp.fee}
+                            onChange={(e) => updateFee(i, Number(e.target.value))}
+                            className="glass-input w-20"
+                          />
+                          <span className="text-xs text-text-muted">%</span>
+                        </div>
+                        <button
+                          onClick={() => removeMarketplace(i)}
+                          className="text-text-muted hover:text-red-400"
+                          aria-label="Remover marketplace"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+
+                <div className="flex items-center gap-2 border-t border-border-glass pt-4">
+                  <input
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addMarketplace())}
+                    placeholder="Nome do novo marketplace"
+                    className="glass-input w-full"
+                  />
+                  <NeonButton type="button" variant="outline" size="sm" onClick={addMarketplace}>
+                    <Plus size={14} /> Adicionar mais
+                  </NeonButton>
+                </div>
+              </>
+            )}
           </GlassCard>
 
           <GlassCard id="risk" padding="lg" className="scroll-mt-24 space-y-4">
@@ -113,8 +237,8 @@ export default function SettingsPage() {
         <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 md:left-[calc(50%+128px)]">
           <div className="glass-card flex items-center gap-4 px-5 py-3 shadow-neon-glow">
             <span className="text-sm text-text-secondary">Alterações não salvas</span>
-            <NeonButton size="sm" onClick={() => setDirty(false)}>
-              <Save size={14} /> Salvar alterações
+            <NeonButton size="sm" onClick={handleSave} disabled={saving}>
+              <Save size={14} /> {saving ? "Salvando..." : "Salvar alterações"}
             </NeonButton>
           </div>
         </div>

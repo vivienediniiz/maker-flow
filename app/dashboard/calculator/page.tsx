@@ -31,6 +31,8 @@ export default function CalculatorPage() {
   const [productMode, setProductMode] = useState<"select" | "new">("new");
   const [projectName, setProjectName] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
+  const [marketplaces, setMarketplaces] = useState<{ name: string; fee: number }[]>([]);
+  const [selectedMarketplace, setSelectedMarketplace] = useState("");
   const [beds, setBeds] = useState<PrintBed[]>([newBed(1)]);
   const [filamentPricePerKg, setFilamentPricePerKg] = useState(120);
   const [kwhRate, setKwhRate] = useState(0.95);
@@ -49,6 +51,7 @@ export default function CalculatorPage() {
 
   useEffect(() => {
     loadProducts();
+    loadMarketplaces();
   }, []);
 
   async function loadProducts() {
@@ -58,6 +61,27 @@ export default function CalculatorPage() {
     if (!user) return;
     const { data } = await supabase.from("products").select("*").eq("user_id", user.id).order("name");
     setProducts((data as Product[]) ?? []);
+  }
+
+  async function loadMarketplaces() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from("settings")
+      .select("marketplace_fees_json")
+      .eq("user_id", user.id)
+      .single();
+
+    const feesObj = data?.marketplace_fees_json ?? {};
+    setMarketplaces(Object.entries(feesObj).map(([name, fee]) => ({ name, fee: Number(fee) })));
+  }
+
+  function handleSelectMarketplace(name: string) {
+    setSelectedMarketplace(name);
+    const mp = marketplaces.find((m) => m.name === name);
+    if (mp) setMarketplaceFee(mp.fee);
   }
 
   function handleSelectProduct(productId: string) {
@@ -314,11 +338,38 @@ export default function CalculatorPage() {
               <Field label="Margem de lucro (%)">
                 <input type="number" value={marginPercent} onChange={(e) => setMarginPercent(Number(e.target.value))} className="glass-input w-full" />
               </Field>
-              <Field label="Taxa de marketplace (%)">
-                <input type="number" value={marketplaceFee} onChange={(e) => setMarketplaceFee(Number(e.target.value))} className="glass-input w-full" />
+              <Field label="Taxa de marketplace">
+                <div className="space-y-2">
+                  <select
+                    value={selectedMarketplace}
+                    onChange={(e) => handleSelectMarketplace(e.target.value)}
+                    className="glass-input w-full"
+                  >
+                    <option value="" className="bg-bg-raised">
+                      {marketplaces.length === 0 ? "Nenhum cadastrado em Configurações" : "Selecione..."}
+                    </option>
+                    {marketplaces.map((mp) => (
+                      <option key={mp.name} value={mp.name} className="bg-bg-raised">
+                        {mp.name} ({mp.fee}%)
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    value={marketplaceFee}
+                    onChange={(e) => setMarketplaceFee(Number(e.target.value))}
+                    className="glass-input w-full"
+                    placeholder="Ajustar % manualmente"
+                  />
+                </div>
               </Field>
             </div>
           </GlassCard>
+
+          {/* Cadastrar Produto — logo abaixo dos campos preenchidos */}
+          <NeonButton variant="outline" className="w-full" onClick={() => setProductModalOpen(true)}>
+            <PackagePlus size={16} /> Cadastrar Produto
+          </NeonButton>
         </div>
 
         {/* Right column: summary + actions */}
@@ -348,9 +399,6 @@ export default function CalculatorPage() {
             <div className="space-y-2">
               <NeonButton className="w-full" onClick={() => setOrderModalOpen(true)}>
                 <Rocket size={16} /> Iniciar Projeto / Criar Pedido
-              </NeonButton>
-              <NeonButton variant="outline" className="w-full" onClick={() => setProductModalOpen(true)}>
-                <PackagePlus size={16} /> Cadastrar Produto
               </NeonButton>
               <NeonButton variant="outline" className="w-full" onClick={() => setQuoteModalOpen(true)}>
                 <FileDown size={16} /> Gerar PDF de Orçamento
