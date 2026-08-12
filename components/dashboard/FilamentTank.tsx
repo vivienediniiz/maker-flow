@@ -2,8 +2,9 @@ import { cn } from "@/lib/utils";
 import type { Filament } from "@/lib/types";
 
 export function FilamentTank({ filament }: { filament: Filament }) {
-  const fillPercent = Math.min(100, (filament.remaining_weight_g / 1000) * 100);
-  const isLow = fillPercent < 20;
+  const total = filament.weight_total_g > 0 ? filament.weight_total_g : 1000;
+  const fillPercent = Math.min(100, (filament.remaining_weight_g / total) * 100);
+  const isLow = filament.remaining_weight_g < 150 || fillPercent < 15;
 
   return (
     <div className="glass-card flex flex-col items-center gap-3 p-4">

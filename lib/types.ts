@@ -60,6 +60,7 @@ export interface Filament {
   color_hex: string;
   price_per_kg: number;
   remaining_weight_g: number;
+  weight_total_g: number;
 }
 export type QuoteChannel = "tiktok" | "whatsapp" | "presencial" | "shopee" | "mercado_livre";
 
@@ -186,6 +187,7 @@ export interface Sale {
   total: number;
   channel: "presencial" | "whatsapp" | "marketplace" | "site";
   sold_at: string;
+  filament_id: string | null;
 }
 
 export interface Settings {
