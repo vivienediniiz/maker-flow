@@ -5,7 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
-import type { Client, QuotePaymentMethod } from "@/lib/types";
+import type { Client, Product, QuotePaymentMethod } from "@/lib/types";
 
 interface NewOrderModalProps {
   open: boolean;
@@ -50,6 +50,9 @@ export function NewOrderModal({
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [productMode, setProductMode] = useState<"select" | "new">("new");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState("");
   const [projectName, setProjectName] = useState(initialProjectName);
   const [finalPrice, setFinalPrice] = useState(initialFinalPrice != null ? String(initialFinalPrice.toFixed(2)) : "");
   const [paymentMethod, setPaymentMethod] = useState<QuotePaymentMethod>("pix");
@@ -59,16 +62,37 @@ export function NewOrderModal({
   useEffect(() => {
     if (!open) return;
     loadClients();
+    loadProducts();
     setMode("select");
     setSelectedClientId("");
     setNewName("");
     setNewPhone("");
     setNewEmail("");
+    setProductMode("new");
+    setSelectedProductId("");
     setProjectName(initialProjectName);
     setFinalPrice(initialFinalPrice != null ? String(initialFinalPrice.toFixed(2)) : "");
     setPaymentMethod("pix");
     setError(null);
   }, [open, initialProjectName, initialFinalPrice]);
+
+  async function loadProducts() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from("products").select("*").eq("user_id", user.id).order("name");
+    setProducts((data as Product[]) ?? []);
+  }
+
+  function handleSelectProduct(productId: string) {
+    setSelectedProductId(productId);
+    const product = products.find((p) => p.id === productId);
+    if (product) {
+      setProjectName(product.name);
+      setFinalPrice(String(product.sale_price.toFixed(2)));
+    }
+  }
 
   async function loadClients() {
     const {
@@ -162,13 +186,51 @@ export function NewOrderModal({
     <Modal open={open} onClose={onClose} title="Criar Pedido">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-xs text-text-muted">Nome do produto / projeto</label>
-          <input
-            value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
-            className="glass-input w-full"
-            placeholder="Ex: Chaveiro personalizado"
-          />
+          <label className="mb-1.5 block text-xs text-text-muted">Produto</label>
+          <div className="glass-card mb-2 flex gap-1 p-1">
+            <button
+              type="button"
+              onClick={() => setProductMode("select")}
+              className={`flex-1 rounded-pill py-2 text-xs font-medium transition-colors ${
+                productMode === "select" ? "bg-neon-gradient text-white" : "text-text-secondary"
+              }`}
+            >
+              Produto já cadastrado
+            </button>
+            <button
+              type="button"
+              onClick={() => setProductMode("new")}
+              className={`flex-1 rounded-pill py-2 text-xs font-medium transition-colors ${
+                productMode === "new" ? "bg-neon-gradient text-white" : "text-text-secondary"
+              }`}
+            >
+              Digitar produto
+            </button>
+          </div>
+
+          {productMode === "select" ? (
+            <select
+              value={selectedProductId}
+              onChange={(e) => handleSelectProduct(e.target.value)}
+              className="glass-input w-full"
+            >
+              <option value="" className="bg-bg-raised">
+                {products.length === 0 ? "Nenhum produto cadastrado" : "Selecione..."}
+              </option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id} className="bg-bg-raised">
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              className="glass-input w-full"
+              placeholder="Ex: Chaveiro personalizado"
+            />
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
