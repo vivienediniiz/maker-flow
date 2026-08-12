@@ -49,6 +49,7 @@ export interface Printer {
   current_nozzle_temp_c: number | null;
   current_bed_temp_c: number | null;
   last_telemetry_at: string | null;
+  last_snapshot_at: string | null;
 }
 
 export interface Filament {

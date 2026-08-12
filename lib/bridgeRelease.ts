@@ -1,4 +1,4 @@
-export const BRIDGE_VERSION = "1.0.0";
+export const BRIDGE_VERSION = "1.1.0";
 
 export function getBridgeDownloadUrl() {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;

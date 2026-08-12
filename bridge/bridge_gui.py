@@ -28,7 +28,7 @@ except ImportError:
     bl = None
 
 APP_NAME = "MakerFlowBridge"
-BRIDGE_VERSION = "1.0.0"
+BRIDGE_VERSION = "1.1.0"
 
 FIELDS = [
     ("api_key", "Chave da impressora (MakerFlow)"),
@@ -61,6 +61,8 @@ def load_config():
         return None
     data.setdefault("makerflow_url", core.DEFAULT_MAKERFLOW_URL)
     data.setdefault("poll_interval", core.DEFAULT_POLL_INTERVAL)
+    data.setdefault("snapshot_interval", core.DEFAULT_SNAPSHOT_INTERVAL)
+    data.setdefault("enable_camera", False)
     return data
 
 
@@ -74,6 +76,9 @@ def worker_loop(config, stop_event, event_queue):
         return
 
     printer = None
+    next_telemetry = 0.0
+    next_snapshot = 0.0
+
     while not stop_event.is_set():
         try:
             if printer is None:
@@ -81,13 +86,32 @@ def worker_loop(config, stop_event, event_queue):
                 printer = bl.Printer(config["printer_ip"], config["printer_access_code"], config["printer_serial"])
                 printer.connect()
                 time.sleep(2)
+                next_telemetry = 0.0
+                next_snapshot = 0.0
 
-            payload = core.read_telemetry(printer)
-            response = core.send_telemetry(config["makerflow_url"], config["api_key"], payload)
-            if response.ok:
-                event_queue.put(("telemetry", payload))
-            else:
-                event_queue.put(("error", f"MakerFlow respondeu {response.status_code}: {response.text[:200]}"))
+            now = time.monotonic()
+
+            if now >= next_telemetry:
+                payload = core.read_telemetry(printer)
+                response = core.send_telemetry(config["makerflow_url"], config["api_key"], payload)
+                if response.ok:
+                    event_queue.put(("telemetry", payload))
+                else:
+                    event_queue.put(("error", f"MakerFlow respondeu {response.status_code}: {response.text[:200]}"))
+                next_telemetry = now + config.get("poll_interval", core.DEFAULT_POLL_INTERVAL)
+
+            if config.get("enable_camera") and now >= next_snapshot:
+                try:
+                    jpeg = core.capture_snapshot(config["printer_ip"], config["printer_access_code"])
+                    snap_response = core.send_snapshot(config["makerflow_url"], config["api_key"], jpeg)
+                    if snap_response.ok:
+                        event_queue.put(("snapshot", None))
+                    else:
+                        event_queue.put(("camera_error", f"MakerFlow respondeu {snap_response.status_code}"))
+                except Exception as exc:
+                    # Falha de camera nao derruba a telemetria - so registra e segue.
+                    event_queue.put(("camera_error", str(exc)))
+                next_snapshot = now + config.get("snapshot_interval", core.DEFAULT_SNAPSHOT_INTERVAL)
         except Exception as exc:
             event_queue.put(("error", str(exc)))
             try:
@@ -96,8 +120,10 @@ def worker_loop(config, stop_event, event_queue):
             except Exception:
                 pass
             printer = None
+            next_telemetry = 0.0
+            next_snapshot = 0.0
 
-        stop_event.wait(config.get("poll_interval", core.DEFAULT_POLL_INTERVAL))
+        stop_event.wait(1)
 
     if printer:
         try:
@@ -157,6 +183,11 @@ class App:
             entry.pack(anchor="w", pady=(0, 8))
             self.entries[key] = entry
 
+        self.camera_var = tk.BooleanVar(value=bool(existing.get("enable_camera", False)))
+        ttk.Checkbutton(
+            self.container, text="Habilitar câmera (se a impressora tiver)", variable=self.camera_var
+        ).pack(anchor="w", pady=(4, 8))
+
         if message:
             ttk.Label(self.container, text=message, foreground="#c0392b", wraplength=380, justify="left").pack(
                 anchor="w", pady=(0, 8)
@@ -170,11 +201,14 @@ class App:
     def on_save(self):
         values = {key: entry.get().strip() for key, entry in self.entries.items()}
         if not all(values.values()):
+            values["enable_camera"] = self.camera_var.get()
             self.show_config_view(existing=values, message="Preencha todos os campos antes de salvar.")
             return
 
         values["makerflow_url"] = core.DEFAULT_MAKERFLOW_URL
         values["poll_interval"] = core.DEFAULT_POLL_INTERVAL
+        values["snapshot_interval"] = core.DEFAULT_SNAPSHOT_INTERVAL
+        values["enable_camera"] = self.camera_var.get()
         save_config(values)
         self.show_status_view(values)
 
@@ -183,7 +217,8 @@ class App:
         self.clear_container()
 
         ttk.Label(self.container, text="MakerFlow Bridge", font=("Segoe UI", 13, "bold")).pack(anchor="w")
-        ttk.Label(self.container, text=f"Impressora: {config['printer_ip']}", foreground="#666666").pack(
+        camera_suffix = " · câmera habilitada" if config.get("enable_camera") else ""
+        ttk.Label(self.container, text=f"Impressora: {config['printer_ip']}{camera_suffix}", foreground="#666666").pack(
             anchor="w", pady=(2, 12)
         )
 
@@ -242,6 +277,10 @@ class App:
                         detail += f" · {payload['progress_percent']}%"
                     self.detail_var.set(detail)
                     self.log(f"[ok] {detail}")
+                elif kind == "snapshot":
+                    self.log("[ok] snapshot da câmera enviado")
+                elif kind == "camera_error":
+                    self.log(f"[erro câmera] {payload}")
         except queue.Empty:
             pass
 

@@ -46,6 +46,8 @@ def load_config():
     api_key = os.getenv("MAKERFLOW_API_KEY")
     makerflow_url = os.getenv("MAKERFLOW_URL", core.DEFAULT_MAKERFLOW_URL)
     poll_interval = int(os.getenv("POLL_INTERVAL_SECONDS", core.DEFAULT_POLL_INTERVAL))
+    snapshot_interval = int(os.getenv("SNAPSHOT_INTERVAL_SECONDS", core.DEFAULT_SNAPSHOT_INTERVAL))
+    enable_camera_env = os.getenv("ENABLE_CAMERA")
 
     had_env = bool(printer_ip and printer_serial and printer_access_code and api_key)
 
@@ -67,10 +69,18 @@ def load_config():
         print("\nFaltam dados obrigatorios. Encerrando.")
         sys.exit(1)
 
+    if enable_camera_env is not None:
+        enable_camera = enable_camera_env.strip().lower() in ("1", "true", "s", "sim", "yes")
+    else:
+        enable_camera = ask("Habilitar captura de camera, se a impressora tiver? [s/N]").strip().lower() == "s"
+
     if not had_env:
         save = input("\nSalvar esses dados em bridge/.env pra nao perguntar de novo? [s/N]: ").strip().lower()
         if save == "s":
-            write_env_file(printer_ip, printer_serial, printer_access_code, api_key, makerflow_url, poll_interval)
+            write_env_file(
+                printer_ip, printer_serial, printer_access_code, api_key, makerflow_url, poll_interval,
+                snapshot_interval, enable_camera,
+            )
 
     return {
         "printer_ip": printer_ip,
@@ -79,17 +89,24 @@ def load_config():
         "api_key": api_key,
         "makerflow_url": makerflow_url.rstrip("/"),
         "poll_interval": poll_interval,
+        "snapshot_interval": snapshot_interval,
+        "enable_camera": enable_camera,
     }
 
 
-def write_env_file(ip, serial, access_code, api_key, makerflow_url, poll_interval):
+def write_env_file(ip, serial, access_code, api_key, makerflow_url, poll_interval, snapshot_interval, enable_camera):
     ENV_PATH.write_text(
         "PRINTER_IP={}\n"
         "PRINTER_SERIAL={}\n"
         "PRINTER_ACCESS_CODE={}\n"
         "MAKERFLOW_API_KEY={}\n"
         "MAKERFLOW_URL={}\n"
-        "POLL_INTERVAL_SECONDS={}\n".format(ip, serial, access_code, api_key, makerflow_url, poll_interval),
+        "POLL_INTERVAL_SECONDS={}\n"
+        "SNAPSHOT_INTERVAL_SECONDS={}\n"
+        "ENABLE_CAMERA={}\n".format(
+            ip, serial, access_code, api_key, makerflow_url, poll_interval,
+            snapshot_interval, "true" if enable_camera else "false",
+        ),
         encoding="utf-8",
     )
     print(f"Salvo em {ENV_PATH}")
@@ -102,27 +119,50 @@ def main():
     printer = bl.Printer(config["printer_ip"], config["printer_access_code"], config["printer_serial"])
     printer.connect()
     time.sleep(2)
+    camera_msg = (
+        f" + snapshot da camera a cada {config['snapshot_interval']}s"
+        if config["enable_camera"]
+        else " (camera desabilitada)"
+    )
     print(
-        "Conectado. Enviando telemetria a cada {}s pra {}. Ctrl+C pra parar.\n".format(
-            config["poll_interval"], config["makerflow_url"]
+        "Conectado. Enviando telemetria a cada {}s{} pra {}. Ctrl+C pra parar.\n".format(
+            config["poll_interval"], camera_msg, config["makerflow_url"]
         )
     )
 
+    next_telemetry = 0.0
+    next_snapshot = 0.0
+
     try:
         while True:
-            try:
-                payload = core.read_telemetry(printer)
-                response = core.send_telemetry(config["makerflow_url"], config["api_key"], payload)
-                if response.ok:
-                    print(f"[ok] status={payload.get('status')} progresso={payload.get('progress_percent', '?')}%")
-                else:
-                    print(f"[erro] MakerFlow respondeu {response.status_code}: {response.text}")
-            except requests.RequestException as exc:
-                print(f"[erro de rede] Nao consegui falar com o MakerFlow: {exc}")
-            except Exception as exc:
-                print(f"[erro] Falha lendo a impressora: {exc}")
+            now = time.monotonic()
 
-            time.sleep(config["poll_interval"])
+            if now >= next_telemetry:
+                try:
+                    payload = core.read_telemetry(printer)
+                    response = core.send_telemetry(config["makerflow_url"], config["api_key"], payload)
+                    if response.ok:
+                        print(f"[ok] status={payload.get('status')} progresso={payload.get('progress_percent', '?')}%")
+                    else:
+                        print(f"[erro] MakerFlow respondeu {response.status_code}: {response.text}")
+                except requests.RequestException as exc:
+                    print(f"[erro de rede] Nao consegui falar com o MakerFlow: {exc}")
+                except Exception as exc:
+                    print(f"[erro] Falha lendo a impressora: {exc}")
+                next_telemetry = now + config["poll_interval"]
+
+            if config["enable_camera"] and now >= next_snapshot:
+                try:
+                    jpeg = core.capture_snapshot(config["printer_ip"], config["printer_access_code"])
+                    response = core.send_snapshot(config["makerflow_url"], config["api_key"], jpeg)
+                    if not response.ok:
+                        print(f"[erro camera] MakerFlow respondeu {response.status_code}: {response.text}")
+                except Exception as exc:
+                    # Falha de camera nunca deve derrubar a telemetria - so pula essa rodada.
+                    print(f"[erro camera] {exc}")
+                next_snapshot = now + config["snapshot_interval"]
+
+            time.sleep(1)
     except KeyboardInterrupt:
         print("\nEncerrando...")
     finally:

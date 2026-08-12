@@ -1,6 +1,11 @@
+"use client";
+
+import { useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { cn } from "@/lib/utils";
-import { Thermometer, Clock, FileBox } from "lucide-react";
+import { getSnapshotUrl, isSnapshotStale } from "@/lib/printerSnapshot";
+import { Thermometer, Clock, FileBox, Camera, CameraOff } from "lucide-react";
+import { PrinterCameraModal } from "@/components/dashboard/PrinterCameraModal";
 import type { Printer } from "@/lib/types";
 
 export const STATUS_LABEL: Record<Printer["status"], string> = {
@@ -20,9 +25,14 @@ export const STATUS_DOT: Record<Printer["status"], string> = {
 };
 
 export function PrinterCard({ printer }: { printer: Printer }) {
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [thumbError, setThumbError] = useState(false);
+
   const isActive = printer.status === "printing" || printer.status === "paused";
   const progress = printer.current_progress_percent;
   const hasTemps = printer.current_nozzle_temp_c !== null || printer.current_bed_temp_c !== null;
+  const hasSnapshot = !!printer.last_snapshot_at;
+  const stale = isSnapshotStale(printer.last_snapshot_at);
 
   return (
     <GlassCard hover padding="md" className="flex flex-col gap-4">
@@ -36,6 +46,39 @@ export function PrinterCard({ printer }: { printer: Printer }) {
           {STATUS_LABEL[printer.status]}
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setCameraOpen(true)}
+        className="group relative flex h-24 w-full items-center justify-center overflow-hidden rounded-lg border border-border-glass bg-white/[0.03]"
+        aria-label="Ver câmera"
+      >
+        {hasSnapshot && !thumbError ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={getSnapshotUrl(printer.id, printer.last_snapshot_at ?? undefined)}
+            alt={`Câmera de ${printer.name}`}
+            onError={() => setThumbError(true)}
+            className="h-full w-full object-cover transition-opacity group-hover:opacity-80"
+          />
+        ) : (
+          <div className="flex flex-col items-center gap-1 text-text-muted">
+            <CameraOff size={18} />
+            <span className="text-[10px]">Sem câmera</span>
+          </div>
+        )}
+        {hasSnapshot && !thumbError && (
+          <span
+            className={cn(
+              "absolute right-1.5 top-1.5 flex items-center gap-1 rounded-pill bg-black/60 px-1.5 py-0.5 text-[9px] text-white",
+              stale ? "text-amber-300" : "text-neon-green"
+            )}
+          >
+            <Camera size={9} />
+            {stale ? "parado" : "ao vivo"}
+          </span>
+        )}
+      </button>
 
       {isActive ? (
         <>
@@ -77,6 +120,8 @@ export function PrinterCard({ printer }: { printer: Printer }) {
       ) : (
         <p className="text-xs text-text-muted">Sem trabalho em andamento.</p>
       )}
+
+      <PrinterCameraModal open={cameraOpen} onClose={() => setCameraOpen(false)} printer={printer} />
     </GlassCard>
   );
 }

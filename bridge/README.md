@@ -66,6 +66,11 @@ progresso, tempo restante, arquivo em impressão e temperaturas, e envia via
 `POST` pro endpoint `/api/v1/printers/telemetry` do MakerFlow, autenticado
 com `Authorization: Bearer <api_key_webhook>`. Pra parar, `Ctrl+C`.
 
+Com `ENABLE_CAMERA=true` no `.env` (ou respondendo "s" quando perguntado),
+captura um snapshot da câmera a cada `SNAPSHOT_INTERVAL_SECONDS` (padrão 4s)
+e manda pro endpoint `/api/v1/printers/snapshot`, numa cadência independente
+da telemetria — ver seção "Câmera" abaixo.
+
 ### Rodando continuamente
 
 Esse script fica preso no terminal enquanto roda. Pra deixar rodando sem
@@ -126,6 +131,31 @@ publicar uma versão nova:
 
 ---
 
+## Câmera (opcional, vale pras duas versões)
+
+Desabilitada por padrão — cada cliente decide se quer ligar (nem toda
+impressora tem câmera, e tem quem prefira não usar por privacidade). Quando
+habilitada, tira uma foto (não streaming) a cada poucos segundos e manda pro
+MakerFlow, que guarda só a mais recente por impressora.
+
+Não precisa dizer qual modelo de impressora você tem — o bridge tenta os
+dois protocolos conhecidos automaticamente:
+
+1. **Protocolo "chamber image" (A1 / A1 Mini / P1P / P1S), porta 6000.**
+   Apesar do que muita documentação por aí diz, isso **não é RTSP** — é um
+   protocolo próprio da Bambu Lab (TCP+TLS com autenticação simples,
+   documentado pela comunidade e usado por integrações como o Home
+   Assistant `ha-bambulab`). Implementado direto em `core.py`, sem
+   dependência externa. **Testado e validado contra uma impressora A1
+   real.**
+2. **RTSPS de verdade (X1 / X1C), porta 322** — `rtsps://bblp:<codigo>@<ip>:322/streaming/live/1`,
+   capturado via `ffmpeg` (empacotado automaticamente pela biblioteca
+   `imageio-ffmpeg`, sem precisar instalar nada à parte). Implementado mas
+   **não testado contra uma impressora X1 real** — se você tiver uma e algo
+   não funcionar, essa é a parte mais provável de precisar ajuste.
+
+Se o primeiro protocolo falhar, tenta automaticamente o segundo.
+
 ## Solução de problemas (vale pras duas versões)
 
 - **Não conecta / trava em "Conectando..."**: confirme que o Modo Somente
@@ -136,6 +166,11 @@ publicar uma versão nova:
   nenhuma impressora cadastrada — confira se copiou certo em Cadastros →
   Impressoras.
 - **`MakerFlow respondeu 401`**: a chave não foi enviada corretamente.
+- **`[erro câmera]` toda hora / imagem nunca aparece**: falha de câmera
+  nunca derruba a telemetria (status/temperaturas continuam funcionando
+  normal) — mas se quiser a câmera funcionando, confirme que a impressora
+  tem câmera e que o Modo Somente LAN está ativo. Pra A1/P1, teste
+  isoladamente: `python -c "import core; core.capture_snapshot_chamber('IP', 'CODIGO')"`.
 - **Erro de rede pro MakerFlow**: confira `MAKERFLOW_URL` (padrão aponta pra
   produção; troque pra `http://localhost:3000` se estiver testando contra o
   site rodando localmente — só existe essa opção na versão CLI via `.env`,
