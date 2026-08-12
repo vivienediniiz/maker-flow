@@ -35,6 +35,15 @@ export function Topbar({ title, searchValue, onSearchChange, searchPlaceholder }
   }, []);
 
   useEffect(() => {
+    function openFromEvent() {
+      setMenuOpen(false);
+      setProfileModalOpen(true);
+    }
+    window.addEventListener("open-account-modal", openFromEvent);
+    return () => window.removeEventListener("open-account-modal", openFromEvent);
+  }, []);
+
+  useEffect(() => {
     if (menuOpen && avatarRef.current) {
       const rect = avatarRef.current.getBoundingClientRect();
       setMenuPos({

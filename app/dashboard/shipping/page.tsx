@@ -6,7 +6,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
-import { CheckCircle2, Truck } from "lucide-react";
+import { CheckCircle2, Lock, Truck } from "lucide-react";
 
 const QUOTES = [
   { carrier: "Correios PAC", eta: "6-9 dias úteis", price: 22.4 },
@@ -22,35 +22,44 @@ export default function ShippingPage() {
   const [destinationCep, setDestinationCep] = useState("");
   const [loadingOrigin, setLoadingOrigin] = useState(true);
 
-  useEffect(() => {
-    async function loadDefaultOriginCep() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setLoadingOrigin(false);
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("cep")
-        .eq("id", user.id)
-        .single();
-
-      const { data: settings } = await supabase
-        .from("settings")
-        .select("origin_cep")
-        .eq("user_id", user.id)
-        .single();
-
-      const defaultCep = profile?.cep || settings?.origin_cep || "";
-      setOriginCep(defaultCep);
+  async function loadOriginCep() {
+    setLoadingOrigin(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
       setLoadingOrigin(false);
+      return;
     }
 
-    loadDefaultOriginCep();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("cep")
+      .eq("id", user.id)
+      .single();
+
+    const { data: settings } = await supabase
+      .from("settings")
+      .select("origin_cep")
+      .eq("user_id", user.id)
+      .single();
+
+    setOriginCep(profile?.cep || settings?.origin_cep || "");
+    setLoadingOrigin(false);
+  }
+
+  useEffect(() => {
+    loadOriginCep();
   }, [supabase]);
+
+  useEffect(() => {
+    function onStudioAddressUpdated(e: Event) {
+      const detail = (e as CustomEvent<{ cep: string | null }>).detail;
+      setOriginCep(detail?.cep || "");
+    }
+    window.addEventListener("studio-address-updated", onStudioAddressUpdated);
+    return () => window.removeEventListener("studio-address-updated", onStudioAddressUpdated);
+  }, []);
 
   return (
     <>
@@ -62,13 +71,12 @@ export default function ShippingPage() {
 
         <GlassCard padding="lg" className="space-y-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="CEP de origem">
+            <Field label="CEP de origem" hint={<Lock size={11} />}>
               <input
-                value={originCep}
-                onChange={(e) => setOriginCep(e.target.value)}
-                placeholder="00000-000"
-                className="glass-input w-full"
-                disabled={loadingOrigin}
+                value={loadingOrigin ? "Carregando..." : originCep}
+                readOnly
+                placeholder="Cadastre em Minha conta"
+                className="glass-input w-full cursor-not-allowed opacity-70"
               />
             </Field>
             <Field label="CEP de destino">
@@ -80,13 +88,28 @@ export default function ShippingPage() {
               />
             </Field>
           </div>
+
+          {!loadingOrigin && !originCep && (
+            <p className="text-xs text-amber-400">
+              Cadastre o CEP do seu estúdio em{" "}
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event("open-account-modal"))}
+                className="underline hover:text-amber-300"
+              >
+                Minha conta
+              </button>{" "}
+              para usá-lo como origem padrão do frete.
+            </p>
+          )}
+
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Field label="Peso (kg)"><input type="number" className="glass-input w-full" /></Field>
             <Field label="Altura (cm)"><input type="number" className="glass-input w-full" /></Field>
             <Field label="Largura (cm)"><input type="number" className="glass-input w-full" /></Field>
             <Field label="Comprimento (cm)"><input type="number" className="glass-input w-full" /></Field>
           </div>
-          <NeonButton onClick={() => setQuoted(true)}>
+          <NeonButton onClick={() => setQuoted(true)} disabled={!originCep}>
             <Truck size={16} /> Cotar frete
           </NeonButton>
         </GlassCard>
@@ -107,10 +130,21 @@ export default function ShippingPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] text-text-muted">{label}</label>
+      <label className="mb-1.5 flex items-center gap-1.5 text-[11px] text-text-muted">
+        {label}
+        {hint}
+      </label>
       {children}
     </div>
   );

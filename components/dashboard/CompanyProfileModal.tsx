@@ -176,6 +176,7 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
       studio_name: studioName,
       avatar_url: avatarUrlToSave,
     });
+    window.dispatchEvent(new CustomEvent("studio-address-updated", { detail: { cep: cep || null } }));
     setTimeout(() => setSuccess(false), 2000);
   }
 
