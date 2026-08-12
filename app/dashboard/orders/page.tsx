@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteDetailModal } from "@/components/dashboard/QuoteDetailModal";
+import { NewOrderModal } from "@/components/dashboard/NewOrderModal";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { QUOTE_STATUS_LABELS, isQuoteSentExpired, formatOrderNumber } from "@/lib/quotes";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Plus } from "lucide-react";
 import type { QuoteWithClient, QuoteStatus } from "@/lib/types";
 
 const FILTERS: { key: "all" | QuoteStatus; label: string }[] = [
@@ -26,6 +28,7 @@ export default function OrdersPage() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
   const [search, setSearch] = useState("");
   const [selectedQuote, setSelectedQuote] = useState<QuoteWithClient | null>(null);
+  const [newOrderModalOpen, setNewOrderModalOpen] = useState(false);
 
   useEffect(() => {
     loadQuotes();
@@ -105,19 +108,24 @@ export default function OrdersPage() {
         searchPlaceholder="Buscar por nº do pedido, cliente..."
       />
       <main className="space-y-6 px-6 py-8 md:px-8">
-        <div className="glass-card flex flex-wrap gap-1 p-1">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={cn(
-                "rounded-pill px-4 py-2 text-xs font-medium transition-colors",
-                filter === f.key ? "bg-neon-gradient text-white shadow-neon-glow" : "text-text-secondary hover:text-text-primary"
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="glass-card flex flex-wrap gap-1 p-1">
+            {FILTERS.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={cn(
+                  "rounded-pill px-4 py-2 text-xs font-medium transition-colors",
+                  filter === f.key ? "bg-neon-gradient text-white shadow-neon-glow" : "text-text-secondary hover:text-text-primary"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <NeonButton onClick={() => setNewOrderModalOpen(true)}>
+            <Plus size={16} /> Criar Pedido
+          </NeonButton>
         </div>
 
         {loading ? (
@@ -186,6 +194,11 @@ export default function OrdersPage() {
         quote={selectedQuote}
         onClose={() => setSelectedQuote(null)}
         onStatusChange={handleStatusChange}
+      />
+      <NewOrderModal
+        open={newOrderModalOpen}
+        onClose={() => setNewOrderModalOpen(false)}
+        onCreated={loadQuotes}
       />
     </>
   );

@@ -5,13 +5,15 @@ import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
-import type { Client } from "@/lib/types";
+import type { Client, QuotePaymentMethod } from "@/lib/types";
 
 interface NewOrderModalProps {
   open: boolean;
   onClose: () => void;
-  projectName: string;
-  finalPrice: number;
+  // Opcionais: quando vem da Calculadora, já chegam preenchidos.
+  // Quando aberto direto da aba Pedidos, ficam vazios e editáveis no modal.
+  initialProjectName?: string;
+  initialFinalPrice?: number;
   weightG?: number;
   printTimeMin?: number;
   energyCost?: number;
@@ -20,11 +22,20 @@ interface NewOrderModalProps {
   onCreated?: () => void;
 }
 
+const PAYMENT_METHODS: { value: QuotePaymentMethod; label: string }[] = [
+  { value: "pix", label: "Pix" },
+  { value: "credit_card", label: "Cartão de Crédito" },
+  { value: "debit_card", label: "Cartão de Débito" },
+  { value: "cash", label: "Dinheiro" },
+  { value: "transfer", label: "Transferência" },
+  { value: "other", label: "Outro" },
+];
+
 export function NewOrderModal({
   open,
   onClose,
-  projectName,
-  finalPrice,
+  initialProjectName = "",
+  initialFinalPrice,
   weightG = 0,
   printTimeMin = 0,
   energyCost = 0,
@@ -39,6 +50,9 @@ export function NewOrderModal({
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [projectName, setProjectName] = useState(initialProjectName);
+  const [finalPrice, setFinalPrice] = useState(initialFinalPrice != null ? String(initialFinalPrice.toFixed(2)) : "");
+  const [paymentMethod, setPaymentMethod] = useState<QuotePaymentMethod>("pix");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -50,8 +64,11 @@ export function NewOrderModal({
     setNewName("");
     setNewPhone("");
     setNewEmail("");
+    setProjectName(initialProjectName);
+    setFinalPrice(initialFinalPrice != null ? String(initialFinalPrice.toFixed(2)) : "");
+    setPaymentMethod("pix");
     setError(null);
-  }, [open]);
+  }, [open, initialProjectName, initialFinalPrice]);
 
   async function loadClients() {
     const {
@@ -64,8 +81,19 @@ export function NewOrderModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setError(null);
+
+    if (!projectName.trim()) {
+      setError("Informe o nome do produto/projeto.");
+      return;
+    }
+    const price = Number(finalPrice);
+    if (!price || price <= 0) {
+      setError("Informe um valor final válido.");
+      return;
+    }
+
+    setSaving(true);
 
     const {
       data: { user },
@@ -105,9 +133,6 @@ export function NewOrderModal({
       return;
     }
 
-    // Entra direto na aba Pedidos já como "Pago" — é um projeto que o cliente
-    // já confirmou/pagou na hora, diferente do fluxo de Gerar Orçamento (que
-    // entra como "Orçamento Enviado" e pode expirar em 15 dias).
     const { error: quoteError } = await supabase.from("quotes").insert({
       user_id: user.id,
       project_name: projectName || "Projeto sem nome",
@@ -116,9 +141,10 @@ export function NewOrderModal({
       energy_cost: energyCost,
       filament_cost: filamentCost,
       margin_percent: marginPercent,
-      final_price: finalPrice,
+      final_price: price,
       client_id: clientId,
       status: "paid",
+      payment_method: paymentMethod,
     });
 
     setSaving(false);
@@ -133,15 +159,48 @@ export function NewOrderModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Iniciar Projeto / Criar Pedido">
+    <Modal open={open} onClose={onClose} title="Criar Pedido">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="glass-card flex items-center justify-between px-4 py-3">
-          <div>
-            <p className="text-sm font-medium text-text-primary">{projectName || "Projeto sem nome"}</p>
-            <p className="text-xs text-text-muted">Entra em Pedidos já como Pago</p>
-          </div>
-          <span className="neon-text font-numeric text-lg font-semibold">{formatBRL(finalPrice)}</span>
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">Nome do produto / projeto</label>
+          <input
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
+            className="glass-input w-full"
+            placeholder="Ex: Chaveiro personalizado"
+          />
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1.5 block text-xs text-text-muted">Valor final (R$)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={finalPrice}
+              onChange={(e) => setFinalPrice(e.target.value)}
+              className="glass-input w-full"
+              placeholder="0,00"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs text-text-muted">Forma de pagamento</label>
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value as QuotePaymentMethod)}
+              className="glass-input w-full"
+            >
+              {PAYMENT_METHODS.map((pm) => (
+                <option key={pm.value} value={pm.value} className="bg-bg-raised">
+                  {pm.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <p className="text-[11px] text-text-muted">Entra em Pedidos já como Pago.</p>
 
         <div className="glass-card flex gap-1 p-1">
           <button
@@ -203,6 +262,13 @@ export function NewOrderModal({
                 placeholder="E-mail"
               />
             </div>
+          </div>
+        )}
+
+        {finalPrice && !isNaN(Number(finalPrice)) && (
+          <div className="glass-card flex items-center justify-between px-4 py-3">
+            <span className="text-xs text-text-muted">Valor</span>
+            <span className="neon-text font-numeric text-lg font-semibold">{formatBRL(Number(finalPrice))}</span>
           </div>
         )}
 

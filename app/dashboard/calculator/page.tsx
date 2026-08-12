@@ -414,8 +414,8 @@ export default function CalculatorPage() {
       <NewOrderModal
         open={orderModalOpen}
         onClose={() => setOrderModalOpen(false)}
-        projectName={projectName}
-        finalPrice={calc.finalPrice}
+        initialProjectName={projectName}
+        initialFinalPrice={calc.finalPrice}
         weightG={calc.totalWeightG}
         printTimeMin={calc.totalHours * 60}
         energyCost={calc.energyCost}

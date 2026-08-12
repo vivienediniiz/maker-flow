@@ -4,7 +4,16 @@ import { Modal } from "@/components/ui/Modal";
 import { QuoteStatusStepper } from "@/components/dashboard/QuoteStatusStepper";
 import { formatBRL } from "@/lib/utils";
 import { formatOrderNumber } from "@/lib/quotes";
-import type { QuoteWithClient, QuoteStatus } from "@/lib/types";
+import type { QuoteWithClient, QuoteStatus, QuotePaymentMethod } from "@/lib/types";
+
+const PAYMENT_METHOD_LABELS: Record<QuotePaymentMethod, string> = {
+  pix: "Pix",
+  credit_card: "Cartão de Crédito",
+  debit_card: "Cartão de Débito",
+  cash: "Dinheiro",
+  transfer: "Transferência",
+  other: "Outro",
+};
 
 export function QuoteDetailModal({
   quote,
@@ -45,6 +54,12 @@ export function QuoteDetailModal({
           <span className="text-xs text-text-muted">Valor final</span>
           <span className="font-numeric text-lg font-semibold text-neon-pink">{formatBRL(quote.final_price)}</span>
         </div>
+
+        {quote.payment_method && (
+          <p className="text-xs text-text-muted">
+            Forma de pagamento: <span className="text-text-secondary">{PAYMENT_METHOD_LABELS[quote.payment_method]}</span>
+          </p>
+        )}
 
         <div>
           <p className="mb-3 text-xs font-medium uppercase tracking-wider text-text-muted">Status do pedido</p>
