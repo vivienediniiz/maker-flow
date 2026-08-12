@@ -25,6 +25,14 @@ export function formatOrderNumber(n: number) {
   return `#${String(n).padStart(4, "0")}`;
 }
 
+export const QUOTE_CHANNEL_LABELS: Record<string, string> = {
+  tiktok: "TikTok Shop",
+  whatsapp: "WhatsApp",
+  presencial: "Presencial",
+  shopee: "Shopee",
+  mercado_livre: "Mercado Livre",
+};
+
 /** Um orçamento "sent" vence 15 dias depois de enviado, se ninguém avançar o status. */
 export function isQuoteSentExpired(status: QuoteStatus, sentAt: string): boolean {
   if (status !== "sent") return false;
