@@ -4,69 +4,31 @@ import { PrinterCard } from "@/components/dashboard/PrinterCard";
 import { GlassAccordion } from "@/components/ui/GlassAccordion";
 import { FinancialChart } from "@/components/charts/FinancialChart";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { createClient } from "@/lib/supabase/server";
 import { formatBRL } from "@/lib/utils";
 import { DollarSign, TrendingUp, Layers, Server, Plus } from "lucide-react";
 import type { Printer } from "@/lib/types";
 
-// Placeholder data — replace with server-side fetch from Supabase
-const printers: Printer[] = [
-  {
-    id: "1",
-    user_id: "u1",
-    name: "Farm 01",
-    model: "Bambu Lab X1C",
-    watts_power: 350,
-    cost_per_hour: 0.42,
-    status: "printing",
-    api_key_webhook: null,
-    current_job: {
-      file_name: "dragao_articulado_v2.stl",
-      progress_percent: 68,
-      eta_minutes: 47,
-      nozzle_temp_c: 230,
-      bed_temp_c: 60,
-    },
-  },
-  {
-    id: "2",
-    user_id: "u1",
-    name: "Farm 02",
-    model: "Prusa MK4",
-    watts_power: 220,
-    cost_per_hour: 0.28,
-    status: "printing",
-    api_key_webhook: null,
-    current_job: {
-      file_name: "suporte_monitor.stl",
-      progress_percent: 23,
-      eta_minutes: 112,
-      nozzle_temp_c: 215,
-      bed_temp_c: 55,
-    },
-  },
-  {
-    id: "3",
-    user_id: "u1",
-    name: "Farm 03",
-    model: "Ender 3 V3",
-    watts_power: 180,
-    cost_per_hour: 0.19,
-    status: "idle",
-    api_key_webhook: null,
-  },
-  {
-    id: "4",
-    user_id: "u1",
-    name: "Farm 04",
-    model: "Bambu Lab P1S",
-    watts_power: 300,
-    cost_per_hour: 0.35,
-    status: "error",
-    api_key_webhook: null,
-  },
-];
+async function getPrinters(): Promise<Printer[]> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
 
-export default function DashboardPage() {
+  const { data } = await supabase
+    .from("printers")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  return (data as Printer[]) ?? [];
+}
+
+export default async function DashboardPage() {
+  const printers = await getPrinters();
+  const activeCount = printers.filter((p) => p.status === "printing").length;
+
   return (
     <>
       <Topbar title="Dashboard" />
@@ -87,7 +49,7 @@ export default function DashboardPage() {
           <KpiCard label="Faturamento Mensal" value={formatBRL(8320)} delta={17.4} icon={DollarSign} accent="pink" />
           <KpiCard label="Lucro Líquido" value={formatBRL(5210)} delta={12.1} icon={TrendingUp} accent="green" />
           <KpiCard label="Filamento em Kg" value="14.6 kg" delta={-4.2} icon={Layers} accent="orange" />
-          <KpiCard label="Status do Farm" value="2/4 ativas" icon={Server} accent="purple" />
+          <KpiCard label="Status do Farm" value={`${activeCount}/${printers.length} ativas`} icon={Server} accent="purple" />
         </section>
 
         {/* Printer farm */}
@@ -95,11 +57,17 @@ export default function DashboardPage() {
           <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-text-muted">
             Impressoras em Tempo Real
           </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {printers.map((p) => (
-              <PrinterCard key={p.id} printer={p} />
-            ))}
-          </div>
+          {printers.length === 0 ? (
+            <div className="glass-card px-6 py-8 text-center text-sm text-text-muted">
+              Nenhuma impressora cadastrada ainda. Adicione em Cadastros → Impressoras.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {printers.map((p) => (
+                <PrinterCard key={p.id} printer={p} />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Financial evolution */}

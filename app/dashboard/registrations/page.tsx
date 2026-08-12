@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { PrintersRegistrationTab } from "@/components/dashboard/PrintersRegistrationTab";
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
 
@@ -17,11 +18,7 @@ const TABS = [
   "Categorias",
 ] as const;
 
-const MOCK_ROWS: Record<(typeof TABS)[number], { primary: string; secondary: string }[]> = {
-  Impressoras: [
-    { primary: "Farm 01 — Bambu Lab X1C", secondary: "350W · R$0,42/h" },
-    { primary: "Farm 02 — Prusa MK4", secondary: "220W · R$0,28/h" },
-  ],
+const MOCK_ROWS: Record<Exclude<(typeof TABS)[number], "Impressoras">, { primary: string; secondary: string }[]> = {
   Filamentos: [
     { primary: "PLA Preto — Voolt3D", secondary: "R$89/kg · 820g restantes" },
     { primary: "PETG Rosa — 3DFila", secondary: "R$105/kg · 140g restantes" },
@@ -67,21 +64,27 @@ export default function RegistrationsPage() {
           ))}
         </div>
 
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-lg">{tab}</h3>
-          <NeonButton size="sm">
-            <Plus size={14} /> Novo em {tab}
-          </NeonButton>
-        </div>
+        {tab === "Impressoras" ? (
+          <PrintersRegistrationTab />
+        ) : (
+          <>
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-lg">{tab}</h3>
+              <NeonButton size="sm">
+                <Plus size={14} /> Novo em {tab}
+              </NeonButton>
+            </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {MOCK_ROWS[tab].map((row, i) => (
-            <GlassCard key={i} hover padding="md">
-              <p className="text-sm font-medium text-text-primary">{row.primary}</p>
-              <p className="text-xs text-text-muted">{row.secondary}</p>
-            </GlassCard>
-          ))}
-        </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {MOCK_ROWS[tab].map((row, i) => (
+                <GlassCard key={i} hover padding="md">
+                  <p className="text-sm font-medium text-text-primary">{row.primary}</p>
+                  <p className="text-xs text-text-muted">{row.secondary}</p>
+                </GlassCard>
+              ))}
+            </div>
+          </>
+        )}
       </main>
     </>
   );

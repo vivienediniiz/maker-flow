@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Thermometer, Clock, FileBox } from "lucide-react";
 import type { Printer } from "@/lib/types";
 
-const STATUS_LABEL: Record<Printer["status"], string> = {
+export const STATUS_LABEL: Record<Printer["status"], string> = {
   idle: "Ociosa",
   printing: "Imprimindo",
   paused: "Pausada",
@@ -11,7 +11,7 @@ const STATUS_LABEL: Record<Printer["status"], string> = {
   offline: "Offline",
 };
 
-const STATUS_DOT: Record<Printer["status"], string> = {
+export const STATUS_DOT: Record<Printer["status"], string> = {
   idle: "bg-text-muted",
   printing: "bg-neon-green shadow-neon-glow-green animate-pulse-glow",
   paused: "bg-neon-orange shadow-neon-glow-orange",
