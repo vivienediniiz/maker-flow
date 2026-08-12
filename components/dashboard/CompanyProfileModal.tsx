@@ -79,7 +79,12 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
       setAvatarUrl(data.avatar_url ?? null);
 
       if (!data.street && !data.street_number && data.address) {
-        const parsedAddress = data.address.split(",").map((part) => part.trim()).filter(Boolean);
+        const addressText = typeof data.address === "string" ? data.address : "";
+        const parsedAddress = addressText
+          .split(",")
+          .map((part: string) => part.trim())
+          .filter((part): part is string => Boolean(part));
+
         if (parsedAddress.length > 0) setStreet(parsedAddress[0]);
         if (parsedAddress.length > 1) setStreetNumber(parsedAddress[1]);
       }
