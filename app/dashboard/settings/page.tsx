@@ -12,6 +12,7 @@ const SECTIONS = [
   { id: "energy", label: "Tarifa de Luz" },
   { id: "printers", label: "Parque de Impressoras" },
   { id: "marketplaces", label: "Taxas de Marketplaces" },
+  { id: "shipping", label: "Frete (Remetente)" },
   { id: "risk", label: "Faixas de Risco Operacional" },
   { id: "labor", label: "Mão de Obra" },
   { id: "pdf", label: "Aparência do PDF" },
@@ -38,6 +39,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [marketplaces, setMarketplaces] = useState<MarketplaceRow[]>([]);
   const [newName, setNewName] = useState("");
+  const [originCep, setOriginCep] = useState("");
+  const [originAddress, setOriginAddress] = useState("");
 
   useEffect(() => {
     loadSettings();
@@ -55,9 +58,12 @@ export default function SettingsPage() {
 
     const { data } = await supabase
       .from("settings")
-      .select("marketplace_fees_json")
+      .select("marketplace_fees_json, origin_cep, origin_address")
       .eq("user_id", user.id)
       .single();
+
+    setOriginCep(data?.origin_cep ?? "");
+    setOriginAddress(data?.origin_address ?? "");
 
     const hasExisting = data?.marketplace_fees_json && Object.keys(data.marketplace_fees_json).length > 0;
     const feesObj: Record<string, number> = hasExisting ? data!.marketplace_fees_json : DEFAULT_MARKETPLACES;
@@ -110,7 +116,10 @@ export default function SettingsPage() {
       feesObj[m.name] = m.fee;
     });
 
-    await supabase.from("settings").update({ marketplace_fees_json: feesObj }).eq("user_id", user.id);
+    await supabase
+      .from("settings")
+      .update({ marketplace_fees_json: feesObj, origin_cep: originCep || null, origin_address: originAddress || null })
+      .eq("user_id", user.id);
 
     setSaving(false);
     setDirty(false);
@@ -200,6 +209,40 @@ export default function SettingsPage() {
                 </div>
               </>
             )}
+          </GlassCard>
+
+          <GlassCard id="shipping" padding="lg" className="scroll-mt-24 space-y-4">
+            <h3 className="font-display text-lg">Frete (Remetente)</h3>
+            <p className="text-sm text-text-secondary">
+              Cadastre o CEP e endereço do seu estúdio aqui — assim, ao criar um pedido, você só
+              precisa informar o frete do destinatário, sem repetir os dados de origem toda vez.
+            </p>
+            <div className="grid max-w-md grid-cols-2 gap-4">
+              <label className="block">
+                <span className="mb-1.5 block text-xs text-text-muted">CEP de origem</span>
+                <input
+                  value={originCep}
+                  onChange={(e) => {
+                    setOriginCep(e.target.value);
+                    markDirty();
+                  }}
+                  className="glass-input w-full"
+                  placeholder="00000-000"
+                />
+              </label>
+            </div>
+            <label className="block max-w-md">
+              <span className="mb-1.5 block text-xs text-text-muted">Endereço completo</span>
+              <input
+                value={originAddress}
+                onChange={(e) => {
+                  setOriginAddress(e.target.value);
+                  markDirty();
+                }}
+                className="glass-input w-full"
+                placeholder="Rua, número, cidade — UF"
+              />
+            </label>
           </GlassCard>
 
           <GlassCard id="risk" padding="lg" className="scroll-mt-24 space-y-4">

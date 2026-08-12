@@ -56,6 +56,28 @@ export interface Filament {
   price_per_kg: number;
   remaining_weight_g: number;
 }
+export type QuoteChannel = "tiktok" | "whatsapp" | "presencial" | "shopee" | "mercado_livre";
+
+export interface Quote {
+  id: string;
+  user_id: string;
+  order_number: number;
+  project_name: string;
+  weight_g: number;
+  print_time_min: number;
+  energy_cost: number;
+  filament_cost: number;
+  margin_percent: number;
+  final_price: number;
+  client_id: string | null;
+  product_id: string | null;
+  status: QuoteStatus;
+  sent_at: string;
+  payment_method: QuotePaymentMethod | null;
+  channel: QuoteChannel | null;
+  shipping_cost: number | null;
+  destination_cep: string | null;
+}
 
 export type QuoteStatus = "sent" | "paid" | "in_production" | "shipped" | "expired";
 
@@ -168,4 +190,14 @@ export interface Settings {
   hourly_work_rate: number;
   marketplace_fees_json: Record<string, number>;
   operational_risk_json: Record<string, number>;
+  origin_cep: string | null;
+  origin_address: string | null;
 }
+
+export const QUOTE_CHANNEL_LABELS: Record<string, string> = {
+  tiktok: "TikTok Shop",
+  whatsapp: "WhatsApp",
+  presencial: "Presencial",
+  shopee: "Shopee",
+  mercado_livre: "Mercado Livre",
+};

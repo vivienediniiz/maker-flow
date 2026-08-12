@@ -5,7 +5,8 @@ import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
-import type { Client, Product, QuotePaymentMethod } from "@/lib/types";
+import type { Client, Product, QuotePaymentMethod, QuoteChannel } from "@/lib/types";
+import { QUOTE_CHANNEL_LABELS } from "@/lib/quotes";
 
 interface NewOrderModalProps {
   open: boolean;
@@ -56,6 +57,9 @@ export function NewOrderModal({
   const [projectName, setProjectName] = useState(initialProjectName);
   const [finalPrice, setFinalPrice] = useState(initialFinalPrice != null ? String(initialFinalPrice.toFixed(2)) : "");
   const [paymentMethod, setPaymentMethod] = useState<QuotePaymentMethod>("pix");
+  const [channel, setChannel] = useState<QuoteChannel>("whatsapp");
+  const [shippingCost, setShippingCost] = useState("");
+  const [destinationCep, setDestinationCep] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -73,6 +77,9 @@ export function NewOrderModal({
     setProjectName(initialProjectName);
     setFinalPrice(initialFinalPrice != null ? String(initialFinalPrice.toFixed(2)) : "");
     setPaymentMethod("pix");
+    setChannel("whatsapp");
+    setShippingCost("");
+    setDestinationCep("");
     setError(null);
   }, [open, initialProjectName, initialFinalPrice]);
 
@@ -170,6 +177,9 @@ export function NewOrderModal({
       product_id: productMode === "select" && selectedProductId ? selectedProductId : null,
       status: "paid",
       payment_method: paymentMethod,
+      channel,
+      shipping_cost: shippingCost ? Number(shippingCost) : null,
+      destination_cep: destinationCep || null,
     });
 
     setSaving(false);
@@ -261,6 +271,45 @@ export function NewOrderModal({
               ))}
             </select>
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1.5 block text-xs text-text-muted">Canal de venda</label>
+            <select
+              value={channel}
+              onChange={(e) => setChannel(e.target.value as QuoteChannel)}
+              className="glass-input w-full"
+            >
+              {Object.entries(QUOTE_CHANNEL_LABELS).map(([value, label]) => (
+                <option key={value} value={value} className="bg-bg-raised">
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs text-text-muted">Frete do destinatário (R$)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={shippingCost}
+              onChange={(e) => setShippingCost(e.target.value)}
+              className="glass-input w-full"
+              placeholder="Opcional"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">CEP de destino <span className="text-text-muted/60">(opcional, pro documento de envio)</span></label>
+          <input
+            value={destinationCep}
+            onChange={(e) => setDestinationCep(e.target.value)}
+            className="glass-input w-full"
+            placeholder="00000-000"
+          />
         </div>
 
         <p className="text-[11px] text-text-muted">Entra em Pedidos já como Pago.</p>
