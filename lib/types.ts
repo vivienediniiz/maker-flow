@@ -19,6 +19,11 @@ export interface Profile {
   studio_name: string | null;
   phone: string | null;
   document: string | null; // CNPJ ou CPF
+  cep: string | null;
+  street: string | null;
+  street_number: string | null;
+  state: string | null;
+  complement: string | null;
   address: string | null;
   instagram: string | null;
   website: string | null;

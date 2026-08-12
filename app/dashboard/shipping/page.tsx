@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import { CheckCircle2, Truck } from "lucide-react";
 
@@ -15,7 +16,41 @@ const QUOTES = [
 ];
 
 export default function ShippingPage() {
+  const supabase = createClient();
   const [quoted, setQuoted] = useState(false);
+  const [originCep, setOriginCep] = useState("");
+  const [destinationCep, setDestinationCep] = useState("");
+  const [loadingOrigin, setLoadingOrigin] = useState(true);
+
+  useEffect(() => {
+    async function loadDefaultOriginCep() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoadingOrigin(false);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("cep")
+        .eq("id", user.id)
+        .single();
+
+      const { data: settings } = await supabase
+        .from("settings")
+        .select("origin_cep")
+        .eq("user_id", user.id)
+        .single();
+
+      const defaultCep = profile?.cep || settings?.origin_cep || "";
+      setOriginCep(defaultCep);
+      setLoadingOrigin(false);
+    }
+
+    loadDefaultOriginCep();
+  }, [supabase]);
 
   return (
     <>
@@ -28,10 +63,21 @@ export default function ShippingPage() {
         <GlassCard padding="lg" className="space-y-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="CEP de origem">
-              <input placeholder="00000-000" className="glass-input w-full" />
+              <input
+                value={originCep}
+                onChange={(e) => setOriginCep(e.target.value)}
+                placeholder="00000-000"
+                className="glass-input w-full"
+                disabled={loadingOrigin}
+              />
             </Field>
             <Field label="CEP de destino">
-              <input placeholder="00000-000" className="glass-input w-full" />
+              <input
+                value={destinationCep}
+                onChange={(e) => setDestinationCep(e.target.value)}
+                placeholder="00000-000"
+                className="glass-input w-full"
+              />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

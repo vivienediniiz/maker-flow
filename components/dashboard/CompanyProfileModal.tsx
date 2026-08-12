@@ -27,7 +27,11 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [document, setDocument] = useState("");
-  const [address, setAddress] = useState("");
+  const [cep, setCep] = useState("");
+  const [street, setStreet] = useState("");
+  const [streetNumber, setStreetNumber] = useState("");
+  const [state, setState] = useState("");
+  const [complement, setComplement] = useState("");
   const [instagram, setInstagram] = useState("");
   const [website, setWebsite] = useState("");
   const [bio, setBio] = useState("");
@@ -53,7 +57,9 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
 
     const { data } = await supabase
       .from("profiles")
-      .select("full_name, studio_name, phone, document, address, instagram, website, bio, avatar_url")
+      .select(
+        "full_name, studio_name, phone, document, cep, street, street_number, state, complement, address, instagram, website, bio, avatar_url"
+      )
       .eq("id", user.id)
       .single();
 
@@ -62,11 +68,21 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
       setStudioName(data.studio_name ?? "");
       setPhone(data.phone ?? "");
       setDocument(data.document ?? "");
-      setAddress(data.address ?? "");
+      setCep(data.cep ?? "");
+      setStreet(data.street ?? "");
+      setStreetNumber(data.street_number ?? "");
+      setState(data.state ?? "");
+      setComplement(data.complement ?? "");
       setInstagram(data.instagram ?? "");
       setWebsite(data.website ?? "");
       setBio(data.bio ?? "");
       setAvatarUrl(data.avatar_url ?? null);
+
+      if (!data.street && !data.street_number && data.address) {
+        const parsedAddress = data.address.split(",").map((part) => part.trim()).filter(Boolean);
+        if (parsedAddress.length > 0) setStreet(parsedAddress[0]);
+        if (parsedAddress.length > 1) setStreetNumber(parsedAddress[1]);
+      }
     }
     setLoading(false);
   }
@@ -120,6 +136,7 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
     }
 
     const avatarUrlToSave = avatarUrl ? avatarUrl.split("?")[0] : null;
+    const officialAddress = [street, streetNumber, complement, state].filter(Boolean).join(", ");
 
     const { error: updateError } = await supabase
       .from("profiles")
@@ -128,7 +145,12 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
         studio_name: studioName || null,
         phone: phone || null,
         document: document || null,
-        address: address || null,
+        cep: cep || null,
+        street: street || null,
+        street_number: streetNumber || null,
+        state: state || null,
+        complement: complement || null,
+        address: officialAddress || null,
         instagram: instagram || null,
         website: website || null,
         bio: bio || null,
@@ -239,13 +261,55 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1.5 block text-xs text-text-muted">CEP</label>
+                <input
+                  value={cep}
+                  onChange={(e) => setCep(e.target.value)}
+                  className="glass-input w-full"
+                  placeholder="00000-000"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs text-text-muted">Estado</label>
+                <input
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  className="glass-input w-full"
+                  placeholder="SP"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1.5 block text-xs text-text-muted">Rua</label>
+                <input
+                  value={street}
+                  onChange={(e) => setStreet(e.target.value)}
+                  className="glass-input w-full"
+                  placeholder="Rua das Flores"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs text-text-muted">Número</label>
+                <input
+                  value={streetNumber}
+                  onChange={(e) => setStreetNumber(e.target.value)}
+                  className="glass-input w-full"
+                  placeholder="123"
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="mb-1.5 block text-xs text-text-muted">Endereço</label>
+              <label className="mb-1.5 block text-xs text-text-muted">Complemento</label>
               <input
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                value={complement}
+                onChange={(e) => setComplement(e.target.value)}
                 className="glass-input w-full"
-                placeholder="Rua, número, cidade — UF"
+                placeholder="Sala 01, bloco B"
               />
             </div>
 
