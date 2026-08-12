@@ -1,9 +1,13 @@
 """
-MakerFlow Bridge
+MakerFlow Bridge (CLI)
 
-Le o status de uma impressora Bambu Lab na rede local (via bambulabs-api) e
-envia telemetria periodicamente pro endpoint /api/v1/printers/telemetry do
-MakerFlow.
+Versao de linha de comando, pra desenvolvedores/uso avancado. Le o status de
+uma impressora Bambu Lab na rede local (via bambulabs-api) e envia telemetria
+periodicamente pro endpoint /api/v1/printers/telemetry do MakerFlow.
+
+Para o cliente final (sem Python instalado), use o bridge_gui.py empacotado
+como .exe — ele tem uma janela grafica em vez de perguntas no terminal, mas
+usa a mesma logica de core.py por baixo.
 
 Este script roda no computador da pessoa, na mesma rede Wi-Fi da impressora.
 Ele NAO roda no servidor do site — o MakerFlow nao teria como alcancar a
@@ -15,8 +19,9 @@ import sys
 import time
 from pathlib import Path
 
-import requests
 from dotenv import load_dotenv
+
+import core
 
 try:
     import bambulabs_api as bl
@@ -24,22 +29,10 @@ except ImportError:
     print("Faltou instalar as dependencias. Rode: pip install -r requirements.txt")
     sys.exit(1)
 
+import requests
+
 ENV_PATH = Path(__file__).parent / ".env"
 load_dotenv(ENV_PATH)
-
-DEFAULT_MAKERFLOW_URL = "https://maker-flow.netlify.app"
-DEFAULT_POLL_INTERVAL = 12
-
-# GcodeState (bambulabs_api) -> status aceito pelo MakerFlow
-GCODE_STATE_MAP = {
-    "RUNNING": "printing",
-    "PREPARE": "printing",
-    "PAUSE": "paused",
-    "FINISH": "idle",
-    "IDLE": "idle",
-    "FAILED": "error",
-    "UNKNOWN": "idle",
-}
 
 
 def ask(label):
@@ -51,8 +44,8 @@ def load_config():
     printer_serial = os.getenv("PRINTER_SERIAL")
     printer_access_code = os.getenv("PRINTER_ACCESS_CODE")
     api_key = os.getenv("MAKERFLOW_API_KEY")
-    makerflow_url = os.getenv("MAKERFLOW_URL", DEFAULT_MAKERFLOW_URL)
-    poll_interval = int(os.getenv("POLL_INTERVAL_SECONDS", DEFAULT_POLL_INTERVAL))
+    makerflow_url = os.getenv("MAKERFLOW_URL", core.DEFAULT_MAKERFLOW_URL)
+    poll_interval = int(os.getenv("POLL_INTERVAL_SECONDS", core.DEFAULT_POLL_INTERVAL))
 
     had_env = bool(printer_ip and printer_serial and printer_access_code and api_key)
 
@@ -102,70 +95,6 @@ def write_env_file(ip, serial, access_code, api_key, makerflow_url, poll_interva
     print(f"Salvo em {ENV_PATH}")
 
 
-def map_status(gcode_state, error_code):
-    if error_code:
-        return "error"
-    key = str(gcode_state).split(".")[-1].upper()
-    return GCODE_STATE_MAP.get(key, "idle")
-
-
-def read_telemetry(printer):
-    gcode_state = printer.get_state()
-    try:
-        error_code = printer.print_error_code()
-    except Exception:
-        error_code = 0
-
-    payload = {"status": map_status(gcode_state, error_code)}
-
-    try:
-        file_name = printer.get_file_name()
-        if file_name:
-            payload["file_name"] = file_name
-    except Exception:
-        pass
-
-    try:
-        percentage = printer.get_percentage()
-        if isinstance(percentage, (int, float)):
-            payload["progress_percent"] = max(0, min(100, int(percentage)))
-    except Exception:
-        pass
-
-    try:
-        remaining_seconds = printer.get_time()
-        if isinstance(remaining_seconds, (int, float)):
-            payload["eta_minutes"] = max(0, round(remaining_seconds / 60))
-    except Exception:
-        pass
-
-    try:
-        nozzle_temp = printer.get_nozzle_temperature()
-        if isinstance(nozzle_temp, (int, float)):
-            payload["nozzle_temp_c"] = round(nozzle_temp, 1)
-    except Exception:
-        pass
-
-    try:
-        bed_temp = printer.get_bed_temperature()
-        if isinstance(bed_temp, (int, float)):
-            payload["bed_temp_c"] = round(bed_temp, 1)
-    except Exception:
-        pass
-
-    return payload
-
-
-def send_telemetry(makerflow_url, api_key, payload):
-    url = f"{makerflow_url}/api/v1/printers/telemetry"
-    return requests.post(
-        url,
-        json=payload,
-        headers={"Authorization": f"Bearer {api_key}"},
-        timeout=10,
-    )
-
-
 def main():
     config = load_config()
 
@@ -182,8 +111,8 @@ def main():
     try:
         while True:
             try:
-                payload = read_telemetry(printer)
-                response = send_telemetry(config["makerflow_url"], config["api_key"], payload)
+                payload = core.read_telemetry(printer)
+                response = core.send_telemetry(config["makerflow_url"], config["api_key"], payload)
                 if response.ok:
                     print(f"[ok] status={payload.get('status')} progresso={payload.get('progress_percent', '?')}%")
                 else:

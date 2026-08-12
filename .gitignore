@@ -63,3 +63,6 @@ out
 bridge/__pycache__/
 bridge/venv/
 bridge/.venv/
+bridge/build/
+bridge/dist/
+bridge/*.spec
