@@ -17,6 +17,7 @@ interface CalculatorSummary {
   energyCost: number;
   filamentCost: number;
   marginPercent: number;
+  productId?: string;
 }
 
 interface StudioInfo {
@@ -282,6 +283,7 @@ export function GenerateQuoteModal({
       margin_percent: summary.marginPercent,
       final_price: summary.finalPrice,
       client_id: clientId,
+      product_id: summary.productId || null,
       status: "sent",
     });
 

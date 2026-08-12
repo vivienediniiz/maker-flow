@@ -46,7 +46,7 @@ export default function OrdersPage() {
 
     const { data } = await supabase
       .from("quotes")
-      .select("*, clients(name, phone)")
+      .select("*, clients(name, phone, email, address), products(name, image_url, category, description, calc_inputs)")
       .eq("user_id", user.id)
       .order("order_number", { ascending: false });
 

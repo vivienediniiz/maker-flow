@@ -73,13 +73,15 @@ export interface Quote {
   margin_percent: number;
   final_price: number;
   client_id: string | null;
+  product_id: string | null;
   status: QuoteStatus;
   sent_at: string;
   payment_method: QuotePaymentMethod | null;
 }
 
 export interface QuoteWithClient extends Quote {
-  clients: { name: string; phone: string | null } | null;
+  clients: { name: string; phone: string | null; email: string | null; address: string | null } | null;
+  products: { name: string; image_url: string | null; category: string; description: string | null; calc_inputs: CalcInputs | null } | null;
 }
 
 export type PaymentStatus = "pending" | "paid" | "refunded" | "failed";

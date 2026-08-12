@@ -167,6 +167,7 @@ export function NewOrderModal({
       margin_percent: marginPercent,
       final_price: price,
       client_id: clientId,
+      product_id: productMode === "select" && selectedProductId ? selectedProductId : null,
       status: "paid",
       payment_method: paymentMethod,
     });

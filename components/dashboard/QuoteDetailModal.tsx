@@ -26,25 +26,68 @@ export function QuoteDetailModal({
 }) {
   if (!quote) return null;
 
-  const hasCalcDetails = quote.weight_g > 0 || quote.print_time_min > 0;
+  const hasOwnCalcDetails = quote.weight_g > 0 || quote.print_time_min > 0;
+  const linkedProductCalc = quote.products?.calc_inputs ?? null;
 
   return (
     <Modal open={!!quote} onClose={onClose} title={`Pedido ${formatOrderNumber(quote.order_number)}`}>
-      <div className="space-y-5">
+      <div className="max-h-[70vh] space-y-5 overflow-y-auto scrollbar-glass pr-1">
+        {/* Cliente */}
         <div className="glass-card space-y-1 p-4">
           <p className="text-sm font-medium text-text-primary">{quote.clients?.name ?? "Cliente não informado"}</p>
-          {quote.clients?.phone && <p className="text-xs text-text-muted">{quote.clients.phone}</p>}
-          <p className="mt-2 text-xs text-text-secondary">{quote.project_name}</p>
+          {quote.clients?.phone && <p className="text-xs text-text-secondary">📱 {quote.clients.phone}</p>}
+          {quote.clients?.email && <p className="text-xs text-text-secondary">✉️ {quote.clients.email}</p>}
+          {quote.clients?.address && <p className="text-xs text-text-secondary">📍 {quote.clients.address}</p>}
         </div>
 
-        {hasCalcDetails ? (
+        {/* Produto vinculado (foto/categoria/descrição), se houver */}
+        {quote.products ? (
+          <div className="glass-card flex gap-3 p-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neon-gradient-soft">
+              {quote.products.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={quote.products.image_url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-xl">🧩</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-text-primary">{quote.products.name}</p>
+              {quote.products.category && <p className="text-xs text-text-muted">{quote.products.category}</p>}
+              {quote.products.description && (
+                <p className="mt-1 line-clamp-2 text-xs text-text-secondary">{quote.products.description}</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-text-secondary">{quote.project_name}</p>
+        )}
+
+        {/* Detalhamento de custo: do próprio pedido, ou do produto vinculado como referência */}
+        {hasOwnCalcDetails ? (
           <div className="space-y-2 text-sm">
+            <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Detalhamento do cálculo</p>
             <Row label="Peso total" value={`${quote.weight_g.toFixed(0)} g`} />
             <Row label="Tempo de impressão" value={`${(quote.print_time_min / 60).toFixed(1)} h`} />
             <Row label="Custo de filamento" value={formatBRL(quote.filament_cost)} />
             <Row label="Custo de energia" value={formatBRL(quote.energy_cost)} />
             <Row label="Margem aplicada" value={`${quote.margin_percent}%`} />
-            <div className="my-1 h-px bg-border-glass" />
+          </div>
+        ) : linkedProductCalc ? (
+          <div className="space-y-2 text-sm">
+            <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
+              Detalhamento do produto vinculado <span className="text-text-muted/60">(referência)</span>
+            </p>
+            <Row
+              label="Peso total"
+              value={`${linkedProductCalc.beds.reduce((s, b) => s + b.weightG, 0).toFixed(0)} g`}
+            />
+            <Row
+              label="Tempo de impressão"
+              value={`${linkedProductCalc.beds.reduce((s, b) => s + b.timeH + b.timeM / 60, 0).toFixed(1)} h`}
+            />
+            <Row label="Filamento (R$/kg)" value={formatBRL(linkedProductCalc.filamentPricePerKg)} />
+            <Row label="Margem aplicada" value={`${linkedProductCalc.marginPercent}%`} />
           </div>
         ) : (
           <p className="text-xs text-text-muted">Este pedido não tem detalhamento de cálculo salvo.</p>

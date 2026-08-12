@@ -29,6 +29,7 @@ function newBed(index: number): PrintBed {
 export default function CalculatorPage() {
   const supabase = createClient();
   const [productMode, setProductMode] = useState<"select" | "new">("new");
+  const [selectedProductId, setSelectedProductId] = useState("");
   const [projectName, setProjectName] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [marketplaces, setMarketplaces] = useState<{ name: string; fee: number }[]>([]);
@@ -85,6 +86,7 @@ export default function CalculatorPage() {
   }
 
   function handleSelectProduct(productId: string) {
+    setSelectedProductId(productId);
     const product = products.find((p) => p.id === productId);
     if (!product) return;
 
@@ -456,6 +458,7 @@ export default function CalculatorPage() {
           energyCost: calc.energyCost,
           filamentCost: calc.filamentCost,
           marginPercent,
+          productId: productMode === "select" && selectedProductId ? selectedProductId : undefined,
         }}
       />
     </>
