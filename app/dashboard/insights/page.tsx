@@ -7,7 +7,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { FilamentTank } from "@/components/dashboard/FilamentTank";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
-import { Trophy, Users, Layers, Percent, Package, Repeat, Loader2 } from "lucide-react";
+import { Trophy, Users, Layers, Percent, Package, Repeat, Wallet, Loader2 } from "lucide-react";
 import {
   ScatterChart,
   Scatter,
@@ -22,12 +22,12 @@ import type { Filament } from "@/lib/types";
 
 type Period = "30d" | "3m" | "1y";
 
-function periodStartIso(period: Period) {
+function periodStart(period: Period) {
   const start = new Date();
   if (period === "30d") start.setDate(start.getDate() - 30);
   else if (period === "3m") start.setMonth(start.getMonth() - 3);
   else start.setFullYear(start.getFullYear() - 1);
-  return start.toISOString();
+  return start;
 }
 
 // Embeds de relacionamento do Supabase podem vir como objeto ou array de 1
@@ -81,9 +81,11 @@ export default function InsightsPage() {
       return;
     }
 
-    const cutoff = periodStartIso(period);
+    const start = periodStart(period);
+    const cutoff = start.toISOString();
+    const cutoffDate = cutoff.slice(0, 10);
 
-    const [salesRes, ordersRes, filamentsRes] = await Promise.all([
+    const [salesRes, ordersRes, filamentsRes, extraPurchasesRes] = await Promise.all([
       supabase
         .from("sales")
         .select(
@@ -97,6 +99,11 @@ export default function InsightsPage() {
         .eq("user_id", user.id)
         .gte("created_at", cutoff),
       supabase.from("filaments").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase
+        .from("extra_purchases")
+        .select("id, amount, purchased_at")
+        .eq("user_id", user.id)
+        .gte("purchased_at", cutoffDate),
     ]);
 
     const productAgg = new Map<string, ProductAgg>();
@@ -159,6 +166,18 @@ export default function InsightsPage() {
     const repeatClients = clients.filter((c) => c.count > 1).length;
     const repeatRate = distinctClients > 0 ? (repeatClients / distinctClients) * 100 : null;
 
+    // Custo operacional do periodo: por enquanto so compras extras entram na
+    // conta, porque tem data (purchased_at) e valor por lancamento — supplies
+    // e estoque (quantidade parada), sem log de quando/quanto foi consumido,
+    // entao nao da pra atribuir a um periodo especifico sem inventar numero.
+    const totalProductProfit = products.reduce((sum, p) => sum + p.profit, 0);
+    const totalExtraPurchases = (extraPurchasesRes.data ?? []).reduce(
+      (sum, row) => sum + (Number(row.amount) || 0),
+      0
+    );
+    const hasNetProfitData = products.length > 0 || totalExtraPurchases > 0;
+    const netProfit = hasNetProfitData ? totalProductProfit - totalExtraPurchases : null;
+
     setRankings([
       {
         icon: Trophy,
@@ -195,6 +214,12 @@ export default function InsightsPage() {
         label: "Taxa de Recompra",
         value: repeatRate !== null ? `${repeatRate.toFixed(0)}%` : null,
         emptyMessage: "Sem pedidos registrados neste período",
+      },
+      {
+        icon: Wallet,
+        label: "Lucro Líquido (após compras extras)",
+        value: netProfit !== null ? formatBRL(netProfit) : null,
+        emptyMessage: "Sem vendas ou compras extras neste período",
       },
     ]);
 

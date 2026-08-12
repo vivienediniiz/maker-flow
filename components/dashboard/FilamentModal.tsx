@@ -1,0 +1,194 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Modal } from "@/components/ui/Modal";
+import { NeonButton } from "@/components/ui/NeonButton";
+import { createClient } from "@/lib/supabase/client";
+import type { Filament } from "@/lib/types";
+
+interface FilamentModalProps {
+  open: boolean;
+  onClose: () => void;
+  filament?: Filament | null;
+  onSaved: (filament: Filament) => void;
+}
+
+export function FilamentModal({ open, onClose, filament, onSaved }: FilamentModalProps) {
+  const supabase = createClient();
+  const isEditing = !!filament;
+
+  const [brand, setBrand] = useState("");
+  const [material, setMaterial] = useState("");
+  const [colorHex, setColorHex] = useState("#FFFFFF");
+  const [pricePerKg, setPricePerKg] = useState("");
+  const [weightTotalG, setWeightTotalG] = useState("1000");
+  const [remainingWeightG, setRemainingWeightG] = useState("1000");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setBrand(filament?.brand ?? "");
+    setMaterial(filament?.material ?? "");
+    setColorHex(filament?.color_hex ?? "#FFFFFF");
+    setPricePerKg(filament ? String(filament.price_per_kg) : "");
+    setWeightTotalG(filament ? String(filament.weight_total_g) : "1000");
+    setRemainingWeightG(filament ? String(filament.remaining_weight_g) : "1000");
+    setError(null);
+  }, [open, filament]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+
+    const payload = {
+      brand,
+      material,
+      color_hex: colorHex,
+      price_per_kg: Number(pricePerKg) || 0,
+      weight_total_g: Number(weightTotalG) || 0,
+      remaining_weight_g: Number(remainingWeightG) || 0,
+    };
+
+    if (isEditing && filament) {
+      const { data, error: updateError } = await supabase
+        .from("filaments")
+        .update(payload)
+        .eq("id", filament.id)
+        .select()
+        .single();
+
+      setSaving(false);
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+      onSaved(data as Filament);
+      onClose();
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setError("Sessão expirada — faça login de novo.");
+      setSaving(false);
+      return;
+    }
+
+    const { data, error: insertError } = await supabase
+      .from("filaments")
+      .insert({ ...payload, user_id: user.id })
+      .select()
+      .single();
+
+    setSaving(false);
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+
+    onSaved(data as Filament);
+    onClose();
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title={isEditing ? "Editar Filamento" : "Novo Filamento"}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1.5 block text-xs text-text-muted">Marca</label>
+            <input
+              required
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              className="glass-input w-full"
+              placeholder="Ex: Voolt3D"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs text-text-muted">Material</label>
+            <input
+              required
+              value={material}
+              onChange={(e) => setMaterial(e.target.value)}
+              className="glass-input w-full"
+              placeholder="Ex: PLA"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">Cor</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={colorHex}
+              onChange={(e) => setColorHex(e.target.value)}
+              className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-border-glass bg-transparent"
+            />
+            <input
+              value={colorHex}
+              onChange={(e) => setColorHex(e.target.value)}
+              className="glass-input w-full"
+              placeholder="#FFFFFF"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">Preço por kg (R$)</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={pricePerKg}
+            onChange={(e) => setPricePerKg(e.target.value)}
+            className="glass-input w-full"
+            placeholder="89.00"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1.5 block text-xs text-text-muted">Peso total do rolo (g)</label>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              value={weightTotalG}
+              onChange={(e) => setWeightTotalG(e.target.value)}
+              className="glass-input w-full"
+              placeholder="1000"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs text-text-muted">Peso restante (g)</label>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              value={remainingWeightG}
+              onChange={(e) => setRemainingWeightG(e.target.value)}
+              className="glass-input w-full"
+              placeholder="1000"
+            />
+          </div>
+        </div>
+
+        {error && <p className="text-xs text-red-400">{error}</p>}
+
+        <div className="flex justify-end gap-3 pt-2">
+          <NeonButton type="button" variant="ghost" onClick={onClose}>
+            Cancelar
+          </NeonButton>
+          <NeonButton type="submit" disabled={saving}>
+            {saving ? "Salvando..." : isEditing ? "Salvar alterações" : "Criar Filamento"}
+          </NeonButton>
+        </div>
+      </form>
+    </Modal>
+  );
+}

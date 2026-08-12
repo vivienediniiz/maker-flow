@@ -167,6 +167,43 @@ export interface Category {
   name: string;
 }
 
+export type BranchType = "matriz" | "filial";
+
+export interface Branch {
+  id: string;
+  user_id: string;
+  name: string;
+  type: BranchType;
+  address: string | null;
+  created_at: string;
+}
+
+export type SupplyUnit = "un" | "g" | "ml" | "kg" | "l";
+
+export interface Supply {
+  id: string;
+  user_id: string;
+  name: string;
+  category: string | null;
+  unit: SupplyUnit;
+  cost_per_unit: number;
+  stock_quantity: number;
+  low_stock_threshold: number | null;
+  created_at: string;
+}
+
+export interface ExtraPurchase {
+  id: string;
+  user_id: string;
+  description: string;
+  category: string | null;
+  amount: number;
+  supplier: string | null;
+  purchased_at: string;
+  notes: string | null;
+  created_at: string;
+}
+
 export interface Client {
   id: string;
   user_id: string;
