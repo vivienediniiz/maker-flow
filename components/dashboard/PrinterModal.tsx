@@ -24,7 +24,6 @@ export function PrinterModal({ open, onClose, printer, onSaved }: PrinterModalPr
   const [costPerHour, setCostPerHour] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [createdPrinter, setCreatedPrinter] = useState<Printer | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -33,7 +32,6 @@ export function PrinterModal({ open, onClose, printer, onSaved }: PrinterModalPr
     setWattsPower(printer ? String(printer.watts_power) : "");
     setCostPerHour(printer ? String(printer.cost_per_hour) : "");
     setError(null);
-    setCreatedPrinter(null);
   }, [open, printer]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -87,32 +85,8 @@ export function PrinterModal({ open, onClose, printer, onSaved }: PrinterModalPr
       return;
     }
 
-    const created = data as Printer;
-    onSaved(created);
-    setCreatedPrinter(created);
-  }
-
-  if (createdPrinter) {
-    return (
-      <Modal open={open} onClose={onClose} title="Impressora criada">
-        <div className="space-y-4">
-          <p className="text-sm text-text-secondary">
-            <strong className="text-text-primary">{createdPrinter.name}</strong> foi cadastrada. Use a chave abaixo
-            como Bearer token no script que envia telemetria pra{" "}
-            <code className="rounded bg-white/5 px-1.5 py-0.5 text-xs">/api/v1/printers/telemetry</code>.
-          </p>
-          <ApiKeyField apiKey={createdPrinter.api_key_webhook} />
-          <p className="text-xs text-amber-400">
-            Guarde essa chave agora — ela também fica disponível depois na lista de impressoras.
-          </p>
-          <div className="flex justify-end pt-2">
-            <NeonButton type="button" onClick={onClose}>
-              Concluir
-            </NeonButton>
-          </div>
-        </div>
-      </Modal>
-    );
+    onSaved(data as Printer);
+    onClose();
   }
 
   return (

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Copy, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Copy, Loader2, Pencil, Plus, Trash2, Wifi } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { PrinterModal } from "@/components/dashboard/PrinterModal";
+import { PrinterSetupWizard } from "@/components/dashboard/PrinterSetupWizard";
 import { STATUS_DOT, STATUS_LABEL } from "@/components/dashboard/PrinterCard";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatBRL } from "@/lib/utils";
@@ -16,6 +17,8 @@ export function PrintersRegistrationTab() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPrinter, setEditingPrinter] = useState<Printer | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardPrinter, setWizardPrinter] = useState<Printer | null>(null);
 
   useEffect(() => {
     loadPrinters();
@@ -55,9 +58,15 @@ export function PrintersRegistrationTab() {
     setModalOpen(true);
   }
 
+  function openWizard(printer: Printer) {
+    setWizardPrinter(printer);
+    setWizardOpen(true);
+  }
+
   function handleSaved(printer: Printer) {
     setPrinters((prev) => {
       const exists = prev.some((p) => p.id === printer.id);
+      if (!exists) openWizard(printer);
       return exists ? prev.map((p) => (p.id === printer.id ? printer : p)) : [printer, ...prev];
     });
   }
@@ -114,6 +123,14 @@ export function PrintersRegistrationTab() {
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         <button
+                          onClick={() => openWizard(p)}
+                          className="text-text-muted hover:text-neon-pink"
+                          aria-label="Configurar conexão"
+                          title="Configurar conexão"
+                        >
+                          <Wifi size={14} />
+                        </button>
+                        <button
                           onClick={() => openEdit(p)}
                           className="text-text-muted hover:text-text-primary"
                           aria-label="Editar impressora"
@@ -143,6 +160,7 @@ export function PrintersRegistrationTab() {
         printer={editingPrinter}
         onSaved={handleSaved}
       />
+      <PrinterSetupWizard open={wizardOpen} onClose={() => setWizardOpen(false)} printer={wizardPrinter} />
     </div>
   );
 }

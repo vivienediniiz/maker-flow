@@ -1,97 +1,132 @@
 # MakerFlow Bridge
 
-Script separado, em Python, que le o status de uma impressora Bambu Lab na
+Programa separado, em Python, que lê o status de uma impressora Bambu Lab na
 rede local e envia telemetria (status, progresso, temperaturas) pro MakerFlow
 automaticamente.
 
-**Importante:** isso roda no seu computador, na mesma rede Wi-Fi da
-impressora — não no servidor do site. O MakerFlow (Netlify) fica na internet
-e não teria como alcançar uma impressora atrás do seu roteador; por isso esse
-script existe como uma "ponte" (bridge) rodando localmente e enviando os
-dados pra fora.
+**Importante:** isso roda no computador de quem tem a impressora, na mesma
+rede Wi-Fi dela — não no servidor do site. O MakerFlow (Netlify) fica na
+internet e não teria como alcançar uma impressora atrás do roteador de casa;
+por isso esse programa existe como uma "ponte" (bridge) rodando localmente e
+enviando os dados pra fora.
 
-## Pré-requisitos
+Tem duas versões, pro mesmo objetivo:
 
-- Python 3.9 ou mais recente instalado.
-- A impressora Bambu Lab com **Modo Somente LAN** (LAN Only Mode) e **Modo
-  Desenvolvedor** (Developer Mode) ativados nas configurações de rede dela —
-  sem isso, o acesso local pela API não funciona. Veja como ativar em
-  [wiki.bambulab.com/en/knowledge-sharing/enable-lan-mode](https://wiki.bambulab.com/en/knowledge-sharing/enable-lan-mode).
-- Uma impressora já cadastrada em **Cadastros → Impressoras** no MakerFlow,
-  com a chave (`api_key_webhook`) dela em mãos — copie pelo botão de copiar
-  na tela de cadastro.
+| | `bridge.py` (CLI) | `bridge_gui.py` (janela gráfica) |
+|---|---|---|
+| Pra quem | desenvolvedor / uso avançado | cliente final do MakerFlow, sem Python instalado |
+| Como roda | `python bridge.py` no terminal | `MakerFlowBridge.exe`, baixado pelo wizard "Configurar conexão" dentro do MakerFlow |
+| Configuração | `.env` ou perguntas no terminal | janela com campos, salva em `%APPDATA%\MakerFlowBridge\config.json` |
 
-## Instalação
+As duas usam a mesma lógica de leitura/envio de telemetria, em `core.py`.
+
+## Pré-requisito da impressora (vale pras duas versões)
+
+A impressora Bambu Lab precisa estar com **Modo Somente LAN** (LAN Only Mode)
+e **Modo Desenvolvedor** (Developer Mode) ativados nas configurações de rede
+dela — sem isso, o acesso local pela API não funciona. Veja como ativar em
+[wiki.bambulab.com/en/knowledge-sharing/enable-lan-mode](https://wiki.bambulab.com/en/knowledge-sharing/enable-lan-mode).
+Com isso ativado, a tela **Configurações → Rede** mostra o IP e o código de
+acesso; o número de série normalmente também aparece ali, ou então numa
+etiqueta embaixo da impressora / no cartão que veio na caixa.
+
+Precisa também de uma impressora já cadastrada em **Cadastros → Impressoras**
+no MakerFlow, pra ter a chave (`api_key_webhook`) dela.
+
+---
+
+## Versão CLI (`bridge.py`) — desenvolvedor
+
+### Instalação
 
 ```bash
 cd bridge
 pip install -r requirements.txt
 ```
 
-## Configuração
+### Configuração
 
-Você precisa de três dados que aparecem na tela da própria impressora, em
-**Configurações de Rede**:
+Duas formas de informar IP, número de série, código de acesso e chave do
+MakerFlow:
 
-- IP da impressora (ex: `192.168.1.100`)
-- Número de série
-- Código de acesso
+- **Arquivo `.env`**: copie `.env.example` pra `.env` (mesma pasta) e
+  preencha os valores.
+- **Direto no terminal**: se não existir `.env` ou faltar algum dado, o
+  script pergunta na hora e oferece salvar num `.env` pra não perguntar de
+  novo.
 
-E mais um, que vem do MakerFlow:
-
-- A chave (`api_key_webhook`) da impressora cadastrada em Cadastros → Impressoras.
-
-Tem duas formas de informar isso:
-
-### Opção 1 — arquivo `.env`
-
-Copie `.env.example` para `.env` (mesma pasta) e preencha os valores:
-
-```bash
-cp .env.example .env
-```
-
-### Opção 2 — direto no terminal
-
-Se não existir `.env` ou faltar algum dado, o script pergunta tudo na hora
-que você rodar, e oferece salvar num `.env` pra não perguntar de novo.
-
-## Rodando
+### Rodando
 
 ```bash
 python bridge.py
 ```
 
-O script conecta na impressora e, a cada 10–15 segundos (configurável em
-`POLL_INTERVAL_SECONDS`), lê:
+A cada 10–15 segundos (configurável em `POLL_INTERVAL_SECONDS`), lê status,
+progresso, tempo restante, arquivo em impressão e temperaturas, e envia via
+`POST` pro endpoint `/api/v1/printers/telemetry` do MakerFlow, autenticado
+com `Authorization: Bearer <api_key_webhook>`. Pra parar, `Ctrl+C`.
 
-- status (imprimindo / ocioso / pausado / erro)
-- progresso da impressão (%)
-- tempo restante estimado
-- nome do arquivo em impressão
-- temperatura do bico e da mesa
+### Rodando continuamente
 
-...e envia tudo via `POST` pro endpoint `/api/v1/printers/telemetry` do
-MakerFlow, autenticado com `Authorization: Bearer <api_key_webhook>` daquela
-impressora específica. O MakerFlow identifica qual impressora é pela chave —
-por isso cada impressora precisa da sua própria chave e do seu próprio
-`bridge.py` rodando (ou várias instâncias, uma por impressora).
+Esse script fica preso no terminal enquanto roda. Pra deixar rodando sem
+precisar de terminal aberto:
 
-Pra parar, `Ctrl+C`.
+- **Windows:** tarefa agendada (Agendador de Tarefas) rodando `python
+  bridge.py` na inicialização, ou [NSSM](https://nssm.cc/) pra registrar como
+  serviço.
+- **Linux/macOS:** `systemd` ou `pm2`/`supervisor`.
 
-## Rodando continuamente
+---
 
-Esse script fica parado no terminal enquanto roda. Se quiser que ele funcione
-o tempo todo sem precisar deixar o terminal aberto, dá pra:
+## Versão GUI (`bridge_gui.py` / `MakerFlowBridge.exe`) — cliente final
 
-- **Windows:** criar uma tarefa agendada (Agendador de Tarefas) que roda
-  `python bridge.py` na inicialização, ou usar o
-  [NSSM](https://nssm.cc/) pra registrar como serviço.
-- **Linux/macOS:** rodar como serviço `systemd` ou usar `pm2`/`supervisor`.
+Pensada pra quem não tem (nem precisa ter) Python instalado. Dentro do
+MakerFlow, em Cadastros → Impressoras, o botão **"Configurar conexão"** abre
+um wizard de 4 passos que explica tudo isso visualmente e linka pro download
+— este README é mais pra quem está desenvolvendo/mantendo o programa.
 
-Isso fica a critério de cada um — não faz parte deste script.
+Na primeira execução, abre uma janela pedindo os 4 dados (chave do
+MakerFlow, IP, número de série, código de acesso) e salva em
+`%APPDATA%\MakerFlowBridge\config.json`. Nas próximas execuções, pula direto
+pra tela de status. O botão **"Reconfigurar"** reabre o formulário (útil se
+trocar de impressora ou o IP mudar).
 
-## Solução de problemas
+### Rodando em desenvolvimento (sem empacotar)
+
+```bash
+cd bridge
+pip install -r requirements.txt
+python bridge_gui.py
+```
+
+### Empacotando como `.exe`
+
+```powershell
+cd bridge
+.\build.ps1
+```
+
+Isso instala as dependências, instala o PyInstaller e gera
+`bridge\dist\MakerFlowBridge.exe` — um executável standalone, sem precisar
+de Python na máquina de quem vai rodar.
+
+### Publicando uma nova versão pro download
+
+O `.exe` fica hospedado no bucket público `bridge-releases` do Supabase
+Storage (não vai pro Git — `dist/` e `build/` estão no `.gitignore`). Pra
+publicar uma versão nova:
+
+1. Rode `.\build.ps1` de novo.
+2. Suba `dist\MakerFlowBridge.exe` pro bucket `bridge-releases`, mesmo nome
+   de arquivo (sobrescreve a versão anterior). Isso precisa da
+   `SUPABASE_SERVICE_ROLE_KEY` (bucket só permite leitura pública, não
+   upload).
+3. Atualize `BRIDGE_VERSION` em `lib/bridgeRelease.ts` (raiz do projeto
+   Next.js) — é o número que aparece no wizard.
+
+---
+
+## Solução de problemas (vale pras duas versões)
 
 - **Não conecta / trava em "Conectando..."**: confirme que o Modo Somente
   LAN e o Modo Desenvolvedor estão ativados na impressora, e que o
@@ -100,8 +135,8 @@ Isso fica a critério de cada um — não faz parte deste script.
 - **`MakerFlow respondeu 404`**: a chave (`api_key_webhook`) não bate com
   nenhuma impressora cadastrada — confira se copiou certo em Cadastros →
   Impressoras.
-- **`MakerFlow respondeu 401`**: a chave não foi enviada corretamente —
-  confira o `.env`.
-- **Erro de rede pro MakerFlow**: confira `MAKERFLOW_URL` no `.env` (padrão
-  aponta pra produção; troque pra `http://localhost:3000` se estiver testando
-  contra o site rodando localmente).
+- **`MakerFlow respondeu 401`**: a chave não foi enviada corretamente.
+- **Erro de rede pro MakerFlow**: confira `MAKERFLOW_URL` (padrão aponta pra
+  produção; troque pra `http://localhost:3000` se estiver testando contra o
+  site rodando localmente — só existe essa opção na versão CLI via `.env`,
+  a versão GUI sempre aponta pra produção).
