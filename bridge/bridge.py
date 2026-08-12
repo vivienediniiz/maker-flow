@@ -42,10 +42,8 @@ GCODE_STATE_MAP = {
 }
 
 
-def ask(label, current=None):
-    prompt = f"{label}" + (f" [{current}]" if current else "") + ": "
-    value = input(prompt).strip()
-    return value or current
+def ask(label):
+    return input(f"{label}: ").strip()
 
 
 def load_config():
@@ -63,10 +61,14 @@ def load_config():
         print("IP, numero de serie e codigo de acesso aparecem na tela da impressora,")
         print("em Configuracoes de Rede (com o Modo Somente LAN ativado).\n")
 
-    printer_ip = ask("IP da impressora", printer_ip)
-    printer_serial = ask("Numero de serie", printer_serial)
-    printer_access_code = ask("Codigo de acesso", printer_access_code)
-    api_key = ask("Chave da impressora no MakerFlow (Cadastros -> Impressoras)", api_key)
+    if not printer_ip:
+        printer_ip = ask("IP da impressora")
+    if not printer_serial:
+        printer_serial = ask("Numero de serie")
+    if not printer_access_code:
+        printer_access_code = ask("Codigo de acesso")
+    if not api_key:
+        api_key = ask("Chave da impressora no MakerFlow (Cadastros -> Impressoras)")
 
     if not all([printer_ip, printer_serial, printer_access_code, api_key]):
         print("\nFaltam dados obrigatorios. Encerrando.")
