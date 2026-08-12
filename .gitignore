@@ -58,3 +58,8 @@ out
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# bridge/ (Python)
+bridge/__pycache__/
+bridge/venv/
+bridge/.venv/
