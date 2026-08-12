@@ -11,14 +11,14 @@ export interface Profile {
   subscription_tier: SubscriptionTier;
   billing_cycle: BillingCycle | null;
   subscription_status: SubscriptionStatus;
-  trial_ends_at: string;
-  payment_method: PaymentMethodType;
-  paid_until: string | null;
+  trial_ends_at: string; // ISO timestamp — fim do período gratuito de 7 dias
+  payment_method: PaymentMethodType; // card (assinatura automática) | pix (renovação manual) | null
+  paid_until: string | null; // ISO timestamp — só relevante quando payment_method = pix
   mp_customer_id: string | null;
   mp_subscription_id: string | null;
   studio_name: string | null;
   phone: string | null;
-  document: string | null;
+  document: string | null; // CNPJ ou CPF
   address: string | null;
   instagram: string | null;
   website: string | null;
@@ -37,6 +37,7 @@ export interface Printer {
   cost_per_hour: number;
   status: PrinterStatus;
   api_key_webhook: string | null;
+  // Runtime telemetry (not persisted columns, joined from latest webhook payload)
   current_job?: {
     file_name: string;
     progress_percent: number;
@@ -55,6 +56,8 @@ export interface Filament {
   price_per_kg: number;
   remaining_weight_g: number;
 }
+
+export type QuoteStatus = "sent" | "paid" | "in_production" | "shipped" | "expired";
 
 export type QuotePaymentMethod = "pix" | "credit_card" | "debit_card" | "cash" | "transfer" | "other";
 
@@ -92,7 +95,7 @@ export interface Order {
   status_production: ProductionStatus;
   channel: "site" | "whatsapp" | "marketplace" | "presencial";
   total_value: number;
-  deadline: string;
+  deadline: string; // ISO date
 }
 
 export interface PriceTier {
@@ -140,8 +143,8 @@ export interface Client {
   name: string;
   phone: string | null;
   email: string | null;
-  notes: string | null;
   address: string | null;
+  notes: string | null;
 }
 
 export interface Sale {
