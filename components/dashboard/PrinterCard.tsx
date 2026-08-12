@@ -20,7 +20,9 @@ export const STATUS_DOT: Record<Printer["status"], string> = {
 };
 
 export function PrinterCard({ printer }: { printer: Printer }) {
-  const job = printer.current_job;
+  const isActive = printer.status === "printing" || printer.status === "paused";
+  const progress = printer.current_progress_percent;
+  const hasTemps = printer.current_nozzle_temp_c !== null || printer.current_bed_temp_c !== null;
 
   return (
     <GlassCard hover padding="md" className="flex flex-col gap-4">
@@ -35,36 +37,42 @@ export function PrinterCard({ printer }: { printer: Printer }) {
         </div>
       </div>
 
-      {job ? (
+      {isActive ? (
         <>
-          <div className="flex items-center gap-2 text-xs text-text-secondary">
-            <FileBox size={13} className="text-neon-pink" />
-            <span className="truncate">{job.file_name}</span>
-          </div>
+          {printer.current_file_name && (
+            <div className="flex items-center gap-2 text-xs text-text-secondary">
+              <FileBox size={13} className="text-neon-pink" />
+              <span className="truncate">{printer.current_file_name}</span>
+            </div>
+          )}
 
-          <div>
-            <div className="mb-1.5 flex justify-between text-[11px] text-text-muted">
-              <span>{job.progress_percent}%</span>
+          {progress !== null && (
+            <div>
+              <div className="mb-1.5 flex justify-between text-[11px] text-text-muted">
+                <span>{progress}%</span>
+                <span className="flex items-center gap-1">
+                  <Clock size={11} /> ETA {printer.current_eta_minutes ?? "—"} min
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-pill bg-white/5">
+                <div
+                  className="h-full rounded-pill bg-neon-gradient shadow-neon-glow transition-all"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {hasTemps && (
+            <div className="flex items-center justify-between text-[11px] text-text-muted">
               <span className="flex items-center gap-1">
-                <Clock size={11} /> ETA {job.eta_minutes} min
+                <Thermometer size={11} className="text-neon-orange" /> Bico {printer.current_nozzle_temp_c ?? "—"}°C
+              </span>
+              <span className="flex items-center gap-1">
+                <Thermometer size={11} className="text-neon-purple" /> Mesa {printer.current_bed_temp_c ?? "—"}°C
               </span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-pill bg-white/5">
-              <div
-                className="h-full rounded-pill bg-neon-gradient shadow-neon-glow transition-all"
-                style={{ width: `${job.progress_percent}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-[11px] text-text-muted">
-            <span className="flex items-center gap-1">
-              <Thermometer size={11} className="text-neon-orange" /> Bico {job.nozzle_temp_c}°C
-            </span>
-            <span className="flex items-center gap-1">
-              <Thermometer size={11} className="text-neon-purple" /> Mesa {job.bed_temp_c}°C
-            </span>
-          </div>
+          )}
         </>
       ) : (
         <p className="text-xs text-text-muted">Sem trabalho em andamento.</p>

@@ -42,14 +42,13 @@ export interface Printer {
   cost_per_hour: number;
   status: PrinterStatus;
   api_key_webhook: string | null;
-  // Runtime telemetry (not persisted columns, joined from latest webhook payload)
-  current_job?: {
-    file_name: string;
-    progress_percent: number;
-    eta_minutes: number;
-    nozzle_temp_c: number;
-    bed_temp_c: number;
-  };
+  // Snapshot do ultimo webhook de telemetria recebido (ver /api/v1/printers/telemetry)
+  current_file_name: string | null;
+  current_progress_percent: number | null;
+  current_eta_minutes: number | null;
+  current_nozzle_temp_c: number | null;
+  current_bed_temp_c: number | null;
+  last_telemetry_at: string | null;
 }
 
 export interface Filament {

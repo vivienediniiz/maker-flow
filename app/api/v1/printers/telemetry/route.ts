@@ -51,16 +51,20 @@ export async function POST(req: NextRequest) {
 
   const { error: updateError } = await supabase
     .from("printers")
-    .update({ status: parsed.data.status })
+    .update({
+      status: parsed.data.status,
+      current_file_name: parsed.data.file_name ?? null,
+      current_progress_percent: parsed.data.progress_percent ?? null,
+      current_eta_minutes: parsed.data.eta_minutes ?? null,
+      current_nozzle_temp_c: parsed.data.nozzle_temp_c ?? null,
+      current_bed_temp_c: parsed.data.bed_temp_c ?? null,
+      last_telemetry_at: new Date().toISOString(),
+    })
     .eq("id", printer.id);
 
   if (updateError) {
     return NextResponse.json({ error: "Falha ao atualizar status" }, { status: 500 });
   }
-
-  // Job-level telemetry (file, progress, temps) is intentionally NOT persisted to the
-  // `printers` table — store it in a `printer_jobs` table or a realtime channel/cache
-  // keyed by printer_id, and have the dashboard subscribe to that instead of polling.
 
   return NextResponse.json({ ok: true, printer_id: printer.id }, { status: 200 });
 }
