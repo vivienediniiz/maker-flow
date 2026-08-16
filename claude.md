@@ -7,7 +7,8 @@ SaaS de gestão para makers/estúdios de impressão 3D. Next.js 14 (App Router) 
 - **Deploy:** Netlify, auto-deploy a partir do repositório GitHub `vivienediniiz/maker-flow` (com hífen — existe também um `makerflow` sem hífen, mais antigo e **não usado**, cuidado pra não confundir)
 - **Site:** maker-flow.netlify.app
 - **Supabase:** projeto `makerflow`, ID `dgcdltcpvnultwduypcu`, região `sa-east-1` (São Paulo)
-- **Mercado Pago:** credenciais de produção configuradas (assinatura via cartão) + fluxo Pix manual avulso
+- **Mercado Pago:** credenciais de produção configuradas (assinatura via cartão) + fluxo Pix manual avulso — isso é separado da integração de vendas por maker (ver "Integrações" abaixo)
+- **`bridge/`**: script Python separado (fora do app Next.js) que roda no computador do maker, na rede local da impressora Bambu Lab, e manda telemetria + snapshot de câmera pro MakerFlow via webhook. Tem versão CLI (`bridge.py`, dev) e GUI empacotada em `.exe` via PyInstaller (`bridge_gui.py`, cliente final — hospedado no bucket `bridge-releases` do Supabase Storage). Ver `bridge/README.md`.
 
 ## Design system
 
@@ -17,13 +18,17 @@ SaaS de gestão para makers/estúdios de impressão 3D. Next.js 14 (App Router) 
 
 ## Estrutura do banco (Supabase)
 
-Tabelas principais: `profiles`, `printers`, `filaments`, `quotes`, `orders` (não usada ativamente — `quotes` virou a fonte única de verdade pro fluxo de pedidos), `products`, `settings`, `clients`, `categories`, `sales`.
+Tabelas principais: `profiles`, `printers`, `filaments`, `quotes`, `orders` (não usada ativamente — `quotes` virou a fonte única de verdade pro fluxo de vendas), `products`, `settings`, `clients`, `categories`, `sales`, `branches`, `supplies`, `extra_purchases`, `integrations`.
 
-`quotes` é o coração do sistema de Pedidos: tem `status` (`sent`/`paid`/`in_production`/`shipped`/`expired`), `order_number` (sequencial automático via trigger), `channel`, `payment_method`, `shipping_cost`, `destination_cep`, `product_id` (vínculo opcional com um produto do catálogo).
+`quotes` é o coração do sistema de Vendas (tela antes chamada "Pedidos"): tem `status` (`sent`/`paid`/`in_production`/`shipped`/`expired`), `order_number` (sequencial automático via trigger), `channel` (canal de venda escolhido manualmente), `source` (`mercado_pago`/`shopee`/`tiktok_shop`/`manual` — origem do *registro*, diferente de `channel`), `external_order_id` (idempotência de webhook, unique junto com `user_id`+`source`), `buyer_name`, `platform_fee`, `cost_amount`, `net_amount` (coluna gerada), `payment_method`, `shipping_cost`, `destination_cep`, `product_id` (vínculo opcional com um produto do catálogo).
+
+`printers` guarda telemetria (`current_*`, `last_telemetry_at`) e câmera (`last_snapshot_at`) recebidas via `/api/v1/printers/telemetry` e `/api/v1/printers/snapshot`, autenticado por `api_key_webhook` (gerado automaticamente por impressora).
+
+`integrations` guarda a conexão do maker com plataformas de venda (Mercado Pago/Shopee/TikTok Shop). Credenciais **nunca** ficam em texto puro — vão pro Supabase Vault via funções `security definer` (`public.integration_set_credential`/`_get_credential`/`_delete_credential`, só acessíveis por `service_role`). `integrations.credential_secret_id` só guarda a referência.
 
 `products.calc_inputs` (jsonb) guarda o snapshot completo dos parâmetros da Calculadora quando um produto é criado por lá — permite recarregar o cálculo depois.
 
-Buckets de Storage: `avatars` (logo do estúdio), `products` (fotos de produto).
+Buckets de Storage: `avatars` (logo do estúdio), `products` (fotos de produto), `bridge-releases` (público, `.exe` do bridge), `printer-snapshots` (público, foto mais recente da câmera de cada impressora).
 
 ## Funcionalidades já construídas
 
@@ -31,8 +36,12 @@ Buckets de Storage: `avatars` (logo do estúdio), `products` (fotos de produto).
 - Dashboard, Calculadora (com seletor de produto existente, faixas de preço, marketplace vindo de Configurações)
 - Clientes (lista em tabela, busca)
 - Produtos (lista em tabela, foto, overlay de detalhe)
-- Pedidos (lista, número sequencial, overlay com barra de status **só avança**, doc. de envio em PDF)
+- Vendas (ex-"Pedidos": grid de cards com badge de origem, Bruto/Custos/Líquido, filtro de status + canal de origem, overlay com barra de status **só avança**, doc. de envio em PDF)
 - Estoque 3D (Adicionar Estoque + venda com histórico real)
+- Cadastros (Impressoras, Filamentos, Insumos, Compras Extras, Filiais, Categorias — todas com CRUD real)
+- Insights & BI (rankings, matriz venda×lucro, prateleira de filamentos, filtro de período — dados reais de `sales`/`orders`/`filaments`)
+- Integrações: Mercado Pago (Access Token manual, webhook + reconciliação funcionais) conectado de verdade; Shopee/TikTok Shop com estrutura de OAuth/webhook pronta, aguardando app aprovado nas duas plataformas
+- Impressoras: cadastro real (Cadastros → Impressoras), wizard de conexão de 4 passos, telemetria + câmera via `bridge/` (ver acima)
 - Configurações (taxas de marketplace, frete do remetente — persistidos de verdade)
 - Assinatura MakerFlow: cartão automático (Mercado Pago preapproval) + Pix manual (com tolerância de 15 dias)
 - Perfil do estúdio com upload de logo
@@ -48,10 +57,10 @@ Buckets de Storage: `avatars` (logo do estúdio), `products` (fotos de produto).
 2. **jsPDF com `unit: "px"`** corta o conteúdo — sempre usar `unit: "mm", format: "a4"` e escalar a imagem pela largura da página.
 3. **tsconfig.json**: não usar `"ignoreDeprecations": "6.0"` (valor inválido, quebra o build) — se for mexer nisso, é `"5.0"`, mas geralmente é mais seguro nem mexer.
 4. Cache do TS Server do VS Code às vezes mostra "Cannot find module" fantasma pra arquivo que existe — `Ctrl+Shift+P` → `TypeScript: Restart TS Server` resolve.
+5. A câmera das impressoras Bambu Lab A1/A1 Mini/P1P/P1S **não é RTSP** (apesar de bastante coisa por aí dizer o contrário) — é um protocolo proprietário próprio na porta 6000 (implementado em `bridge/core.py`). Só X1/X1C usa RTSPS de verdade (porta 322).
 
 ## Ideias guardadas pro roadmap (ainda não construídas)
 
-- Integração com APIs de marketplace (Mercado Livre, Shopee, TikTok Shop) pra puxar pedidos automaticamente
-- Status de impressora em tempo real via MQTT local (Bambu Lab) — usar biblioteca `bambulabs-api`, precisa de um script/agente rodando na rede local do usuário, já que o endpoint `/api/v1/printers/telemetry` existe mas não está conectado a nada real ainda
-- Emissão de Nota Fiscal real (precisa de provedor fiscal certificado tipo NFE.io/Focus NFe — botão já existe desativado no overlay de Pedidos)
+- Shopee e TikTok Shop: falta só o app ser aprovado nas respectivas plataformas (Shopee Open Platform / TikTok Shop Partner Center) — código já está pronto, só configurar `SHOPEE_PARTNER_ID`/`SHOPEE_PARTNER_KEY`/`TIKTOK_APP_KEY`/`TIKTOK_APP_SECRET`
+- Emissão de Nota Fiscal real (precisa de provedor fiscal certificado tipo NFE.io/Focus NFe — botão já existe desativado no overlay de Vendas)
 - Link de cobrança real por pedido (pro cliente do maker pagar), com webhook próprio separado da assinatura do MakerFlow
