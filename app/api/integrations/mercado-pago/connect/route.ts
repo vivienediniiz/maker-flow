@@ -39,6 +39,11 @@ export async function GET(_req: NextRequest) {
   authorizeUrl.searchParams.set("platform_id", "mp");
   authorizeUrl.searchParams.set("redirect_uri", redirectUri);
   authorizeUrl.searchParams.set("state", user.id);
+  // "read" pra buscar os pedidos/pagamentos, "offline_access" pra ganhar
+  // refresh_token (sem isso o token some em algumas horas e a gente não
+  // consegue renovar sozinho). Sem declarar scope nenhum, o Mercado Pago
+  // pode rejeitar a autorização com "não foi possível conectar o aplicativo".
+  authorizeUrl.searchParams.set("scope", "read offline_access");
 
   return NextResponse.redirect(authorizeUrl.toString());
 }
