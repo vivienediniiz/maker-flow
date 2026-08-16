@@ -5,17 +5,19 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://maker-flow.netlify
 
 /**
  * Fluxo OAuth automático: o maker clica "Conectar", é redirecionado pro
- * Mercado Pago, autoriza o MakerFlow a acessar a conta dele, e volta já
- * conectado — sem colar token manualmente. Precisa de MERCADOPAGO_CLIENT_ID
- * configurado (Suas integrações -> a aplicação -> OAuth, no painel do MP) e
- * do redirect_uri abaixo cadastrado na mesma aplicação.
+ * Mercado Pago, autoriza o app "MakerFlow Vendas" a acessar a conta dele, e
+ * volta já conectado — sem colar token manualmente. Esse app é separado do
+ * "Makerflow3d" (usado só pra assinatura do MakerFlow — não mexer). Precisa
+ * de MERCADO_PAGO_VENDAS_CLIENT_ID configurado (Suas integrações -> app
+ * "MakerFlow Vendas" -> OAuth, no painel do MP) e do redirect_uri abaixo
+ * cadastrado na mesma aplicação.
  */
 export async function GET(_req: NextRequest) {
-  const clientId = process.env.MERCADOPAGO_CLIENT_ID;
+  const clientId = process.env.MERCADO_PAGO_VENDAS_CLIENT_ID;
 
   if (!clientId) {
     return NextResponse.json(
-      { error: "Integração com Mercado Pago não configurada — falta MERCADOPAGO_CLIENT_ID no ambiente." },
+      { error: "Integração com Mercado Pago não configurada — falta MERCADO_PAGO_VENDAS_CLIENT_ID no ambiente." },
       { status: 503 }
     );
   }
@@ -29,7 +31,7 @@ export async function GET(_req: NextRequest) {
     return NextResponse.redirect(`${SITE_URL}/login`);
   }
 
-  const redirectUri = `${SITE_URL}/api/integrations/mercado-pago/callback`;
+  const redirectUri = `${SITE_URL}/api/auth/mercado-pago/callback`;
 
   const authorizeUrl = new URL("https://auth.mercadopago.com.br/authorization");
   authorizeUrl.searchParams.set("client_id", clientId);

@@ -10,11 +10,16 @@ function adminClient() {
 }
 
 /**
- * Volta do Mercado Pago com `code` (válido por 10 min) + `state` (user_id,
- * setado em /connect). Troca o code por access_token/refresh_token, guarda
- * no Vault, e salva o user_id do vendedor no MP em platform_account_id —
- * é por ele que o webhook de aplicação única (/api/webhooks/mercado-pago)
- * identifica de qual maker é cada notificação.
+ * Volta do Mercado Pago (app "MakerFlow Vendas") com `code` (válido por
+ * 10 min) + `state` (user_id, setado em /api/integrations/mercado-pago/connect).
+ * Troca o code por access_token/refresh_token/public_key, guarda no Vault, e
+ * salva o user_id do vendedor no MP em platform_account_id — é por ele que o
+ * webhook de aplicação única (/api/webhooks/mercado-pago) identifica de qual
+ * maker é cada notificação.
+ *
+ * Caminho /api/auth/mercado-pago/callback (não /api/integrations/...) pra
+ * bater exatamente com o Redirect URI já cadastrado no painel do app
+ * "MakerFlow Vendas" no Mercado Pago.
  */
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
@@ -31,7 +36,7 @@ export async function GET(req: NextRequest) {
   const admin = adminClient();
 
   try {
-    const tokens = await exchangeMercadoPagoCode(code, `${SITE_URL}/api/integrations/mercado-pago/callback`);
+    const tokens = await exchangeMercadoPagoCode(code, `${SITE_URL}/api/auth/mercado-pago/callback`);
 
     const { data: existing } = await admin
       .from("integrations")

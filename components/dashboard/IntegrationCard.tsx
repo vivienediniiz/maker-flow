@@ -42,7 +42,11 @@ export function IntegrationCard({
   const available = AVAILABLE_PLATFORMS.includes(platform);
 
   async function handleDisconnect() {
-    if (!confirm(`Desconectar ${PLATFORM_LABELS[platform]}? As credenciais salvas serão removidas.`)) return;
+    const extra =
+      platform === "mercado_pago"
+        ? "\n\nIsso apaga a credencial aqui no MakerFlow, mas o Mercado Pago não tem revogação por API — pra remover o acesso na sua conta MP também, vá em Configurações → Aplicativos autorizados, na própria conta Mercado Pago."
+        : "";
+    if (!confirm(`Desconectar ${PLATFORM_LABELS[platform]}? As credenciais salvas serão removidas.${extra}`)) return;
     setDisconnecting(true);
     await fetch(`/api/integrations/${platform}/disconnect`, { method: "POST" });
     setDisconnecting(false);
@@ -84,6 +88,12 @@ export function IntegrationCard({
       </div>
       {!available && status !== "connected" && (
         <p className="text-[11px] text-amber-400">Aguardando aprovação do app — em breve.</p>
+      )}
+      {platform === "mercado_pago" && status === "connected" && (
+        <p className="text-[11px] text-text-muted">
+          "Desconectar" remove a credencial aqui. Pra revogar na sua conta Mercado Pago também, veja Aplicativos
+          autorizados nas configurações da conta MP.
+        </p>
       )}
     </GlassCard>
   );

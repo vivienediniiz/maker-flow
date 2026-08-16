@@ -7,7 +7,9 @@ SaaS de gestão para makers/estúdios de impressão 3D. Next.js 14 (App Router) 
 - **Deploy:** Netlify, auto-deploy a partir do repositório GitHub `vivienediniiz/maker-flow` (com hífen — existe também um `makerflow` sem hífen, mais antigo e **não usado**, cuidado pra não confundir)
 - **Site:** maker-flow.netlify.app
 - **Supabase:** projeto `makerflow`, ID `dgcdltcpvnultwduypcu`, região `sa-east-1` (São Paulo)
-- **Mercado Pago:** credenciais de produção configuradas (assinatura via cartão) + fluxo Pix manual avulso — isso é separado da integração de vendas por maker (ver "Integrações" abaixo)
+- **Mercado Pago — DOIS apps separados, não confundir:**
+  - **"Makerflow3d"**: `MERCADOPAGO_ACCESS_TOKEN`/`MERCADOPAGO_PUBLIC_KEY`, cobra a assinatura do MakerFlow em si (cartão automático + Pix manual). Webhook: `/api/webhooks/mercadopago`. Não mexer nisso pra vendas.
+  - **"MakerFlow Vendas"**: `MERCADO_PAGO_VENDAS_CLIENT_ID`/`_CLIENT_SECRET`/`_WEBHOOK_SECRET`, app OAuth separado que cada maker conecta pra receber notificação das próprias vendas (ver "Integrações" abaixo). Webhook: `/api/webhooks/mercado-pago` (com hífen entre "mercado" e "pago" — cuidado, é bem parecido com a URL do app de assinatura).
 - **`bridge/`**: script Python separado (fora do app Next.js) que roda no computador do maker, na rede local da impressora Bambu Lab, e manda telemetria + snapshot de câmera pro MakerFlow via webhook. Tem versão CLI (`bridge.py`, dev) e GUI empacotada em `.exe` via PyInstaller (`bridge_gui.py`, cliente final — hospedado no bucket `bridge-releases` do Supabase Storage). Ver `bridge/README.md`.
 
 ## Design system
@@ -40,7 +42,7 @@ Buckets de Storage: `avatars` (logo do estúdio), `products` (fotos de produto),
 - Estoque 3D (Adicionar Estoque + venda com histórico real)
 - Cadastros (Impressoras, Filamentos, Insumos, Compras Extras, Filiais, Categorias — todas com CRUD real)
 - Insights & BI (rankings, matriz venda×lucro, prateleira de filamentos, filtro de período — dados reais de `sales`/`orders`/`filaments`)
-- Integrações: Mercado Pago (Access Token manual, webhook + reconciliação funcionais) conectado de verdade; Shopee/TikTok Shop com estrutura de OAuth/webhook pronta, aguardando app aprovado nas duas plataformas
+- Integrações: Mercado Pago conecta via OAuth automático (app "MakerFlow Vendas", separado do app de assinatura), um clique e volta conectado; webhook usa a Orders API (`GET /v1/orders/{id}`) roteado por `user_id` do payload (URL única pra aplicação inteira, não por maker); fallback "Sincronizar Pedidos" usa a Payments API de busca (não existe endpoint de busca documentado na Orders API) — as duas convergem no mesmo `external_order_id` (o id do pagamento, não do pedido) pra não duplicar venda. Shopee/TikTok Shop com estrutura de OAuth/webhook pronta, aguardando app aprovado nas duas plataformas.
 - Impressoras: cadastro real (Cadastros → Impressoras), wizard de conexão de 4 passos, telemetria + câmera via `bridge/` (ver acima)
 - Configurações (taxas de marketplace, frete do remetente — persistidos de verdade)
 - Assinatura MakerFlow: cartão automático (Mercado Pago preapproval) + Pix manual (com tolerância de 15 dias)
@@ -58,6 +60,7 @@ Buckets de Storage: `avatars` (logo do estúdio), `products` (fotos de produto),
 3. **tsconfig.json**: não usar `"ignoreDeprecations": "6.0"` (valor inválido, quebra o build) — se for mexer nisso, é `"5.0"`, mas geralmente é mais seguro nem mexer.
 4. Cache do TS Server do VS Code às vezes mostra "Cannot find module" fantasma pra arquivo que existe — `Ctrl+Shift+P` → `TypeScript: Restart TS Server` resolve.
 5. A câmera das impressoras Bambu Lab A1/A1 Mini/P1P/P1S **não é RTSP** (apesar de bastante coisa por aí dizer o contrário) — é um protocolo proprietário próprio na porta 6000 (implementado em `bridge/core.py`). Só X1/X1C usa RTSPS de verdade (porta 322).
+6. A doc de referência da Orders API do Mercado Pago (`GET /v1/orders/{id}`) não carrega via fetch de página (404 — parece SPA client-side-only). `lib/mercadoPago.ts` (`fetchMercadoPagoOrderForIntegration`/`upsertQuoteFromMercadoPagoOrder`) foi escrito com extração defensiva dos campos (fee/payer/items) com base em documentação parcial — **validar contra um payload real** assim que a primeira notificação de venda chegar de verdade.
 
 ## Ideias guardadas pro roadmap (ainda não construídas)
 
