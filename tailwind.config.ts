@@ -69,10 +69,40 @@ const config: Config = {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        "aurora-a": {
+          "0%, 100%": { transform: "translate(-8%, -6%) scale(1)" },
+          "50%": { transform: "translate(10%, 6%) scale(1.15)" },
+        },
+        "aurora-b": {
+          "0%, 100%": { transform: "translate(8%, 8%) scale(1.1)" },
+          "50%": { transform: "translate(-12%, -4%) scale(0.95)" },
+        },
+        "aurora-c": {
+          "0%, 100%": { transform: "translate(0%, 10%) scale(1)" },
+          "50%": { transform: "translate(-8%, -12%) scale(1.2)" },
+        },
+        "caret-blink": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0" },
+        },
+        "float-y": {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-14px)" },
+        },
+        "panel-in": {
+          "0%": { transform: "translateX(-32px)", opacity: "0" },
+          "100%": { transform: "translateX(0)", opacity: "1" },
+        },
       },
       animation: {
         "pulse-glow": "pulse-glow 2.4s ease-in-out infinite",
         shimmer: "shimmer 2.5s linear infinite",
+        "aurora-a": "aurora-a 22s ease-in-out infinite",
+        "aurora-b": "aurora-b 18s ease-in-out infinite",
+        "aurora-c": "aurora-c 25s ease-in-out infinite",
+        "caret-blink": "caret-blink 1s step-start infinite",
+        "float-y": "float-y 6s ease-in-out infinite",
+        "panel-in": "panel-in 0.7s cubic-bezier(0.16,1,0.3,1) forwards",
       },
     },
   },

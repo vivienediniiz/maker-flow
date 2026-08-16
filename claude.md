@@ -34,7 +34,7 @@ Buckets de Storage: `avatars` (logo do estúdio), `products` (fotos de produto),
 
 ## Funcionalidades já construídas
 
-- Auth completo (login/signup/logout/troca de senha), trial de 7 dias
+- Auth completo (login/signup/logout/troca de senha), trial de 7 dias. Tela de **login** tem visual próprio (fundo aurora animado, painel "liquid glass", headline com efeito de digitação, login social Google/Facebook) e por isso vive num route group dedicado `app/(login)/login/` — separado do `app/(auth)/` que ainda serve Signup/Reset (layout de duas colunas simples). Login social usa `supabase.auth.signInWithOAuth` + callback em `app/auth/callback/route.ts`; **precisa configurar os provedores Google/Facebook em Supabase → Authentication → Providers** (Client ID/Secret do Google Cloud Console / Meta for Developers) antes de funcionar de verdade — até lá os botões aparecem mas retornam erro do Supabase ("Unsupported provider").
 - Dashboard, Calculadora (com seletor de produto existente, faixas de preço, marketplace vindo de Configurações)
 - Clientes (lista em tabela, busca)
 - Produtos (lista em tabela, foto, overlay de detalhe)
