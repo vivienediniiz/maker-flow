@@ -69,17 +69,59 @@ const config: Config = {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
-        "aurora-a": {
-          "0%, 100%": { transform: "translate(-8%, -6%) scale(1)" },
-          "50%": { transform: "translate(10%, 6%) scale(1.15)" },
+        "blob-1": {
+          "0%, 100%": {
+            transform: "translate(-8%, -12%) rotate(0deg) scale(1)",
+            borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%",
+          },
+          "25%": {
+            transform: "translate(22%, 8%) rotate(18deg) scale(1.08)",
+            borderRadius: "40% 60% 70% 30% / 50% 60% 40% 50%",
+          },
+          "50%": {
+            transform: "translate(48%, 42%) rotate(-12deg) scale(0.95)",
+            borderRadius: "50% 50% 30% 70% / 40% 70% 30% 60%",
+          },
+          "75%": {
+            transform: "translate(14%, 22%) rotate(9deg) scale(1.05)",
+            borderRadius: "65% 35% 55% 45% / 45% 55% 45% 55%",
+          },
         },
-        "aurora-b": {
-          "0%, 100%": { transform: "translate(8%, 8%) scale(1.1)" },
-          "50%": { transform: "translate(-12%, -4%) scale(0.95)" },
+        "blob-2": {
+          "0%, 100%": {
+            transform: "translate(12%, -10%) rotate(0deg) scale(1)",
+            borderRadius: "50% 50% 40% 60% / 60% 40% 60% 40%",
+          },
+          "30%": {
+            transform: "translate(-22%, 16%) rotate(-22deg) scale(1.1)",
+            borderRadius: "35% 65% 60% 40% / 50% 60% 40% 50%",
+          },
+          "60%": {
+            transform: "translate(-42%, 38%) rotate(12deg) scale(0.92)",
+            borderRadius: "55% 45% 35% 65% / 65% 35% 65% 35%",
+          },
+          "85%": {
+            transform: "translate(-10%, 6%) rotate(-6deg) scale(1.04)",
+            borderRadius: "45% 55% 50% 50% / 55% 45% 55% 45%",
+          },
         },
-        "aurora-c": {
-          "0%, 100%": { transform: "translate(0%, 10%) scale(1)" },
-          "50%": { transform: "translate(-8%, -12%) scale(1.2)" },
+        "blob-3": {
+          "0%, 100%": {
+            transform: "translate(0%, 20%) rotate(0deg) scale(1)",
+            borderRadius: "45% 55% 65% 35% / 40% 60% 40% 60%",
+          },
+          "20%": {
+            transform: "translate(-26%, -8%) rotate(-15deg) scale(1.06)",
+            borderRadius: "60% 40% 30% 70% / 55% 45% 55% 45%",
+          },
+          "50%": {
+            transform: "translate(20%, -26%) rotate(20deg) scale(0.94)",
+            borderRadius: "35% 65% 55% 45% / 60% 40% 60% 40%",
+          },
+          "80%": {
+            transform: "translate(16%, 16%) rotate(-8deg) scale(1.05)",
+            borderRadius: "50% 50% 45% 55% / 45% 55% 45% 55%",
+          },
         },
         "caret-blink": {
           "0%, 100%": { opacity: "1" },
@@ -97,9 +139,9 @@ const config: Config = {
       animation: {
         "pulse-glow": "pulse-glow 2.4s ease-in-out infinite",
         shimmer: "shimmer 2.5s linear infinite",
-        "aurora-a": "aurora-a 22s ease-in-out infinite",
-        "aurora-b": "aurora-b 18s ease-in-out infinite",
-        "aurora-c": "aurora-c 25s ease-in-out infinite",
+        "blob-1": "blob-1 26s ease-in-out infinite",
+        "blob-2": "blob-2 34s ease-in-out infinite",
+        "blob-3": "blob-3 40s ease-in-out infinite",
         "caret-blink": "caret-blink 1s step-start infinite",
         "float-y": "float-y 6s ease-in-out infinite",
         "panel-in": "panel-in 0.7s cubic-bezier(0.16,1,0.3,1) forwards",

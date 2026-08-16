@@ -93,11 +93,11 @@ export function AuthTypewriter() {
   const PhraseIcon = phrase.icon;
 
   return (
-    <div className="relative max-w-lg space-y-5">
+    <div className="relative max-w-xl space-y-6">
       <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border-glass bg-white/5">
         <PhraseIcon size={22} className="text-neon-pink" />
       </div>
-      <h1 className="font-display min-h-[4.5rem] text-3xl leading-tight text-text-primary xl:text-4xl">
+      <h1 className="font-display min-h-[8rem] text-4xl leading-tight text-text-primary xl:min-h-[9rem] xl:text-5xl 2xl:text-6xl">
         {typed}
         <span className="animate-caret-blink ml-0.5 inline-block h-[1em] w-[2px] translate-y-0.5 bg-neon-pink align-middle" />
       </h1>

@@ -38,11 +38,31 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-bg">
-      {/* Fundo degradê animado */}
+      {/* Fundo: 3 blobs orgânicos animados, cada um com gradiente/trajetória/duração própria */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="animate-aurora-a absolute -left-1/4 -top-1/4 h-[70vw] w-[70vw] rounded-full bg-neon-orange/30 blur-[120px]" />
-        <div className="animate-aurora-b absolute -right-1/4 top-1/3 h-[60vw] w-[60vw] rounded-full bg-neon-pink/25 blur-[120px]" />
-        <div className="animate-aurora-c absolute -bottom-1/4 left-1/4 h-[65vw] w-[65vw] rounded-full bg-neon-purple/30 blur-[120px]" />
+        <div
+          className="animate-blob-1 absolute -left-[15%] -top-[15%] h-[62vw] w-[62vw] opacity-25 blur-[90px]"
+          style={{
+            background: "linear-gradient(135deg, #E86333 0%, #FF4EDF 55%, #AA17DB 100%)",
+            borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%",
+          }}
+        />
+        <div
+          className="animate-blob-2 absolute -right-[18%] top-[2%] h-[55vw] w-[55vw] opacity-20 blur-[90px]"
+          style={{
+            background: "linear-gradient(210deg, #FF4EDF 0%, #AA17DB 55%, #E86333 100%)",
+            borderRadius: "50% 50% 40% 60% / 60% 40% 60% 40%",
+            animationDelay: "-11s",
+          }}
+        />
+        <div
+          className="animate-blob-3 absolute -bottom-[20%] left-[18%] h-[58vw] w-[58vw] opacity-20 blur-[100px]"
+          style={{
+            background: "linear-gradient(300deg, #AA17DB 0%, #E86333 55%, #FF4EDF 100%)",
+            borderRadius: "45% 55% 65% 35% / 40% 60% 40% 60%",
+            animationDelay: "-23s",
+          }}
+        />
       </div>
 
       {/* Logo fixo no canto superior esquerdo */}
@@ -55,7 +75,7 @@ export default function LoginPage() {
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-2">
         {/* Lado esquerdo: headline com efeito de digitação + ícones flutuantes */}
-        <div className="relative hidden overflow-hidden px-16 lg:flex lg:flex-col lg:justify-center">
+        <div className="relative hidden overflow-hidden px-20 lg:flex lg:flex-col lg:justify-center xl:px-28 2xl:px-32">
           <Printer
             className="animate-float-y absolute left-[12%] top-[22%] h-10 w-10 text-white/10"
             style={{ animationDelay: "0s" }}
