@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getIntegrationCredential, setIntegrationCredential } from "@/lib/vault";
 
 interface MpFeeDetail {
   amount: number;
@@ -16,14 +17,166 @@ interface MpPayment {
   additional_info?: { items?: { title?: string }[] };
 }
 
-export async function fetchMercadoPagoPayment(accessToken: string, paymentId: string): Promise<MpPayment> {
+export interface MpOAuthTokens {
+  access_token: string;
+  refresh_token: string;
+  user_id: number;
+  expires_in: number;
+  obtained_at: string;
+}
+
+function mpOAuthCredentials() {
+  const clientId = process.env.MERCADOPAGO_CLIENT_ID;
+  const clientSecret = process.env.MERCADOPAGO_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error("MERCADOPAGO_CLIENT_ID/MERCADOPAGO_CLIENT_SECRET não configurados no ambiente");
+  }
+  return { clientId, clientSecret };
+}
+
+/** Troca o `code` do redirect de OAuth por access_token + refresh_token. */
+export async function exchangeMercadoPagoCode(code: string, redirectUri: string): Promise<MpOAuthTokens> {
+  const { clientId, clientSecret } = mpOAuthCredentials();
+
+  const res = await fetch("https://api.mercadopago.com/oauth/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: redirectUri,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Mercado Pago respondeu ${res.status} ao trocar o código de autorização`);
+  }
+  const data = await res.json();
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    user_id: data.user_id,
+    expires_in: data.expires_in,
+    obtained_at: new Date().toISOString(),
+  };
+}
+
+/** Renova o access_token usando o refresh_token (access token dura 180 dias). */
+export async function refreshMercadoPagoTokens(refreshToken: string): Promise<MpOAuthTokens> {
+  const { clientId, clientSecret } = mpOAuthCredentials();
+
+  const res = await fetch("https://api.mercadopago.com/oauth/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Mercado Pago respondeu ${res.status} ao renovar o token`);
+  }
+  const data = await res.json();
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    user_id: data.user_id,
+    expires_in: data.expires_in,
+    obtained_at: new Date().toISOString(),
+  };
+}
+
+async function fetchPaymentRaw(accessToken: string, paymentId: string) {
   const res = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) {
+  return { res, payment: res.ok ? ((await res.json()) as MpPayment) : null };
+}
+
+/**
+ * Busca um pagamento pra uma integração conectada via OAuth, renovando o
+ * access_token automaticamente (uma vez) se a API responder 401 - o access
+ * token dura 180 dias mas pode ter sido revogado/expirado antes disso.
+ */
+export async function fetchMercadoPagoPaymentForIntegration(
+  admin: SupabaseClient,
+  integration: { id: string; credential_secret_id: string | null },
+  paymentId: string
+): Promise<MpPayment> {
+  const tokens = await loadTokens(admin, integration);
+
+  let { res, payment } = await fetchPaymentRaw(tokens.access_token, paymentId);
+
+  if (res.status === 401) {
+    const refreshed = await refreshAndSave(admin, integration, tokens.refresh_token);
+    ({ res, payment } = await fetchPaymentRaw(refreshed.access_token, paymentId));
+  }
+
+  if (!res.ok || !payment) {
     throw new Error(`Mercado Pago respondeu ${res.status} ao buscar o pagamento ${paymentId}`);
   }
-  return res.json();
+  return payment;
+}
+
+/** Mesma lógica de renovação automática, pro fallback "Sincronizar Pedidos". */
+export async function searchMercadoPagoPaymentsForIntegration(
+  admin: SupabaseClient,
+  integration: { id: string; credential_secret_id: string | null },
+  beginDateIso: string,
+  endDateIso: string
+): Promise<MpPayment[]> {
+  const tokens = await loadTokens(admin, integration);
+
+  async function search(accessToken: string) {
+    const url = new URL("https://api.mercadopago.com/v1/payments/search");
+    url.searchParams.set("sort", "date_created");
+    url.searchParams.set("criteria", "desc");
+    url.searchParams.set("range", "date_created");
+    url.searchParams.set("begin_date", beginDateIso);
+    url.searchParams.set("end_date", endDateIso);
+    return fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  }
+
+  let res = await search(tokens.access_token);
+  if (res.status === 401) {
+    const refreshed = await refreshAndSave(admin, integration, tokens.refresh_token);
+    res = await search(refreshed.access_token);
+  }
+  if (!res.ok) {
+    throw new Error(`Mercado Pago respondeu ${res.status} ao buscar pagamentos`);
+  }
+  const body = await res.json();
+  return Array.isArray(body.results) ? body.results : [];
+}
+
+async function loadTokens(
+  admin: SupabaseClient,
+  integration: { id: string; credential_secret_id: string | null }
+): Promise<MpOAuthTokens> {
+  if (!integration.credential_secret_id) throw new Error("Integração sem credencial salva");
+  const raw = await getIntegrationCredential(admin, integration.credential_secret_id);
+  if (!raw) throw new Error("Credencial não encontrada no Vault");
+  return JSON.parse(raw) as MpOAuthTokens;
+}
+
+async function refreshAndSave(
+  admin: SupabaseClient,
+  integration: { id: string; credential_secret_id: string | null },
+  refreshToken: string
+): Promise<MpOAuthTokens> {
+  const refreshed = await refreshMercadoPagoTokens(refreshToken);
+  if (integration.credential_secret_id) {
+    await setIntegrationCredential(
+      admin,
+      integration.credential_secret_id,
+      JSON.stringify(refreshed),
+      `mercado_pago:${integration.id}`
+    );
+  }
+  return refreshed;
 }
 
 /**
@@ -82,7 +235,7 @@ export async function upsertQuoteFromMercadoPagoPayment(
  * conforme o formato documentado (ts + v1 separados por vírgula). Só roda se
  * a integração tiver um webhook_secret configurado (opcional) - sem ele, a
  * defesa real continua sendo "nunca confiar no payload, sempre reconsultar
- * a API do MP com o access token guardado" (feito em fetchMercadoPagoPayment).
+ * a API do MP com o access token guardado".
  */
 export function validateMercadoPagoSignature(params: {
   xSignature: string | null;

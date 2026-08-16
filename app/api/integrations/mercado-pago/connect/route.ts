@@ -1,87 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { setIntegrationCredential } from "@/lib/vault";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://maker-flow.netlify.app";
 
-function adminClient() {
-  return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-}
-
 /**
- * O Mercado Pago não tem OAuth de app pra vendas do maker — o maker cola o
- * Access Token da própria conta MP dele (Painel do desenvolvedor > Credenciais
- * de produção). Validamos o token de verdade contra a API antes de salvar.
+ * Fluxo OAuth automático: o maker clica "Conectar", é redirecionado pro
+ * Mercado Pago, autoriza o MakerFlow a acessar a conta dele, e volta já
+ * conectado — sem colar token manualmente. Precisa de MERCADOPAGO_CLIENT_ID
+ * configurado (Suas integrações -> a aplicação -> OAuth, no painel do MP) e
+ * do redirect_uri abaixo cadastrado na mesma aplicação.
  */
-export async function POST(req: NextRequest) {
+export async function GET(_req: NextRequest) {
+  const clientId = process.env.MERCADOPAGO_CLIENT_ID;
+
+  if (!clientId) {
+    return NextResponse.json(
+      { error: "Integração com Mercado Pago não configurada — falta MERCADOPAGO_CLIENT_ID no ambiente." },
+      { status: 503 }
+    );
+  }
+
   const supabase = createServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    return NextResponse.redirect(`${SITE_URL}/login`);
   }
 
-  const body = await req.json().catch(() => ({}));
-  const accessToken = typeof body.accessToken === "string" ? body.accessToken.trim() : "";
-  const webhookSecret = typeof body.webhookSecret === "string" ? body.webhookSecret.trim() : null;
+  const redirectUri = `${SITE_URL}/api/integrations/mercado-pago/callback`;
 
-  if (!accessToken) {
-    return NextResponse.json({ error: "Access Token é obrigatório" }, { status: 400 });
-  }
+  const authorizeUrl = new URL("https://auth.mercadopago.com.br/authorization");
+  authorizeUrl.searchParams.set("client_id", clientId);
+  authorizeUrl.searchParams.set("response_type", "code");
+  authorizeUrl.searchParams.set("platform_id", "mp");
+  authorizeUrl.searchParams.set("redirect_uri", redirectUri);
+  authorizeUrl.searchParams.set("state", user.id);
 
-  const meRes = await fetch("https://api.mercadopago.com/users/me", {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!meRes.ok) {
-    return NextResponse.json({ error: "Access Token inválido — o Mercado Pago rejeitou." }, { status: 400 });
-  }
-
-  const admin = adminClient();
-
-  const { data: existing } = await admin
-    .from("integrations")
-    .select("id, credential_secret_id")
-    .eq("user_id", user.id)
-    .eq("platform", "mercado_pago")
-    .maybeSingle();
-
-  let secretId: string;
-  try {
-    secretId = await setIntegrationCredential(
-      admin,
-      existing?.credential_secret_id ?? null,
-      accessToken,
-      `mercado_pago:${user.id}`
-    );
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
-  }
-
-  const { data: integration, error } = await admin
-    .from("integrations")
-    .upsert(
-      {
-        ...(existing?.id ? { id: existing.id } : {}),
-        user_id: user.id,
-        platform: "mercado_pago",
-        status: "connected",
-        credential_secret_id: secretId,
-        webhook_secret: webhookSecret,
-      },
-      { onConflict: "user_id,platform" }
-    )
-    .select()
-    .single();
-
-  if (error || !integration) {
-    return NextResponse.json({ error: error?.message ?? "Falha ao salvar integração" }, { status: 500 });
-  }
-
-  return NextResponse.json({
-    ok: true,
-    webhookUrl: `${SITE_URL}/api/webhooks/mercado-pago/${integration.id}`,
-  });
+  return NextResponse.redirect(authorizeUrl.toString());
 }

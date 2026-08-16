@@ -7,37 +7,43 @@ function adminClient() {
 }
 
 /**
- * URL de webhook por-maker — mantida como alternativa manual, mas não é mais
- * o caminho principal desde que a conexão virou OAuth automático (ver
- * /api/webhooks/mercado-pago, que usa uma única URL de aplicação + user_id
- * do payload pra rotear pro maker certo). Nenhuma tela gera/mostra essa URL
- * hoje; ela continua funcionando pra quem quiser configurar manualmente as
- * notificações da própria conta MP apontando pra cá.
+ * Webhook de VENDAS do maker, modelo OAuth/aplicação única: uma única URL,
+ * cadastrada UMA VEZ nas notificações da aplicação do MakerFlow no painel do
+ * Mercado Pago (não por maker). O payload de todo pagamento traz `user_id`
+ * (a conta MP de quem recebeu o pagamento) — usamos isso pra achar qual
+ * integração/maker é dona do evento. Documentado pela própria Mercado Pago
+ * como o jeito de uma aplicação distinguir vendedores conectados via OAuth.
+ *
+ * Diferente de /api/webhooks/mercadopago (assinatura do MakerFlow) e de
+ * /api/webhooks/mercado-pago/[integrationId] (URL por-maker, do fluxo antigo
+ * de Access Token manual — mantida funcionando, mas não é mais usada por
+ * nenhuma tela desde que a conexão virou OAuth automático).
  */
-export async function POST(req: NextRequest, { params }: { params: { integrationId: string } }) {
-  const { integrationId } = params;
-
+export async function POST(req: NextRequest) {
   const admin = adminClient();
-
-  const { data: integration } = await admin
-    .from("integrations")
-    .select("id, user_id, status, credential_secret_id, webhook_secret")
-    .eq("id", integrationId)
-    .eq("platform", "mercado_pago")
-    .maybeSingle();
-
-  if (!integration || integration.status !== "connected" || !integration.credential_secret_id) {
-    // Responde 200 mesmo assim - devolver erro faz o MP ficar retentando
-    // pra sempre uma integração que foi desconectada.
-    return NextResponse.json({ ok: true, skipped: "integration not connected" });
-  }
 
   const body = await req.json().catch(() => ({}));
   const topic = body.type ?? req.nextUrl.searchParams.get("topic");
   const resourceId = body.data?.id ?? req.nextUrl.searchParams.get("id") ?? req.nextUrl.searchParams.get("data.id");
+  const mpUserId = body.user_id ?? body.data?.user_id;
 
   if (topic !== "payment" || !resourceId) {
     return NextResponse.json({ ok: true, skipped: "not a payment event" });
+  }
+
+  if (!mpUserId) {
+    return NextResponse.json({ ok: true, skipped: "no user_id in payload" });
+  }
+
+  const { data: integration } = await admin
+    .from("integrations")
+    .select("id, user_id, status, credential_secret_id, webhook_secret")
+    .eq("platform", "mercado_pago")
+    .eq("platform_account_id", String(mpUserId))
+    .maybeSingle();
+
+  if (!integration || integration.status !== "connected" || !integration.credential_secret_id) {
+    return NextResponse.json({ ok: true, skipped: "no connected integration for this account" });
   }
 
   if (integration.webhook_secret) {

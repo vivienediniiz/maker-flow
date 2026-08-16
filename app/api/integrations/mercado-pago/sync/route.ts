@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { getIntegrationCredential } from "@/lib/vault";
-import { upsertQuoteFromMercadoPagoPayment } from "@/lib/mercadoPago";
+import { searchMercadoPagoPaymentsForIntegration, upsertQuoteFromMercadoPagoPayment } from "@/lib/mercadoPago";
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -37,29 +36,21 @@ export async function POST(_req: NextRequest) {
     return NextResponse.json({ ok: true, synced: 0 });
   }
 
-  const accessToken = await getIntegrationCredential(admin, integration.credential_secret_id);
-  if (!accessToken) {
-    return NextResponse.json({ ok: true, synced: 0 });
-  }
-
   const since = new Date();
   since.setDate(since.getDate() - 30);
 
-  const searchUrl = new URL("https://api.mercadopago.com/v1/payments/search");
-  searchUrl.searchParams.set("sort", "date_created");
-  searchUrl.searchParams.set("criteria", "desc");
-  searchUrl.searchParams.set("range", "date_created");
-  searchUrl.searchParams.set("begin_date", since.toISOString());
-  searchUrl.searchParams.set("end_date", new Date().toISOString());
-
-  const res = await fetch(searchUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
-  if (!res.ok) {
+  let payments;
+  try {
+    payments = await searchMercadoPagoPaymentsForIntegration(
+      admin,
+      integration,
+      since.toISOString(),
+      new Date().toISOString()
+    );
+  } catch (err) {
     await admin.from("integrations").update({ status: "error" }).eq("id", integration.id);
-    return NextResponse.json({ error: `Mercado Pago respondeu ${res.status}` }, { status: 502 });
+    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
   }
-
-  const body = await res.json();
-  const payments = Array.isArray(body.results) ? body.results : [];
 
   let synced = 0;
   for (const payment of payments) {

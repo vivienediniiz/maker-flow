@@ -14,10 +14,14 @@ const PLATFORM_LABELS: Record<IntegrationPlatform, string> = {
 };
 
 const PLATFORM_DESCRIPTIONS: Record<IntegrationPlatform, string> = {
-  mercado_pago: "Conecte sua conta pra receber vendas automaticamente via notificação de pagamento.",
+  mercado_pago: "Autorize o MakerFlow a acessar sua conta e receber vendas automaticamente.",
   shopee: "Conecte sua loja pra receber pedidos automaticamente.",
   tiktok_shop: "Conecte sua loja pra receber pedidos automaticamente.",
 };
+
+// Mercado Pago já conecta de verdade via OAuth. Shopee/TikTok Shop ficam
+// desabilitados até o app do MakerFlow ser aprovado nas duas plataformas.
+const AVAILABLE_PLATFORMS: IntegrationPlatform[] = ["mercado_pago"];
 
 function formatLastEvent(iso: string | null) {
   if (!iso) return "Nunca";
@@ -27,17 +31,15 @@ function formatLastEvent(iso: string | null) {
 export function IntegrationCard({
   platform,
   integration,
-  onConnect,
   onDisconnected,
 }: {
   platform: IntegrationPlatform;
   integration: Integration | null;
-  onConnect: () => void;
   onDisconnected: () => void;
 }) {
   const [disconnecting, setDisconnecting] = useState(false);
   const status = integration?.status ?? "disconnected";
-  const isOAuthPlatform = platform !== "mercado_pago";
+  const available = AVAILABLE_PLATFORMS.includes(platform);
 
   async function handleDisconnect() {
     if (!confirm(`Desconectar ${PLATFORM_LABELS[platform]}? As credenciais salvas serão removidas.`)) return;
@@ -45,6 +47,10 @@ export function IntegrationCard({
     await fetch(`/api/integrations/${platform}/disconnect`, { method: "POST" });
     setDisconnecting(false);
     onDisconnected();
+  }
+
+  function handleConnect() {
+    window.location.href = `/api/integrations/${platform}/connect`;
   }
 
   return (
@@ -66,22 +72,17 @@ export function IntegrationCard({
           <NeonButton variant="outline" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
             {disconnecting ? <Loader2 size={14} className="animate-spin" /> : "Desconectar"}
           </NeonButton>
-        ) : isOAuthPlatform ? (
-          <NeonButton
-            size="sm"
-            disabled
-            className="opacity-40"
-            title="Aguardando aprovação do app na plataforma"
-          >
+        ) : available ? (
+          <NeonButton size="sm" onClick={handleConnect}>
             Conectar
           </NeonButton>
         ) : (
-          <NeonButton size="sm" onClick={onConnect}>
-            Configurar
+          <NeonButton size="sm" disabled className="opacity-40" title="Aguardando aprovação do app na plataforma">
+            Conectar
           </NeonButton>
         )}
       </div>
-      {isOAuthPlatform && status !== "connected" && (
+      {!available && status !== "connected" && (
         <p className="text-[11px] text-amber-400">Aguardando aprovação do app — em breve.</p>
       )}
     </GlassCard>

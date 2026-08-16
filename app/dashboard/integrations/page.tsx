@@ -1,24 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { IntegrationCard } from "@/components/dashboard/IntegrationCard";
-import { MercadoPagoCredentialsModal } from "@/components/dashboard/MercadoPagoCredentialsModal";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import type { Integration, IntegrationPlatform } from "@/lib/types";
 
 const PLATFORMS: IntegrationPlatform[] = ["mercado_pago", "shopee", "tiktok_shop"];
 
 export default function IntegrationsPage() {
+  return (
+    <Suspense fallback={<Topbar title="Integrações" />}>
+      <IntegrationsPageContent />
+    </Suspense>
+  );
+}
+
+function IntegrationsPageContent() {
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mpModalOpen, setMpModalOpen] = useState(false);
+
+  const mpConnected = searchParams.get("mp_connected");
+  const mpError = searchParams.get("mp_error");
 
   useEffect(() => {
     loadIntegrations();
   }, []);
+
+  useEffect(() => {
+    if (!mpConnected && !mpError) return;
+    // Limpa os query params depois de mostrar o resultado, pra não reaparecer num refresh.
+    const timeout = setTimeout(() => router.replace("/dashboard/integrations"), 4000);
+    return () => clearTimeout(timeout);
+  }, [mpConnected, mpError, router]);
 
   async function loadIntegrations() {
     setLoading(true);
@@ -47,6 +66,17 @@ export default function IntegrationsPage() {
           importar nada manualmente.
         </p>
 
+        {mpConnected && (
+          <div className="flex items-center gap-2 rounded-xl border border-neon-green/30 bg-neon-green/10 px-4 py-3 text-sm text-neon-green">
+            <CheckCircle2 size={16} /> Mercado Pago conectado com sucesso.
+          </div>
+        )}
+        {mpError && (
+          <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <AlertCircle size={16} /> Falha ao conectar Mercado Pago: {mpError}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-16 text-text-muted">
             <Loader2 size={20} className="animate-spin" />
@@ -58,21 +88,12 @@ export default function IntegrationsPage() {
                 key={platform}
                 platform={platform}
                 integration={integrationFor(platform)}
-                onConnect={() => {
-                  if (platform === "mercado_pago") setMpModalOpen(true);
-                }}
                 onDisconnected={loadIntegrations}
               />
             ))}
           </div>
         )}
       </main>
-
-      <MercadoPagoCredentialsModal
-        open={mpModalOpen}
-        onClose={() => setMpModalOpen(false)}
-        onConnected={loadIntegrations}
-      />
     </>
   );
 }
