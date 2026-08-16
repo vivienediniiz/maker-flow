@@ -1,4 +1,4 @@
-import type { QuoteStatus } from "./types";
+import type { QuoteStatus, QuoteSource } from "./types";
 
 export const QUOTE_EXPIRY_DAYS = 15;
 
@@ -32,6 +32,37 @@ export const QUOTE_CHANNEL_LABELS: Record<string, string> = {
   shopee: "Shopee",
   mercado_livre: "Mercado Livre",
 };
+
+export const QUOTE_SOURCE_LABELS: Record<QuoteSource, string> = {
+  mercado_pago: "Mercado Pago",
+  shopee: "Shopee",
+  tiktok_shop: "TikTok Shop",
+  manual: "Manual",
+};
+
+export const QUOTE_SOURCE_BADGE_STYLES: Record<QuoteSource, string> = {
+  mercado_pago: "bg-sky-500/15 text-sky-400 border-sky-500/30",
+  shopee: "bg-neon-orange/15 text-neon-orange border-neon-orange/30",
+  tiktok_shop: "bg-white/15 text-text-primary border-white/30",
+  manual: "bg-white/10 text-text-secondary border-white/10",
+};
+
+/** Próximo estágio no fluxo linear (sent → paid → in_production → shipped), com o rótulo do botão de ação rápida. */
+export function nextQuoteAction(status: QuoteStatus): { next: QuoteStatus; label: string } | null {
+  const order: QuoteStatus[] = ["sent", "paid", "in_production", "shipped"];
+  const actionLabels: Record<QuoteStatus, string> = {
+    sent: "Marcar como Pago",
+    paid: "Iniciar Produção",
+    in_production: "Marcar Enviado",
+    shipped: "",
+    expired: "Reabrir",
+  };
+  if (status === "expired") return { next: "sent", label: actionLabels.expired };
+  const idx = order.indexOf(status);
+  if (idx === -1 || idx === order.length - 1) return null;
+  const next = order[idx + 1];
+  return { next, label: actionLabels[status] };
+}
 
 /** Um orçamento "sent" vence 15 dias depois de enviado, se ninguém avançar o status. */
 export function isQuoteSentExpired(status: QuoteStatus, sentAt: string): boolean {

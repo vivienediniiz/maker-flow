@@ -5,14 +5,15 @@ import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteDetailModal } from "@/components/dashboard/QuoteDetailModal";
-import { NewOrderModal } from "@/components/dashboard/NewOrderModal";
+import { NewSaleModal } from "@/components/dashboard/NewSaleModal";
+import { SaleCard } from "@/components/dashboard/SaleCard";
 import { createClient } from "@/lib/supabase/client";
-import { formatBRL, cn } from "@/lib/utils";
-import { QUOTE_STATUS_LABELS, isQuoteSentExpired, formatOrderNumber } from "@/lib/quotes";
-import { Loader2, Trash2, Plus } from "lucide-react";
-import type { QuoteWithClient, QuoteStatus } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { QUOTE_STATUS_LABELS, QUOTE_SOURCE_LABELS, isQuoteSentExpired } from "@/lib/quotes";
+import { Loader2, Plus, RefreshCw } from "lucide-react";
+import type { QuoteWithClient, QuoteStatus, QuoteSource, Integration } from "@/lib/types";
 
-const FILTERS: { key: "all" | QuoteStatus; label: string }[] = [
+const STATUS_FILTERS: { key: "all" | QuoteStatus; label: string }[] = [
   { key: "all", label: "Todos" },
   { key: "sent", label: QUOTE_STATUS_LABELS.sent },
   { key: "paid", label: QUOTE_STATUS_LABELS.paid },
@@ -21,20 +22,43 @@ const FILTERS: { key: "all" | QuoteStatus; label: string }[] = [
   { key: "expired", label: QUOTE_STATUS_LABELS.expired },
 ];
 
+const SOURCE_FILTERS: { key: "all" | QuoteSource; label: string }[] = [
+  { key: "all", label: "Todas as Origens" },
+  { key: "tiktok_shop", label: QUOTE_SOURCE_LABELS.tiktok_shop },
+  { key: "shopee", label: QUOTE_SOURCE_LABELS.shopee },
+  { key: "mercado_pago", label: QUOTE_SOURCE_LABELS.mercado_pago },
+  { key: "manual", label: QUOTE_SOURCE_LABELS.manual },
+];
+
+function relativeTime(iso: string | null) {
+  if (!iso) return null;
+  const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (minutes < 1) return "agora mesmo";
+  if (minutes === 1) return "há 1 minuto";
+  if (minutes < 60) return `há ${minutes} minutos`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return hours === 1 ? "há 1 hora" : `há ${hours} horas`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "há 1 dia" : `há ${days} dias`;
+}
+
 export default function OrdersPage() {
   const supabase = createClient();
   const [quotes, setQuotes] = useState<QuoteWithClient[]>([]);
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
+  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]["key"]>("all");
+  const [sourceFilter, setSourceFilter] = useState<(typeof SOURCE_FILTERS)[number]["key"]>("all");
   const [search, setSearch] = useState("");
   const [selectedQuote, setSelectedQuote] = useState<QuoteWithClient | null>(null);
-  const [newOrderModalOpen, setNewOrderModalOpen] = useState(false);
+  const [newSaleModalOpen, setNewSaleModalOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    loadQuotes();
+    loadAll();
   }, []);
 
-  async function loadQuotes() {
+  async function loadAll() {
     setLoading(true);
     const {
       data: { user },
@@ -44,13 +68,16 @@ export default function OrdersPage() {
       return;
     }
 
-    const { data } = await supabase
-      .from("quotes")
-      .select("*, clients(name, phone, email, address), products(name, image_url, category, description, calc_inputs)")
-      .eq("user_id", user.id)
-      .order("order_number", { ascending: false });
+    const [{ data: quoteData }, { data: integrationData }] = await Promise.all([
+      supabase
+        .from("quotes")
+        .select("*, clients(name, phone, email, address), products(name, image_url, category, description, calc_inputs)")
+        .eq("user_id", user.id)
+        .order("order_number", { ascending: false }),
+      supabase.from("integrations").select("*").eq("user_id", user.id),
+    ]);
 
-    let rows = (data as QuoteWithClient[]) ?? [];
+    let rows = (quoteData as QuoteWithClient[]) ?? [];
 
     const toExpire = rows.filter((q) => isQuoteSentExpired(q.status, q.sent_at));
     if (toExpire.length > 0) {
@@ -62,7 +89,18 @@ export default function OrdersPage() {
     }
 
     setQuotes(rows);
+    setIntegrations((integrationData as Integration[]) ?? []);
     setLoading(false);
+  }
+
+  async function handleSync() {
+    setSyncing(true);
+    // Shopee/TikTok Shop ainda não têm API liberada (app aguardando
+    // aprovação) — pra essas, isso só recarrega o que já está no Supabase.
+    // Mercado Pago tem reconciliação de verdade contra a API deles.
+    await fetch("/api/integrations/mercado-pago/sync", { method: "POST" }).catch(() => {});
+    await loadAll();
+    setSyncing(false);
   }
 
   async function handleStatusChange(quoteId: string, status: QuoteStatus) {
@@ -73,60 +111,91 @@ export default function OrdersPage() {
 
   async function handleDelete(quoteId: string, e: React.MouseEvent) {
     e.stopPropagation();
-    if (!confirm("Excluir este pedido? Essa ação não pode ser desfeita.")) return;
+    if (!confirm("Excluir esta venda? Essa ação não pode ser desfeita.")) return;
     setQuotes((prev) => prev.filter((q) => q.id !== quoteId));
     await supabase.from("quotes").delete().eq("id", quoteId);
   }
 
-  const statusFiltered = filter === "all" ? quotes : quotes.filter((q) => q.status === filter);
+  const statusFiltered = statusFilter === "all" ? quotes : quotes.filter((q) => q.status === statusFilter);
+  const sourceFiltered = sourceFilter === "all" ? statusFiltered : statusFiltered.filter((q) => q.source === sourceFilter);
 
-  // Prioriza número do pedido: se o texto buscado bate com o número
-  // (com ou sem #), mostra só isso. Senão, busca por cliente/produto também.
   const searchLower = search.trim().toLowerCase().replace(/^#/, "");
   const filtered = !searchLower
-    ? statusFiltered
+    ? sourceFiltered
     : (() => {
-        const byNumber = statusFiltered.filter((q) => {
+        const byNumber = sourceFiltered.filter((q) => {
           const raw = String(q.order_number);
           const padded = raw.padStart(4, "0");
-          return raw.includes(searchLower) || padded.includes(searchLower);
+          return raw.includes(searchLower) || padded.includes(searchLower) || (q.external_order_id ?? "").toLowerCase().includes(searchLower);
         });
         if (byNumber.length > 0) return byNumber;
-        return statusFiltered.filter(
+        return sourceFiltered.filter(
           (q) =>
             (q.clients?.name ?? "").toLowerCase().includes(searchLower) ||
+            (q.buyer_name ?? "").toLowerCase().includes(searchLower) ||
             q.project_name.toLowerCase().includes(searchLower)
         );
       })();
 
+  const lastSync = integrations
+    .filter((i) => i.status === "connected" && i.last_event_at)
+    .map((i) => i.last_event_at as string)
+    .sort()
+    .reverse()[0];
+
   return (
     <>
       <Topbar
-        title="Pedidos"
+        title="Vendas"
         searchValue={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Buscar por nº do pedido, cliente..."
+        searchPlaceholder="Buscar vendas por nº, cliente, ID externo..."
       />
       <main className="space-y-6 px-6 py-8 md:px-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="glass-card flex flex-wrap gap-1 p-1">
-            {FILTERS.map((f) => (
-              <button
-                key={f.key}
-                onClick={() => setFilter(f.key)}
-                className={cn(
-                  "rounded-pill px-4 py-2 text-xs font-medium transition-colors",
-                  filter === f.key ? "bg-neon-gradient text-white shadow-neon-glow" : "text-text-secondary hover:text-text-primary"
-                )}
-              >
-                {f.label}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-text-secondary">{filtered.length} vendas</span>
+            <div className="glass-card flex flex-wrap gap-1 p-1">
+              {STATUS_FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setStatusFilter(f.key)}
+                  className={cn(
+                    "rounded-pill px-4 py-2 text-xs font-medium transition-colors",
+                    statusFilter === f.key ? "bg-neon-gradient text-white shadow-neon-glow" : "text-text-secondary hover:text-text-primary"
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value as (typeof SOURCE_FILTERS)[number]["key"])}
+              className="glass-input"
+            >
+              {SOURCE_FILTERS.map((f) => (
+                <option key={f.key} value={f.key} className="bg-bg-raised">
+                  {f.label}
+                </option>
+              ))}
+            </select>
           </div>
-          <NeonButton onClick={() => setNewOrderModalOpen(true)}>
-            <Plus size={16} /> Criar Pedido
-          </NeonButton>
+
+          <div className="flex items-center gap-3">
+            <NeonButton variant="outline" onClick={handleSync} disabled={syncing}>
+              {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+              Sincronizar Pedidos
+            </NeonButton>
+            <NeonButton onClick={() => setNewSaleModalOpen(true)}>
+              <Plus size={16} /> Nova Venda Manual
+            </NeonButton>
+          </div>
         </div>
+
+        {lastSync && (
+          <p className="text-xs text-text-muted">Última sincronização {relativeTime(lastSync)}.</p>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-16 text-text-muted">
@@ -134,59 +203,20 @@ export default function OrdersPage() {
           </div>
         ) : filtered.length === 0 ? (
           <GlassCard padding="lg" className="text-center text-sm text-text-muted">
-            Nenhum pedido encontrado.
+            Nenhuma venda encontrada.
           </GlassCard>
         ) : (
-          <GlassCard padding="none" className="overflow-hidden">
-            <div className="overflow-x-auto scrollbar-glass">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
-                    <th className="px-6 py-4 font-medium">Nº</th>
-                    <th className="px-6 py-4 font-medium">Cliente</th>
-                    <th className="px-6 py-4 font-medium">Produto</th>
-                    <th className="px-6 py-4 font-medium">Status</th>
-                    <th className="px-6 py-4 font-medium">Data</th>
-                    <th className="px-6 py-4 text-right font-medium">Valor</th>
-                    <th className="w-12 px-4 py-4" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((q) => (
-                    <tr
-                      key={q.id}
-                      onClick={() => setSelectedQuote(q)}
-                      className="cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]"
-                    >
-                      <td className="px-6 py-4 font-numeric text-text-muted">{formatOrderNumber(q.order_number)}</td>
-                      <td className="px-6 py-4 font-medium text-text-primary">
-                        {q.clients?.name ?? "Cliente não informado"}
-                      </td>
-                      <td className="max-w-[200px] truncate px-6 py-4 text-text-secondary">{q.project_name}</td>
-                      <td className="px-6 py-4">
-                        <StatusPill status={q.status} />
-                      </td>
-                      <td className="px-6 py-4 text-text-secondary">
-                        {new Date(q.sent_at).toLocaleDateString("pt-BR")}
-                      </td>
-                      <td className="px-6 py-4 text-right font-numeric font-medium text-text-primary">
-                        {formatBRL(q.final_price)}
-                      </td>
-                      <td className="px-4 py-4">
-                        <button
-                          onClick={(e) => handleDelete(q.id, e)}
-                          className="text-text-muted hover:text-red-400"
-                          aria-label="Excluir pedido"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </GlassCard>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((q) => (
+              <SaleCard
+                key={q.id}
+                quote={q}
+                onOpen={() => setSelectedQuote(q)}
+                onDelete={(e) => handleDelete(q.id, e)}
+                onStatusChange={(status) => handleStatusChange(q.id, status)}
+              />
+            ))}
+          </div>
         )}
       </main>
 
@@ -195,33 +225,7 @@ export default function OrdersPage() {
         onClose={() => setSelectedQuote(null)}
         onStatusChange={handleStatusChange}
       />
-      <NewOrderModal
-        open={newOrderModalOpen}
-        onClose={() => setNewOrderModalOpen(false)}
-        onCreated={loadQuotes}
-      />
+      <NewSaleModal open={newSaleModalOpen} onClose={() => setNewSaleModalOpen(false)} onCreated={loadAll} />
     </>
-  );
-}
-
-function StatusPill({ status }: { status: QuoteStatus }) {
-  const styles: Record<QuoteStatus, string> = {
-    sent: "bg-neon-orange/15 text-neon-orange border-neon-orange/30",
-    paid: "bg-neon-green/15 text-neon-green border-neon-green/30",
-    in_production: "bg-neon-pink/15 text-neon-pink border-neon-pink/30",
-    shipped: "bg-neon-purple/15 text-neon-purple border-neon-purple/30",
-    expired: "bg-red-500/15 text-red-400 border-red-500/30",
-  };
-  const labels: Record<QuoteStatus, string> = {
-    sent: "Orçamento Enviado",
-    paid: "Pago",
-    in_production: "Em Produção",
-    shipped: "Concluído",
-    expired: "Expirado",
-  };
-  return (
-    <span className={cn("inline-flex items-center rounded-pill border px-2.5 py-1 text-[11px] font-medium", styles[status])}>
-      {labels[status]}
-    </span>
   );
 }

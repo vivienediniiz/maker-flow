@@ -64,26 +64,9 @@ export interface Filament {
 }
 export type QuoteChannel = "tiktok" | "whatsapp" | "presencial" | "shopee" | "mercado_livre";
 
-export interface Quote {
-  id: string;
-  user_id: string;
-  order_number: number;
-  project_name: string;
-  weight_g: number;
-  print_time_min: number;
-  energy_cost: number;
-  filament_cost: number;
-  margin_percent: number;
-  final_price: number;
-  client_id: string | null;
-  product_id: string | null;
-  status: QuoteStatus;
-  sent_at: string;
-  payment_method: QuotePaymentMethod | null;
-  channel: QuoteChannel | null;
-  shipping_cost: number | null;
-  destination_cep: string | null;
-}
+// Origem do REGISTRO (quem criou/atualizou essa venda) — diferente de `channel`
+// (canal de venda escolhido manualmente, usado em cálculo de taxa/margem).
+export type QuoteSource = "mercado_pago" | "shopee" | "tiktok_shop" | "manual";
 
 export type QuoteStatus = "sent" | "paid" | "in_production" | "shipped" | "expired";
 
@@ -105,6 +88,15 @@ export interface Quote {
   status: QuoteStatus;
   sent_at: string;
   payment_method: QuotePaymentMethod | null;
+  channel: QuoteChannel | null;
+  shipping_cost: number | null;
+  destination_cep: string | null;
+  source: QuoteSource;
+  external_order_id: string | null;
+  buyer_name: string | null;
+  platform_fee: number;
+  cost_amount: number;
+  net_amount: number;
 }
 
 export interface QuoteWithClient extends Quote {
@@ -245,3 +237,17 @@ export const QUOTE_CHANNEL_LABELS: Record<string, string> = {
   shopee: "Shopee",
   mercado_livre: "Mercado Livre",
 };
+
+export type IntegrationPlatform = "mercado_pago" | "shopee" | "tiktok_shop";
+export type IntegrationStatus = "connected" | "disconnected" | "error";
+
+export interface Integration {
+  id: string;
+  user_id: string;
+  platform: IntegrationPlatform;
+  status: IntegrationStatus;
+  credential_secret_id: string | null;
+  webhook_secret: string | null;
+  last_event_at: string | null;
+  created_at: string;
+}

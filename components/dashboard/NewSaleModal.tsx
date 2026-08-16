@@ -8,11 +8,11 @@ import { formatBRL } from "@/lib/utils";
 import type { Client, Product, QuotePaymentMethod, QuoteChannel } from "@/lib/types";
 import { QUOTE_CHANNEL_LABELS } from "@/lib/quotes";
 
-interface NewOrderModalProps {
+interface NewSaleModalProps {
   open: boolean;
   onClose: () => void;
   // Opcionais: quando vem da Calculadora, já chegam preenchidos.
-  // Quando aberto direto da aba Pedidos, ficam vazios e editáveis no modal.
+  // Quando aberto direto da aba Vendas, ficam vazios e editáveis no modal.
   initialProjectName?: string;
   initialFinalPrice?: number;
   weightG?: number;
@@ -32,7 +32,7 @@ const PAYMENT_METHODS: { value: QuotePaymentMethod; label: string }[] = [
   { value: "other", label: "Outro" },
 ];
 
-export function NewOrderModal({
+export function NewSaleModal({
   open,
   onClose,
   initialProjectName = "",
@@ -43,7 +43,7 @@ export function NewOrderModal({
   filamentCost = 0,
   marginPercent = 0,
   onCreated,
-}: NewOrderModalProps) {
+}: NewSaleModalProps) {
   const supabase = createClient();
   const [mode, setMode] = useState<"select" | "new">("select");
   const [clients, setClients] = useState<Client[]>([]);
@@ -180,6 +180,7 @@ export function NewOrderModal({
       channel,
       shipping_cost: shippingCost ? Number(shippingCost) : null,
       destination_cep: destinationCep || null,
+      source: "manual",
     });
 
     setSaving(false);
@@ -194,7 +195,7 @@ export function NewOrderModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Criar Pedido">
+    <Modal open={open} onClose={onClose} title="Nova Venda Manual">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Produto</label>
@@ -312,7 +313,7 @@ export function NewOrderModal({
           />
         </div>
 
-        <p className="text-[11px] text-text-muted">Entra em Pedidos já como Pago.</p>
+        <p className="text-[11px] text-text-muted">Entra em Vendas já como Pago.</p>
 
         <div className="glass-card flex gap-1 p-1">
           <button
@@ -391,7 +392,7 @@ export function NewOrderModal({
             Cancelar
           </NeonButton>
           <NeonButton type="submit" disabled={saving}>
-            {saving ? "Salvando..." : "Criar Pedido"}
+            {saving ? "Salvando..." : "Criar Venda"}
           </NeonButton>
         </div>
       </form>

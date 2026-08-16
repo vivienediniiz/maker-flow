@@ -5,7 +5,7 @@ import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { Toggle } from "@/components/ui/Toggle";
-import { NewOrderModal } from "@/components/dashboard/NewOrderModal";
+import { NewSaleModal } from "@/components/dashboard/NewSaleModal";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { GenerateQuoteModal } from "@/components/dashboard/GenerateQuoteModal";
 import { createClient } from "@/lib/supabase/client";
@@ -413,7 +413,7 @@ export default function CalculatorPage() {
         </div>
       </main>
 
-      <NewOrderModal
+      <NewSaleModal
         open={orderModalOpen}
         onClose={() => setOrderModalOpen(false)}
         initialProjectName={projectName}

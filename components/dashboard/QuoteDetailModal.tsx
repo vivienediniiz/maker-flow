@@ -6,8 +6,8 @@ import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteStatusStepper } from "@/components/dashboard/QuoteStatusStepper";
 import { createClient } from "@/lib/supabase/client";
-import { formatBRL } from "@/lib/utils";
-import { formatOrderNumber, QUOTE_CHANNEL_LABELS } from "@/lib/quotes";
+import { formatBRL, cn } from "@/lib/utils";
+import { formatOrderNumber, QUOTE_CHANNEL_LABELS, QUOTE_SOURCE_LABELS, QUOTE_SOURCE_BADGE_STYLES } from "@/lib/quotes";
 import type { QuoteWithClient, QuoteStatus, QuotePaymentMethod } from "@/lib/types";
 
 const PAYMENT_METHOD_LABELS: Record<QuotePaymentMethod, string> = {
@@ -112,9 +112,26 @@ export function QuoteDetailModal({
   return (
     <Modal open={!!quote} onClose={onClose} title={`Pedido ${formatOrderNumber(quote.order_number)}`}>
       <div className="max-h-[70vh] space-y-5 overflow-y-auto scrollbar-glass pr-1">
+        {/* Origem, se veio de integração */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={cn(
+              "rounded-pill border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide",
+              QUOTE_SOURCE_BADGE_STYLES[quote.source]
+            )}
+          >
+            {QUOTE_SOURCE_LABELS[quote.source]}
+          </span>
+          {quote.external_order_id && (
+            <span className="font-numeric text-xs text-text-muted">ID: {quote.external_order_id}</span>
+          )}
+        </div>
+
         {/* Cliente */}
         <div className="glass-card space-y-1 p-4">
-          <p className="text-sm font-medium text-text-primary">{quote.clients?.name ?? "Cliente não informado"}</p>
+          <p className="text-sm font-medium text-text-primary">
+            {quote.clients?.name ?? quote.buyer_name ?? "Cliente não informado"}
+          </p>
           {quote.clients?.phone && <p className="text-xs text-text-secondary">📱 {quote.clients.phone}</p>}
           {quote.clients?.email && <p className="text-xs text-text-secondary">✉️ {quote.clients.email}</p>}
           {quote.clients?.address && <p className="text-xs text-text-secondary">📍 {quote.clients.address}</p>}
@@ -173,10 +190,29 @@ export function QuoteDetailModal({
           <p className="text-xs text-text-muted">Este pedido não tem detalhamento de cálculo salvo.</p>
         )}
 
-        <div className="glass-card flex items-center justify-between px-4 py-3">
-          <span className="text-xs text-text-muted">Valor final</span>
-          <span className="font-numeric text-lg font-semibold text-neon-pink">{formatBRL(quote.final_price)}</span>
-        </div>
+        {quote.platform_fee > 0 || quote.cost_amount > 0 ? (
+          <div className="grid grid-cols-3 gap-2 rounded-xl border border-border-glass bg-white/[0.02] px-3 py-3 text-center">
+            <div>
+              <p className="text-[10px] text-text-muted">Bruto</p>
+              <p className="font-numeric text-base font-medium text-text-primary">{formatBRL(quote.final_price)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-text-muted">Custos</p>
+              <p className="font-numeric text-base font-medium text-red-400">
+                {formatBRL(quote.platform_fee + quote.cost_amount)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] text-text-muted">Líquido</p>
+              <p className="font-numeric text-base font-medium text-neon-green">{formatBRL(quote.net_amount)}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="glass-card flex items-center justify-between px-4 py-3">
+            <span className="text-xs text-text-muted">Valor final</span>
+            <span className="font-numeric text-lg font-semibold text-neon-pink">{formatBRL(quote.final_price)}</span>
+          </div>
+        )}
 
         <div className="space-y-1 text-xs text-text-muted">
           {quote.payment_method && (
