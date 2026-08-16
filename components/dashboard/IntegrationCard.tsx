@@ -23,6 +23,16 @@ const PLATFORM_DESCRIPTIONS: Record<IntegrationPlatform, string> = {
 // desabilitados até o app do MakerFlow ser aprovado nas duas plataformas.
 const AVAILABLE_PLATFORMS: IntegrationPlatform[] = ["mercado_pago"];
 
+// As pastas de rota de /api/integrations/*/connect usam hífen (padrão de URL),
+// mas o valor do tipo/enum usa underscore (padrão de coluna) — os dois nomes
+// não são o mesmo texto, por isso o slug precisa de um mapeamento explícito
+// em vez de usar `platform` direto na URL.
+const PLATFORM_CONNECT_SLUGS: Record<IntegrationPlatform, string> = {
+  mercado_pago: "mercado-pago",
+  shopee: "shopee",
+  tiktok_shop: "tiktok-shop",
+};
+
 function formatLastEvent(iso: string | null) {
   if (!iso) return "Nunca";
   return new Date(iso).toLocaleString("pt-BR");
@@ -54,7 +64,7 @@ export function IntegrationCard({
   }
 
   function handleConnect() {
-    window.location.href = `/api/integrations/${platform}/connect`;
+    window.location.href = `/api/integrations/${PLATFORM_CONNECT_SLUGS[platform]}/connect`;
   }
 
   return (
