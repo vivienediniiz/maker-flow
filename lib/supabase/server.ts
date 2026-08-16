@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 export function createClient() {
   const cookieStore = cookies();
@@ -30,3 +31,19 @@ export function createClient() {
     }
   );
 }
+
+/**
+ * auth.getUser() bate no servidor de Auth do Supabase (não é só leitura de
+ * cookie local) — layout.tsx e page.tsx do dashboard chamavam isso cada um
+ * por conta própria, dobrando a espera à toa pro mesmo usuário na mesma
+ * request. React.cache() garante que só a primeira chamada em cada
+ * renderização do servidor de fato bate na rede; as próximas reaproveitam
+ * o resultado.
+ */
+export const getCurrentUser = cache(async () => {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
+});

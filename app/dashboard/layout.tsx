@@ -1,16 +1,14 @@
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { TrialBanner } from "@/components/dashboard/TrialBanner";
 import { PixRenewalBanner } from "@/components/dashboard/PixRenewalBanner";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { trialDaysRemaining } from "@/lib/trial";
 import { pixBillingState } from "@/lib/pix";
 import type { SubscriptionTier, BillingCycle } from "@/lib/types";
 
 async function getCurrentProfile() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) return null;
 

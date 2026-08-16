@@ -4,16 +4,14 @@ import { PrinterCard } from "@/components/dashboard/PrinterCard";
 import { GlassAccordion } from "@/components/ui/GlassAccordion";
 import { FinancialChart } from "@/components/charts/FinancialChart";
 import { NeonButton } from "@/components/ui/NeonButton";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { formatBRL } from "@/lib/utils";
 import { DollarSign, TrendingUp, Layers, Server, Plus } from "lucide-react";
 import type { Printer } from "@/lib/types";
 
 async function getPrinters(): Promise<Printer[]> {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return [];
 
   const { data } = await supabase
