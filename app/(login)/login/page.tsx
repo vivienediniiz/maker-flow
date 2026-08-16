@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Zap, Printer, BarChart3, Package, Layers } from "lucide-react";
+import { Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -74,25 +74,8 @@ export default function LoginPage() {
       </div>
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-2">
-        {/* Lado esquerdo: headline com efeito de digitação + ícones flutuantes */}
+        {/* Lado esquerdo: headline com efeito de digitação */}
         <div className="relative hidden overflow-hidden px-20 lg:flex lg:flex-col lg:justify-center xl:px-28 2xl:px-32">
-          <Printer
-            className="animate-float-y absolute left-[12%] top-[22%] h-10 w-10 text-white/10"
-            style={{ animationDelay: "0s" }}
-          />
-          <BarChart3
-            className="animate-float-y absolute right-[18%] top-[16%] h-8 w-8 text-white/10"
-            style={{ animationDelay: "1.5s" }}
-          />
-          <Package
-            className="animate-float-y absolute bottom-[24%] left-[22%] h-9 w-9 text-white/10"
-            style={{ animationDelay: "3s" }}
-          />
-          <Layers
-            className="animate-float-y absolute bottom-[18%] right-[14%] h-7 w-7 text-white/10"
-            style={{ animationDelay: "2s" }}
-          />
-
           <AuthTypewriter />
         </div>
 
