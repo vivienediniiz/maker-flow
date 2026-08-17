@@ -7,7 +7,7 @@ import { formatBRL } from "@/lib/utils";
 import { Loader2, Trophy } from "lucide-react";
 import type { Quote } from "@/lib/types";
 
-const TOP_LIMIT = 8;
+const TOP_LIMIT = 3;
 
 interface ProductRanking {
   key: string;

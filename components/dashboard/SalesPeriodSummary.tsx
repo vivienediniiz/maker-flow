@@ -63,7 +63,7 @@ export function SalesPeriodSummary() {
   const bySource = SOURCES.map((source) => ({
     source,
     total: periodQuotes.filter((q) => q.source === source).reduce((s, q) => s + q.final_price, 0),
-  })).filter((s) => s.total > 0);
+  }));
 
   return (
     <GlassCard padding="lg" className="space-y-5">
@@ -106,25 +106,23 @@ export function SalesPeriodSummary() {
             </div>
           </div>
 
-          {bySource.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {bySource.map(({ source, total }) => {
-                const Icon = QUOTE_SOURCE_ICONS[source];
-                return (
-                  <span
-                    key={source}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-xs font-medium",
-                      QUOTE_SOURCE_BADGE_STYLES[source]
-                    )}
-                  >
-                    <Icon size={12} />
-                    {QUOTE_SOURCE_LABELS[source]} · {formatBRL(total)}
-                  </span>
-                );
-              })}
-            </div>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {bySource.map(({ source, total }) => {
+              const Icon = QUOTE_SOURCE_ICONS[source];
+              return (
+                <span
+                  key={source}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-xs font-medium",
+                    QUOTE_SOURCE_BADGE_STYLES[source]
+                  )}
+                >
+                  <Icon size={12} />
+                  {QUOTE_SOURCE_LABELS[source]} · {formatBRL(total)}
+                </span>
+              );
+            })}
+          </div>
 
           {periodQuotes.length === 0 && (
             <p className="text-sm text-text-muted">Nenhuma venda nesse período ainda.</p>

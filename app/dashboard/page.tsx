@@ -1,15 +1,16 @@
+import Link from "next/link";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { PrinterCard } from "@/components/dashboard/PrinterCard";
 import { SalesPeriodSummary } from "@/components/dashboard/SalesPeriodSummary";
 import { TopProductsCard } from "@/components/dashboard/TopProductsCard";
 import { DashboardClock } from "@/components/dashboard/DashboardClock";
+import { GreetingTypewriter } from "@/components/dashboard/GreetingTypewriter";
 import { GlassAccordion } from "@/components/ui/GlassAccordion";
 import { FinancialChart } from "@/components/charts/FinancialChart";
-import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { formatBRL } from "@/lib/utils";
-import { DollarSign, TrendingUp, Layers, Server, Plus } from "lucide-react";
+import { DollarSign, TrendingUp, Layers, Server, Plus, Package, ClipboardList } from "lucide-react";
 import type { Printer } from "@/lib/types";
 
 // Seção "Impressoras em Tempo Real" (telemetria via bridge/webhook) escondida
@@ -29,6 +30,28 @@ async function getPrinters(): Promise<Printer[]> {
     .order("created_at", { ascending: false });
 
   return (data as Printer[]) ?? [];
+}
+
+/** "Status do Farm" agora reflete o controle patrimonial (printer_assets), não mais a telemetria. */
+async function getPrinterAssetsSummary(): Promise<{ active: number; total: number }> {
+  const supabase = createClient();
+  const user = await getCurrentUser();
+  if (!user) return { active: 0, total: 0 };
+
+  const { data } = await supabase.from("printer_assets").select("status").eq("user_id", user.id);
+  const rows = data ?? [];
+  return { active: rows.filter((r) => r.status === "active").length, total: rows.length };
+}
+
+/** Soma o que resta de filamento em todos os rolos cadastrados. */
+async function getFilamentStockKg(): Promise<number> {
+  const supabase = createClient();
+  const user = await getCurrentUser();
+  if (!user) return 0;
+
+  const { data } = await supabase.from("filaments").select("remaining_weight_g").eq("user_id", user.id);
+  const totalGrams = (data ?? []).reduce((s, f) => s + (f.remaining_weight_g ?? 0), 0);
+  return totalGrams / 1000;
 }
 
 async function getStudioName(): Promise<string | null> {
@@ -93,12 +116,13 @@ async function getPreviousMonthFinancials(): Promise<PreviousMonthFinancials> {
 }
 
 export default async function DashboardPage() {
-  const [printers, studioName, financials] = await Promise.all([
+  const [printers, studioName, financials, farmStatus, filamentStockKg] = await Promise.all([
     getPrinters(),
     getStudioName(),
     getPreviousMonthFinancials(),
+    getPrinterAssetsSummary(),
+    getFilamentStockKg(),
   ]);
-  const activeCount = printers.filter((p) => p.status === "printing").length;
 
   return (
     <>
@@ -108,14 +132,34 @@ export default async function DashboardPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm text-text-secondary">
-              Bem-vindo{studioName ? `, ${studioName}` : " de volta"} 👋
+              {studioName ? (
+                <>
+                  Bem-vindo, <GreetingTypewriter name={studioName} /> 👋
+                </>
+              ) : (
+                "Bem-vindo de volta 👋"
+              )}
             </p>
             <h2 className="font-display text-2xl">Visão Geral</h2>
             <DashboardClock />
           </div>
-          <NeonButton>
-            <Plus size={16} /> Novo Orçamento
-          </NeonButton>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/dashboard/products"
+              className="inline-flex items-center gap-2 rounded-pill border border-border-glassStrong px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:border-neon-pink/60 hover:bg-white/5"
+            >
+              <Package size={16} /> Produtos
+            </Link>
+            <Link
+              href="/dashboard/orders"
+              className="inline-flex items-center gap-2 rounded-pill border border-border-glassStrong px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:border-neon-pink/60 hover:bg-white/5"
+            >
+              <ClipboardList size={16} /> Vendas
+            </Link>
+            <Link href="/dashboard/calculator" className="neon-btn">
+              <Plus size={16} /> Novo Orçamento
+            </Link>
+          </div>
         </div>
 
         {/* Resumo de vendas por período + produtos mais vendidos */}
@@ -140,8 +184,8 @@ export default async function DashboardPage() {
             icon={TrendingUp}
             accent="green"
           />
-          <KpiCard label="Filamento em Kg" value="14.6 kg" delta={-4.2} icon={Layers} accent="orange" />
-          <KpiCard label="Status do Farm" value={`${activeCount}/${printers.length} ativas`} icon={Server} accent="purple" />
+          <KpiCard label="Filamento em Estoque" value={`${filamentStockKg.toFixed(1)} kg`} icon={Layers} accent="orange" />
+          <KpiCard label="Status do Farm" value={`${farmStatus.active}/${farmStatus.total} ativas`} icon={Server} accent="purple" />
         </section>
 
         {/* Printer farm */}

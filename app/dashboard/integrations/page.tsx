@@ -8,7 +8,9 @@ import { createClient } from "@/lib/supabase/client";
 import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import type { Integration, IntegrationPlatform } from "@/lib/types";
 
-const PLATFORMS: IntegrationPlatform[] = ["mercado_pago", "mercado_livre", "shopee", "tiktok_shop"];
+// Mercado Pago escondido da aba (Vendas continua recebendo webhook normalmente
+// se algum maker já tiver conectado antes) — reative incluindo "mercado_pago" aqui de novo.
+const PLATFORMS: IntegrationPlatform[] = ["mercado_livre", "shopee", "tiktok_shop"];
 
 export default function IntegrationsPage() {
   return (
