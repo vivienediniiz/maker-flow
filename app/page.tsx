@@ -143,8 +143,13 @@ export default function HomePage() {
         </GlassCard>
       </section>
 
-      <footer className="border-t border-border-glass px-6 py-8 text-center text-xs text-text-muted md:px-12">
-        © 2026 StudioMaker. Feito para a comunidade Maker.
+      <footer className="flex flex-col items-center gap-3 border-t border-border-glass px-6 py-8 text-center text-xs text-text-muted md:flex-row md:justify-between md:px-12">
+        <p>© 2026 StudioMaker. Feito para a comunidade Maker.</p>
+        <nav className="flex items-center gap-4">
+          <Link href="/privacy-policy" className="hover:text-text-secondary">
+            Política de Privacidade
+          </Link>
+        </nav>
       </footer>
     </div>
   );
