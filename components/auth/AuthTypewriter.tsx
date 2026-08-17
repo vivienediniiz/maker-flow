@@ -24,7 +24,7 @@ const PHRASES: { title: string; subtitle: string; icon: LucideIcon }[] = [
   {
     title: "Feito por quem faz. Pensado pra quem cresce.",
     subtitle:
-      "MakerFlow é o ERP que entende a rotina de um estúdio 3D — porque foi construído por dentro de um.",
+      "StudioMaker é o ERP que entende a rotina de um estúdio 3D — porque foi construído por dentro de um.",
     icon: Rocket,
   },
 ];

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Entrar — MakerFlow",
+  title: "Entrar — StudioMaker",
 };
 
 export default function LoginGroupLayout({ children }: { children: React.ReactNode }) {

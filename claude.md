@@ -1,4 +1,4 @@
-# MakerFlow — Contexto do Projeto
+# StudioMaker — Contexto do Projeto
 
 SaaS de gestão para makers/estúdios de impressão 3D. Next.js 14 (App Router) + TypeScript + Tailwind + Supabase + Mercado Pago.
 
@@ -8,9 +8,9 @@ SaaS de gestão para makers/estúdios de impressão 3D. Next.js 14 (App Router) 
 - **Site:** maker-flow.netlify.app
 - **Supabase:** projeto `makerflow`, ID `dgcdltcpvnultwduypcu`, região `sa-east-1` (São Paulo)
 - **Mercado Pago — DOIS apps separados, não confundir:**
-  - **"Makerflow3d"**: `MERCADOPAGO_ACCESS_TOKEN`/`MERCADOPAGO_PUBLIC_KEY`, cobra a assinatura do MakerFlow em si (cartão automático + Pix manual). Webhook: `/api/webhooks/mercadopago`. Não mexer nisso pra vendas.
+  - **"Makerflow3d"**: `MERCADOPAGO_ACCESS_TOKEN`/`MERCADOPAGO_PUBLIC_KEY`, cobra a assinatura do StudioMaker em si (cartão automático + Pix manual). Webhook: `/api/webhooks/mercadopago`. Não mexer nisso pra vendas.
   - **"MakerFlow Vendas"**: `MERCADO_PAGO_VENDAS_CLIENT_ID`/`_CLIENT_SECRET`/`_WEBHOOK_SECRET`, app OAuth separado que cada maker conecta pra receber notificação das próprias vendas (ver "Integrações" abaixo). Webhook: `/api/webhooks/mercado-pago` (com hífen entre "mercado" e "pago" — cuidado, é bem parecido com a URL do app de assinatura).
-- **`bridge/`**: script Python separado (fora do app Next.js) que roda no computador do maker, na rede local da impressora Bambu Lab, e manda telemetria + snapshot de câmera pro MakerFlow via webhook. Tem versão CLI (`bridge.py`, dev) e GUI empacotada em `.exe` via PyInstaller (`bridge_gui.py`, cliente final — hospedado no bucket `bridge-releases` do Supabase Storage). Ver `bridge/README.md`.
+- **`bridge/`**: script Python separado (fora do app Next.js) que roda no computador do maker, na rede local da impressora Bambu Lab, e manda telemetria + snapshot de câmera pro StudioMaker via webhook. Tem versão CLI (`bridge.py`, dev) e GUI empacotada em `.exe` via PyInstaller (`bridge_gui.py`, cliente final — hospedado no bucket `bridge-releases` do Supabase Storage). Ver `bridge/README.md`.
 
 ## Design system
 
@@ -45,7 +45,7 @@ Buckets de Storage: `avatars` (logo do estúdio), `products` (fotos de produto),
 - Integrações: Mercado Pago conecta via OAuth automático (app "MakerFlow Vendas", separado do app de assinatura), um clique e volta conectado; webhook usa a Orders API (`GET /v1/orders/{id}`) roteado por `user_id` do payload (URL única pra aplicação inteira, não por maker); fallback "Sincronizar Pedidos" usa a Payments API de busca (não existe endpoint de busca documentado na Orders API) — as duas convergem no mesmo `external_order_id` (o id do pagamento, não do pedido) pra não duplicar venda. Shopee/TikTok Shop com estrutura de OAuth/webhook pronta, aguardando app aprovado nas duas plataformas.
 - Impressoras: cadastro real (Cadastros → Impressoras), wizard de conexão de 4 passos, telemetria + câmera via `bridge/` (ver acima)
 - Configurações (taxas de marketplace, frete do remetente — persistidos de verdade)
-- Assinatura MakerFlow: cartão automático (Mercado Pago preapproval) + Pix manual (com tolerância de 15 dias)
+- Assinatura StudioMaker: cartão automático (Mercado Pago preapproval) + Pix manual (com tolerância de 15 dias)
 - Perfil do estúdio com upload de logo
 
 ## Ferramentas de desenvolvimento
@@ -66,4 +66,4 @@ Buckets de Storage: `avatars` (logo do estúdio), `products` (fotos de produto),
 
 - Shopee e TikTok Shop: falta só o app ser aprovado nas respectivas plataformas (Shopee Open Platform / TikTok Shop Partner Center) — código já está pronto, só configurar `SHOPEE_PARTNER_ID`/`SHOPEE_PARTNER_KEY`/`TIKTOK_APP_KEY`/`TIKTOK_APP_SECRET`
 - Emissão de Nota Fiscal real (precisa de provedor fiscal certificado tipo NFE.io/Focus NFe — botão já existe desativado no overlay de Vendas)
-- Link de cobrança real por pedido (pro cliente do maker pagar), com webhook próprio separado da assinatura do MakerFlow
+- Link de cobrança real por pedido (pro cliente do maker pagar), com webhook próprio separado da assinatura do StudioMaker

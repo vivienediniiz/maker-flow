@@ -18,7 +18,7 @@ interface PrinterSetupWizardProps {
 const TOTAL_STEPS = 4;
 const TITLES = [
   "Ativar acesso local na impressora",
-  "Baixar o programa MakerFlow Bridge",
+  "Baixar o programa StudioMaker Bridge",
   "Conectar o programa à sua impressora",
   "Confirmar conexão",
 ];
@@ -152,8 +152,8 @@ function Step2() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-text-secondary">
-        Baixe o programa MakerFlow Bridge — ele roda no seu computador, na mesma rede Wi-Fi da impressora, e manda
-        os dados dela pro MakerFlow automaticamente. Não precisa ter Python nem nada instalado.
+        Baixe o programa StudioMaker Bridge — ele roda no seu computador, na mesma rede Wi-Fi da impressora, e manda
+        os dados dela pro StudioMaker automaticamente. Não precisa ter Python nem nada instalado.
       </p>
       <a href={getBridgeDownloadUrl()} download className="block">
         <NeonButton type="button" className="w-full justify-center">
@@ -199,7 +199,7 @@ function Step4({ connected, checking }: { connected: boolean; checking: boolean 
       <div className="flex flex-col items-center gap-3 rounded-xl border border-neon-green/30 bg-neon-green/10 px-4 py-8 text-center">
         <CheckCircle2 size={32} className="text-neon-green" />
         <p className="font-medium text-text-primary">Conectado com sucesso!</p>
-        <p className="text-xs text-text-muted">Sua impressora já está enviando dados pro MakerFlow.</p>
+        <p className="text-xs text-text-muted">Sua impressora já está enviando dados pro StudioMaker.</p>
       </div>
     );
   }

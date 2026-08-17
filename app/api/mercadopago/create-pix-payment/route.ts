@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
   const paymentBody = {
     transaction_amount: amount,
-    description: `MakerFlow - Plano ${plan.name} (${cycle === "monthly" ? "Mensal" : "Anual"})`,
+    description: `StudioMaker - Plano ${plan.name} (${cycle === "monthly" ? "Mensal" : "Anual"})`,
     payment_method_id: "pix",
     external_reference: encodeExternalReference(user.id, planId, cycle, "pix"),
     payer: { email: user.email },

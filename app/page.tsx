@@ -52,7 +52,7 @@ export default function HomePage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-gradient shadow-neon-glow">
             <Zap size={18} className="text-white" />
           </div>
-          <span className="font-display text-lg tracking-wide">MakerFlow</span>
+          <span className="font-display text-lg tracking-wide">StudioMaker</span>
         </div>
         <nav className="flex items-center gap-6">
           <Link href="/pricing" className="hidden text-sm text-text-secondary hover:text-text-primary sm:block">
@@ -144,7 +144,7 @@ export default function HomePage() {
       </section>
 
       <footer className="border-t border-border-glass px-6 py-8 text-center text-xs text-text-muted md:px-12">
-        © 2026 MakerFlow. Feito para a comunidade Maker.
+        © 2026 StudioMaker. Feito para a comunidade Maker.
       </footer>
     </div>
   );

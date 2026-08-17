@@ -1,11 +1,11 @@
-# MakerFlow Bridge
+# StudioMaker Bridge
 
 Programa separado, em Python, que lê o status de uma impressora Bambu Lab na
-rede local e envia telemetria (status, progresso, temperaturas) pro MakerFlow
+rede local e envia telemetria (status, progresso, temperaturas) pro StudioMaker
 automaticamente.
 
 **Importante:** isso roda no computador de quem tem a impressora, na mesma
-rede Wi-Fi dela — não no servidor do site. O MakerFlow (Netlify) fica na
+rede Wi-Fi dela — não no servidor do site. O StudioMaker (Netlify) fica na
 internet e não teria como alcançar uma impressora atrás do roteador de casa;
 por isso esse programa existe como uma "ponte" (bridge) rodando localmente e
 enviando os dados pra fora.
@@ -14,8 +14,8 @@ Tem duas versões, pro mesmo objetivo:
 
 | | `bridge.py` (CLI) | `bridge_gui.py` (janela gráfica) |
 |---|---|---|
-| Pra quem | desenvolvedor / uso avançado | cliente final do MakerFlow, sem Python instalado |
-| Como roda | `python bridge.py` no terminal | `MakerFlowBridge.exe`, baixado pelo wizard "Configurar conexão" dentro do MakerFlow |
+| Pra quem | desenvolvedor / uso avançado | cliente final do StudioMaker, sem Python instalado |
+| Como roda | `python bridge.py` no terminal | `MakerFlowBridge.exe`, baixado pelo wizard "Configurar conexão" dentro do StudioMaker |
 | Configuração | `.env` ou perguntas no terminal | janela com campos, salva em `%APPDATA%\MakerFlowBridge\config.json` |
 
 As duas usam a mesma lógica de leitura/envio de telemetria, em `core.py`.
@@ -31,7 +31,7 @@ acesso; o número de série normalmente também aparece ali, ou então numa
 etiqueta embaixo da impressora / no cartão que veio na caixa.
 
 Precisa também de uma impressora já cadastrada em **Cadastros → Impressoras**
-no MakerFlow, pra ter a chave (`api_key_webhook`) dela.
+no StudioMaker, pra ter a chave (`api_key_webhook`) dela.
 
 ---
 
@@ -47,7 +47,7 @@ pip install -r requirements.txt
 ### Configuração
 
 Duas formas de informar IP, número de série, código de acesso e chave do
-MakerFlow:
+StudioMaker:
 
 - **Arquivo `.env`**: copie `.env.example` pra `.env` (mesma pasta) e
   preencha os valores.
@@ -63,7 +63,7 @@ python bridge.py
 
 A cada 10–15 segundos (configurável em `POLL_INTERVAL_SECONDS`), lê status,
 progresso, tempo restante, arquivo em impressão e temperaturas, e envia via
-`POST` pro endpoint `/api/v1/printers/telemetry` do MakerFlow, autenticado
+`POST` pro endpoint `/api/v1/printers/telemetry` do StudioMaker, autenticado
 com `Authorization: Bearer <api_key_webhook>`. Pra parar, `Ctrl+C`.
 
 Com `ENABLE_CAMERA=true` no `.env` (ou respondendo "s" quando perguntado),
@@ -86,12 +86,12 @@ precisar de terminal aberto:
 ## Versão GUI (`bridge_gui.py` / `MakerFlowBridge.exe`) — cliente final
 
 Pensada pra quem não tem (nem precisa ter) Python instalado. Dentro do
-MakerFlow, em Cadastros → Impressoras, o botão **"Configurar conexão"** abre
+StudioMaker, em Cadastros → Impressoras, o botão **"Configurar conexão"** abre
 um wizard de 4 passos que explica tudo isso visualmente e linka pro download
 — este README é mais pra quem está desenvolvendo/mantendo o programa.
 
 Na primeira execução, abre uma janela pedindo os 4 dados (chave do
-MakerFlow, IP, número de série, código de acesso) e salva em
+StudioMaker, IP, número de série, código de acesso) e salva em
 `%APPDATA%\MakerFlowBridge\config.json`. Nas próximas execuções, pula direto
 pra tela de status. O botão **"Reconfigurar"** reabre o formulário (útil se
 trocar de impressora ou o IP mudar).
@@ -136,7 +136,7 @@ publicar uma versão nova:
 Desabilitada por padrão — cada cliente decide se quer ligar (nem toda
 impressora tem câmera, e tem quem prefira não usar por privacidade). Quando
 habilitada, tira uma foto (não streaming) a cada poucos segundos e manda pro
-MakerFlow, que guarda só a mais recente por impressora.
+StudioMaker, que guarda só a mais recente por impressora.
 
 Não precisa dizer qual modelo de impressora você tem — o bridge tenta os
 dois protocolos conhecidos automaticamente:
@@ -162,16 +162,16 @@ Se o primeiro protocolo falhar, tenta automaticamente o segundo.
   LAN e o Modo Desenvolvedor estão ativados na impressora, e que o
   computador está na mesma rede Wi-Fi/LAN dela (sem isolamento de clientes
   no roteador).
-- **`MakerFlow respondeu 404`**: a chave (`api_key_webhook`) não bate com
+- **`StudioMaker respondeu 404`**: a chave (`api_key_webhook`) não bate com
   nenhuma impressora cadastrada — confira se copiou certo em Cadastros →
   Impressoras.
-- **`MakerFlow respondeu 401`**: a chave não foi enviada corretamente.
+- **`StudioMaker respondeu 401`**: a chave não foi enviada corretamente.
 - **`[erro câmera]` toda hora / imagem nunca aparece**: falha de câmera
   nunca derruba a telemetria (status/temperaturas continuam funcionando
   normal) — mas se quiser a câmera funcionando, confirme que a impressora
   tem câmera e que o Modo Somente LAN está ativo. Pra A1/P1, teste
   isoladamente: `python -c "import core; core.capture_snapshot_chamber('IP', 'CODIGO')"`.
-- **Erro de rede pro MakerFlow**: confira `MAKERFLOW_URL` (padrão aponta pra
+- **Erro de rede pro StudioMaker**: confira `MAKERFLOW_URL` (padrão aponta pra
   produção; troque pra `http://localhost:3000` se estiver testando contra o
   site rodando localmente — só existe essa opção na versão CLI via `.env`,
   a versão GUI sempre aponta pra produção).

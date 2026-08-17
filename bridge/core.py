@@ -3,7 +3,7 @@ Logica compartilhada entre o bridge.py (CLI, para desenvolvedores) e o
 bridge_gui.py (janela grafica, empacotada em .exe pro cliente final).
 
 Le telemetria de uma impressora Bambu Lab conectada (via bambulabs_api) e
-envia pro endpoint /api/v1/printers/telemetry do MakerFlow. Tambem sabe
+envia pro endpoint /api/v1/printers/telemetry do StudioMaker. Tambem sabe
 capturar um snapshot da camera (quando a impressora tem) e mandar pro
 endpoint /api/v1/printers/snapshot.
 """
@@ -29,7 +29,7 @@ RTSP_PORT = 322
 _CHAMBER_JPEG_START = bytes([0xFF, 0xD8, 0xFF, 0xE0])
 _CHAMBER_JPEG_END = bytes([0xFF, 0xD9])
 
-# GcodeState (bambulabs_api) -> status aceito pelo MakerFlow
+# GcodeState (bambulabs_api) -> status aceito pelo StudioMaker
 GCODE_STATE_MAP = {
     "RUNNING": "printing",
     "PREPARE": "printing",

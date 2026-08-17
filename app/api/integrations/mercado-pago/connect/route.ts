@@ -7,7 +7,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://maker-flow.netlify
  * Fluxo OAuth automático: o maker clica "Conectar", é redirecionado pro
  * Mercado Pago, autoriza o app "MakerFlow Vendas" a acessar a conta dele, e
  * volta já conectado — sem colar token manualmente. Esse app é separado do
- * "Makerflow3d" (usado só pra assinatura do MakerFlow — não mexer). Precisa
+ * "Makerflow3d" (usado só pra assinatura do StudioMaker — não mexer). Precisa
  * de MERCADO_PAGO_VENDAS_CLIENT_ID configurado (Suas integrações -> app
  * "MakerFlow Vendas" -> OAuth, no painel do MP) e do redirect_uri abaixo
  * cadastrado na mesma aplicação.

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MakerFlow — Gestão para Makers e Estúdios 3D",
+  title: "StudioMaker — Gestão para Makers e Estúdios 3D",
   description:
     "Precificação inteligente, gestão de pedidos e automação para a comunidade Maker e estúdios de Impressão 3D.",
 };

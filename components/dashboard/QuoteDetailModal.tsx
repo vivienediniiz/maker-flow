@@ -89,7 +89,7 @@ export function QuoteDetailModal({
         ${quote!.shipping_cost ? `<p style="margin:0;"><strong>Valor do frete:</strong> ${formatBRL(quote!.shipping_cost)}</p>` : ""}
       </div>
 
-      <p style="text-align:center; font-size:9px; color:#B4AFC4; margin-top:24px;">Gerado via MakerFlow</p>
+      <p style="text-align:center; font-size:9px; color:#B4AFC4; margin-top:24px;">Gerado via StudioMaker</p>
     `;
 
     document.body.appendChild(container);

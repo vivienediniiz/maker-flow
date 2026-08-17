@@ -15,7 +15,7 @@ function adminClient() {
  * integrations.platform_account_id no momento da conexão via OAuth.
  *
  * Diferente de /api/webhooks/mercadopago, que é o webhook da assinatura do
- * MakerFlow (app "Makerflow3d", não mexer nesse).
+ * StudioMaker (app "Makerflow3d", não mexer nesse).
  */
 export async function POST(req: NextRequest) {
   const admin = adminClient();
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (!integration || integration.status !== "connected" || !integration.credential_secret_id) {
-    // Nenhum cliente do MakerFlow corresponde a esse user_id - ignora
+    // Nenhum cliente do StudioMaker corresponde a esse user_id - ignora
     // silenciosamente (só loga), não retorna erro pro Mercado Pago.
     console.log(`[webhook] mercado-pago: nenhuma integração conectada pro user_id ${mpUserId}`);
     return NextResponse.json({ ok: true, skipped: "no connected integration for this account" });

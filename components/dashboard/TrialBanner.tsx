@@ -28,7 +28,7 @@ export function TrialBanner({
         {expired ? <AlertTriangle size={16} className="text-red-400" /> : <Sparkles size={16} className="text-neon-orange" />}
         {expired ? (
           <span>
-            Seu período gratuito acabou. Assine um plano para continuar usando o MakerFlow sem interrupções.
+            Seu período gratuito acabou. Assine um plano para continuar usando o StudioMaker sem interrupções.
           </span>
         ) : (
           <span>

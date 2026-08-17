@@ -4,7 +4,7 @@ import crypto from "crypto";
 /**
  * TODO(aguardando aprovação do app no Shopee Open Platform): estrutura e
  * validação de assinatura prontas, mas isso só recebe eventos reais depois
- * que o app do MakerFlow for aprovado e a URL cadastrada no Shopee Open
+ * que o app do StudioMaker for aprovado e a URL cadastrada no Shopee Open
  * Platform. Até lá, processProof não roda - só loga e responde 200 (a
  * Shopee costuma mandar um ping de verificação ao cadastrar a URL, que
  * precisa de 200 pra validar o endpoint).

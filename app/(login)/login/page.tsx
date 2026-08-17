@@ -70,7 +70,7 @@ export default function LoginPage() {
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-gradient shadow-neon-glow">
           <Zap size={18} className="text-white" />
         </div>
-        <span className="font-display text-lg tracking-wide text-text-primary">MakerFlow</span>
+        <span className="font-display text-lg tracking-wide text-text-primary">StudioMaker</span>
       </div>
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-2">

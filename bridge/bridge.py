@@ -1,16 +1,16 @@
 """
-MakerFlow Bridge (CLI)
+StudioMaker Bridge (CLI)
 
 Versao de linha de comando, pra desenvolvedores/uso avancado. Le o status de
 uma impressora Bambu Lab na rede local (via bambulabs-api) e envia telemetria
-periodicamente pro endpoint /api/v1/printers/telemetry do MakerFlow.
+periodicamente pro endpoint /api/v1/printers/telemetry do StudioMaker.
 
 Para o cliente final (sem Python instalado), use o bridge_gui.py empacotado
 como .exe — ele tem uma janela grafica em vez de perguntas no terminal, mas
 usa a mesma logica de core.py por baixo.
 
 Este script roda no computador da pessoa, na mesma rede Wi-Fi da impressora.
-Ele NAO roda no servidor do site — o MakerFlow nao teria como alcancar a
+Ele NAO roda no servidor do site — o StudioMaker nao teria como alcancar a
 impressora, que fica atras do roteador de casa/estudio.
 """
 
@@ -51,7 +51,7 @@ def load_config():
 
     had_env = bool(printer_ip and printer_serial and printer_access_code and api_key)
 
-    print("=== MakerFlow Bridge ===")
+    print("=== StudioMaker Bridge ===")
     if not had_env:
         print("IP, numero de serie e codigo de acesso aparecem na tela da impressora,")
         print("em Configuracoes de Rede (com o Modo Somente LAN ativado).\n")
@@ -63,7 +63,7 @@ def load_config():
     if not printer_access_code:
         printer_access_code = ask("Codigo de acesso")
     if not api_key:
-        api_key = ask("Chave da impressora no MakerFlow (Cadastros -> Impressoras)")
+        api_key = ask("Chave da impressora no StudioMaker (Cadastros -> Impressoras)")
 
     if not all([printer_ip, printer_serial, printer_access_code, api_key]):
         print("\nFaltam dados obrigatorios. Encerrando.")
@@ -144,9 +144,9 @@ def main():
                     if response.ok:
                         print(f"[ok] status={payload.get('status')} progresso={payload.get('progress_percent', '?')}%")
                     else:
-                        print(f"[erro] MakerFlow respondeu {response.status_code}: {response.text}")
+                        print(f"[erro] StudioMaker respondeu {response.status_code}: {response.text}")
                 except requests.RequestException as exc:
-                    print(f"[erro de rede] Nao consegui falar com o MakerFlow: {exc}")
+                    print(f"[erro de rede] Nao consegui falar com o StudioMaker: {exc}")
                 except Exception as exc:
                     print(f"[erro] Falha lendo a impressora: {exc}")
                 next_telemetry = now + config["poll_interval"]
@@ -156,7 +156,7 @@ def main():
                     jpeg = core.capture_snapshot(config["printer_ip"], config["printer_access_code"])
                     response = core.send_snapshot(config["makerflow_url"], config["api_key"], jpeg)
                     if not response.ok:
-                        print(f"[erro camera] MakerFlow respondeu {response.status_code}: {response.text}")
+                        print(f"[erro camera] StudioMaker respondeu {response.status_code}: {response.text}")
                 except Exception as exc:
                     # Falha de camera nunca deve derrubar a telemetria - so pula essa rodada.
                     print(f"[erro camera] {exc}")

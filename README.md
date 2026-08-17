@@ -1,4 +1,4 @@
-# MakerFlow
+# StudioMaker
 
 SaaS de gestão, precificação e automação para makers e estúdios de impressão 3D.
 Next.js 14 (App Router) · React · TypeScript · Tailwind CSS · Supabase · Mercado Pago.

@@ -76,7 +76,7 @@ export default function PricingPage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-gradient shadow-neon-glow">
             <Zap size={18} className="text-white" />
           </div>
-          <span className="font-display text-lg tracking-wide">MakerFlow</span>
+          <span className="font-display text-lg tracking-wide">StudioMaker</span>
         </Link>
         <Link href="/login" className="text-sm text-text-secondary hover:text-text-primary">
           Já tenho conta

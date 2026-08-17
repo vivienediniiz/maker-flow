@@ -3,7 +3,7 @@ import crypto from "crypto";
 
 /**
  * TODO(aguardando aprovação do app no TikTok Shop Partner Center): estrutura
- * pronta, mas isso só recebe eventos reais depois que o app do MakerFlow for
+ * pronta, mas isso só recebe eventos reais depois que o app do StudioMaker for
  * aprovado e a URL cadastrada no Partner Center. Até lá, só loga e responde
  * 200 (o TikTok Shop também costuma verificar o endpoint antes de ativar).
  *

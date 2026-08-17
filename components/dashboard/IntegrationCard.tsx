@@ -14,13 +14,13 @@ const PLATFORM_LABELS: Record<IntegrationPlatform, string> = {
 };
 
 const PLATFORM_DESCRIPTIONS: Record<IntegrationPlatform, string> = {
-  mercado_pago: "Autorize o MakerFlow a acessar sua conta e receber vendas automaticamente.",
+  mercado_pago: "Autorize o StudioMaker a acessar sua conta e receber vendas automaticamente.",
   shopee: "Conecte sua loja pra receber pedidos automaticamente.",
   tiktok_shop: "Conecte sua loja pra receber pedidos automaticamente.",
 };
 
 // Mercado Pago já conecta de verdade via OAuth. Shopee/TikTok Shop ficam
-// desabilitados até o app do MakerFlow ser aprovado nas duas plataformas.
+// desabilitados até o app do StudioMaker ser aprovado nas duas plataformas.
 const AVAILABLE_PLATFORMS: IntegrationPlatform[] = ["mercado_pago"];
 
 // As pastas de rota de /api/integrations/*/connect usam hífen (padrão de URL),
@@ -54,7 +54,7 @@ export function IntegrationCard({
   async function handleDisconnect() {
     const extra =
       platform === "mercado_pago"
-        ? "\n\nIsso apaga a credencial aqui no MakerFlow, mas o Mercado Pago não tem revogação por API — pra remover o acesso na sua conta MP também, vá em Configurações → Aplicativos autorizados, na própria conta Mercado Pago."
+        ? "\n\nIsso apaga a credencial aqui no StudioMaker, mas o Mercado Pago não tem revogação por API — pra remover o acesso na sua conta MP também, vá em Configurações → Aplicativos autorizados, na própria conta Mercado Pago."
         : "";
     if (!confirm(`Desconectar ${PLATFORM_LABELS[platform]}? As credenciais salvas serão removidas.${extra}`)) return;
     setDisconnecting(true);

@@ -1,11 +1,11 @@
 """
-MakerFlow Bridge (GUI)
+StudioMaker Bridge (GUI)
 
 Versao com janela grafica do bridge, feita pra ser empacotada com PyInstaller
 num .exe standalone e distribuida pro cliente final (sem precisar instalar
 Python). Usa a mesma logica de leitura/envio de telemetria de core.py.
 
-Na primeira vez que roda, pede os dados da impressora e do MakerFlow numa
+Na primeira vez que roda, pede os dados da impressora e do StudioMaker numa
 janela simples e salva em %APPDATA%/MakerFlowBridge/config.json. Nas
 proximas vezes, conecta direto. Tem um botao "Reconfigurar" pra trocar os
 dados (ex: impressora nova, IP mudou).
@@ -31,7 +31,7 @@ APP_NAME = "MakerFlowBridge"
 BRIDGE_VERSION = "1.1.0"
 
 FIELDS = [
-    ("api_key", "Chave da impressora (MakerFlow)"),
+    ("api_key", "Chave da impressora (StudioMaker)"),
     ("printer_ip", "IP da impressora"),
     ("printer_serial", "Numero de serie"),
     ("printer_access_code", "Codigo de acesso"),
@@ -97,7 +97,7 @@ def worker_loop(config, stop_event, event_queue):
                 if response.ok:
                     event_queue.put(("telemetry", payload))
                 else:
-                    event_queue.put(("error", f"MakerFlow respondeu {response.status_code}: {response.text[:200]}"))
+                    event_queue.put(("error", f"StudioMaker respondeu {response.status_code}: {response.text[:200]}"))
                 next_telemetry = now + config.get("poll_interval", core.DEFAULT_POLL_INTERVAL)
 
             if config.get("enable_camera") and now >= next_snapshot:
@@ -107,7 +107,7 @@ def worker_loop(config, stop_event, event_queue):
                     if snap_response.ok:
                         event_queue.put(("snapshot", None))
                     else:
-                        event_queue.put(("camera_error", f"MakerFlow respondeu {snap_response.status_code}"))
+                        event_queue.put(("camera_error", f"StudioMaker respondeu {snap_response.status_code}"))
                 except Exception as exc:
                     # Falha de camera nao derruba a telemetria - so registra e segue.
                     event_queue.put(("camera_error", str(exc)))
@@ -135,7 +135,7 @@ def worker_loop(config, stop_event, event_queue):
 class App:
     def __init__(self, root):
         self.root = root
-        self.root.title("MakerFlow Bridge")
+        self.root.title("StudioMaker Bridge")
         self.root.protocol("WM_DELETE_WINDOW", self.on_exit)
 
         self.event_queue = queue.Queue()
@@ -194,7 +194,7 @@ class App:
             )
 
         ttk.Button(self.container, text="Salvar e conectar", command=self.on_save).pack(anchor="w", pady=(8, 0))
-        ttk.Label(self.container, text=f"MakerFlow Bridge v{BRIDGE_VERSION}", foreground="#999999").pack(
+        ttk.Label(self.container, text=f"StudioMaker Bridge v{BRIDGE_VERSION}", foreground="#999999").pack(
             anchor="w", pady=(16, 0)
         )
 
@@ -216,7 +216,7 @@ class App:
     def show_status_view(self, config):
         self.clear_container()
 
-        ttk.Label(self.container, text="MakerFlow Bridge", font=("Segoe UI", 13, "bold")).pack(anchor="w")
+        ttk.Label(self.container, text="StudioMaker Bridge", font=("Segoe UI", 13, "bold")).pack(anchor="w")
         camera_suffix = " · câmera habilitada" if config.get("enable_camera") else ""
         ttk.Label(self.container, text=f"Impressora: {config['printer_ip']}{camera_suffix}", foreground="#666666").pack(
             anchor="w", pady=(2, 12)
@@ -240,7 +240,7 @@ class App:
         )
         ttk.Button(btn_row, text="Sair", command=self.on_exit).pack(side="left")
 
-        ttk.Label(self.container, text=f"MakerFlow Bridge v{BRIDGE_VERSION}", foreground="#999999").pack(
+        ttk.Label(self.container, text=f"StudioMaker Bridge v{BRIDGE_VERSION}", foreground="#999999").pack(
             anchor="w", pady=(16, 0)
         )
 

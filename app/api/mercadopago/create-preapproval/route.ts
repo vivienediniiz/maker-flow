@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   const amount = priceFor(plan, cycle);
 
   const preapprovalBody = {
-    reason: `MakerFlow - Plano ${plan.name} (${cycle === "monthly" ? "Mensal" : "Anual"})`,
+    reason: `StudioMaker - Plano ${plan.name} (${cycle === "monthly" ? "Mensal" : "Anual"})`,
     external_reference: encodeExternalReference(user.id, planId, cycle),
     payer_email: user.email,
     back_url: `${req.nextUrl.origin}/dashboard/settings?subscription=success`,
