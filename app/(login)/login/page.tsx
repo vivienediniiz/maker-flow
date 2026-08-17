@@ -38,11 +38,12 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Fundo: gradiente estático rosa → roxo → laranja */}
+      {/* Fundo: gradiente estático rosa → roxo → laranja, escurecido */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{ background: "linear-gradient(100deg, #FF4EDF 0%, #AA17DB 55%, #E86333 100%)" }}
       />
+      <div className="pointer-events-none absolute inset-0 bg-bg/55" />
 
       {/* Logo fixo no canto superior esquerdo */}
       <div className="absolute left-6 top-6 z-20 flex items-center gap-2 sm:left-10 sm:top-8">
