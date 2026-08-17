@@ -34,7 +34,7 @@ Buckets de Storage: `avatars` (logo do estúdio), `products` (fotos de produto),
 
 ## Funcionalidades já construídas
 
-- Auth completo (login/signup/logout/troca de senha), trial de 7 dias. Tela de **login** tem visual próprio (fundo aurora animado, painel "liquid glass", headline com efeito de digitação, login social com Google) e por isso vive num route group dedicado `app/(login)/login/` — separado do `app/(auth)/` que ainda serve Signup/Reset (layout de duas colunas simples). Login social usa `supabase.auth.signInWithOAuth` + callback em `app/auth/callback/route.ts`; provider Google já habilitado e funcionando em Supabase → Authentication → Providers. Facebook foi removido (`components/auth/SocialAuthButtons.tsx` ficou com a estrutura em array, fácil reativar/adicionar outro provider depois se precisar) — páginas públicas `/privacy-policy` e `/data-deletion` continuam no ar (a segunda foi criada especificamente pro cadastro do Facebook Login, mas não faz mal manter).
+- Auth completo (login/signup/logout/troca de senha), reverse trial de 14 dias (ver seção Planos abaixo). Tela de **login** tem visual próprio (fundo aurora animado, painel "liquid glass", headline com efeito de digitação, login social com Google) e por isso vive num route group dedicado `app/(login)/login/` — separado do `app/(auth)/` que ainda serve Signup/Reset (layout de duas colunas simples). Login social usa `supabase.auth.signInWithOAuth` + callback em `app/auth/callback/route.ts`; provider Google já habilitado e funcionando em Supabase → Authentication → Providers. Facebook foi removido (`components/auth/SocialAuthButtons.tsx` ficou com a estrutura em array, fácil reativar/adicionar outro provider depois se precisar) — páginas públicas `/privacy-policy` e `/data-deletion` continuam no ar (a segunda foi criada especificamente pro cadastro do Facebook Login, mas não faz mal manter).
 - Dashboard, Calculadora (com seletor de produto existente, faixas de preço, marketplace vindo de Configurações)
 - Clientes (lista em tabela, busca)
 - Produtos (lista em tabela, foto, overlay de detalhe)
@@ -46,11 +46,18 @@ Buckets de Storage: `avatars` (logo do estúdio), `products` (fotos de produto),
 - Impressoras (Cadastros → Impressoras): **controle patrimonial** (`printer_assets`/`printer_maintenance_logs` — modelo, filial, valor pago, nota fiscal, garantia, histórico de manutenção), não mais telemetria. A telemetria em tempo real (tabela `printers`, wizard de 4 passos, câmera, `bridge/`) continua no código, mas está **desligada por padrão** atrás de `NEXT_PUBLIC_ENABLE_REALTIME_TELEMETRY` (troque pra `true` pra reativar o card "Impressoras em Tempo Real" no Dashboard) — sem isso ligado, não tem porta de entrada na UI pro wizard de conexão.
 - Configurações (taxas de marketplace, frete do remetente — persistidos de verdade)
 - Financeiro (`/dashboard/finance`): KPIs de Receita Bruta/Custos Totais/Lucro Líquido Real/Vendas Canceladas, filtro de período+origem, gráfico de evolução, despesas via `extra_purchases` (botão "Nova Despesa"), exportar CSV e gerar relatório PDF — tudo com dados reais.
-- Suporte (`/dashboard/support`): card com link direto pro WhatsApp.
-- Assinatura (`/dashboard/subscription`): plano atual + comparação Starter/Pro/Studio (mesmo checkout do `/pricing`), item de menu separado do card "Meu estúdio/Assine agora" que já existia embaixo do Sidebar. Créditos avulsos (comprar cota extra sem trocar de plano) foi **discutido mas adiado** — não construído ainda.
-- Dashboard: card de resumo de vendas por período (Hoje/7d/30d/Este mês, com breakdown por origem e lucro real) e card de produtos mais vendidos do mês (quantidade = nº de vendas daquele produto, não existe campo de quantidade unitária no schema).
-- Assinatura StudioMaker: cartão automático (Mercado Pago preapproval) + Pix manual (com tolerância de 15 dias)
+- Suporte (`/dashboard/support`): WhatsApp direto pra quem é pago; plano Grátis cai numa Central de Ajuda (`/dashboard/help`, FAQ estática).
+- Assinatura (`/dashboard/subscription`): plano atual + comparação Grátis/Mensal/Trimestral (`PlanComparisonTable`, reaproveitada no `/pricing`), cartão automático (Mercado Pago preapproval) ou Pix manual. Créditos avulsos (comprar cota extra sem trocar de plano) foi **discutido mas adiado** — não construído ainda.
+- Dashboard: pago vê card de resumo de vendas por período (Hoje/7d/30d/Este mês, breakdown por origem e lucro real) + produtos mais vendidos do mês (quantidade = nº de vendas daquele produto, não existe campo de quantidade unitária no schema). Grátis vê versão reduzida (contagens simples + vendas manuais do dia).
 - Perfil do estúdio com upload de logo
+
+## Planos e feature gating
+
+3 tiers: **Grátis** (permanente), **Mensal** (R$19,90) e **Trimestral** (R$49,90, "Mais Popular") — `lib/plans.ts`. Sem eixo de ciclo separado: cada plano pago tem preço e frequência (`frequencyMonths`) fixos, não é mais "mesmo plano, ciclo diferente" (por isso `BillingToggle.tsx` foi removido).
+
+**Reverse trial:** toda conta nova nasce com `subscription_tier = 'monthly'` direto no `handle_new_user()` (14 dias de acesso completo, sem pedir cartão). `app/dashboard/layout.tsx` faz um lazy-check a cada carregamento do dashboard — se `trial_ends_at` passou e `subscription_status != 'active'` (nunca virou assinante de verdade), rebaixa pra `free` automaticamente. Mesmo padrão já usado ali pro Pix vencido.
+
+**Gating:** `lib/entitlements.ts` centraliza os limites do Grátis (10 clientes, 10 produtos, 5 filamentos, 1 filial) e o `isPaid(tier)` que libera o resto (PDF de orçamento, baixa automática de estoque, alerta de estoque baixo, Financeiro, Insights, Insumos/Compras Extras, Integrações, suporte via WhatsApp, Dashboard completo). `SubscriptionContext`/`useSubscription()` (`components/dashboard/SubscriptionContext.tsx`) passa o `tier` já resolvido no servidor (`dashboard/layout.tsx`) pra qualquer componente client via Context, sem cada tela precisar buscar o profile de novo. `UpgradeGate.tsx` é a tela padrão de cadeado usada nas áreas totalmente bloqueadas.
 
 ## Ferramentas de desenvolvimento
 
