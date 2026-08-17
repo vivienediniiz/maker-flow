@@ -46,7 +46,7 @@ export function Sidebar({ studioName, avatarUrl, tier, cycle }: SidebarProps) {
   const planLabel = planDisplayLabel(tier, cycle);
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border-glass bg-bg-raised/60 backdrop-blur-glass md:flex">
+    <aside className="glass-card fixed bottom-4 left-4 top-4 z-40 hidden w-64 flex-col overflow-hidden shadow-neon-glow md:flex">
       <div className="flex items-center gap-2 px-6 py-6">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-gradient shadow-neon-glow">
           <Zap size={18} className="text-white" />

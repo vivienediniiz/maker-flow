@@ -44,7 +44,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="min-h-screen">
       <Sidebar studioName={profile?.full_name} avatarUrl={profile?.avatar_url} tier={tier} cycle={cycle} />
-      <div className="md:pl-64">
+      <div className="md:pl-72">
         {isPix && pixState === "grace" ? (
           <PixRenewalBanner paidUntil={profile!.paid_until} />
         ) : (
