@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Facebook } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-type OAuthProvider = "google" | "facebook";
+type OAuthProvider = "google";
 
 function GoogleIcon() {
   return (
@@ -32,11 +31,6 @@ function GoogleIcon() {
 
 const PROVIDERS: { id: OAuthProvider; label: string; icon: ReactNode }[] = [
   { id: "google", label: "Continuar com Google", icon: <GoogleIcon /> },
-  {
-    id: "facebook",
-    label: "Continuar com Facebook",
-    icon: <Facebook size={18} className="fill-[#1877F2] text-[#1877F2]" />,
-  },
 ];
 
 export function SocialAuthButtons() {
