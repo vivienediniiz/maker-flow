@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import type { Integration, IntegrationPlatform } from "@/lib/types";
 
-const PLATFORMS: IntegrationPlatform[] = ["mercado_pago", "shopee", "tiktok_shop"];
+const PLATFORMS: IntegrationPlatform[] = ["mercado_pago", "mercado_livre", "shopee", "tiktok_shop"];
 
 export default function IntegrationsPage() {
   return (
@@ -27,17 +27,19 @@ function IntegrationsPageContent() {
 
   const mpConnected = searchParams.get("mp_connected");
   const mpError = searchParams.get("mp_error");
+  const mlConnected = searchParams.get("ml_connected");
+  const mlError = searchParams.get("ml_error");
 
   useEffect(() => {
     loadIntegrations();
   }, []);
 
   useEffect(() => {
-    if (!mpConnected && !mpError) return;
+    if (!mpConnected && !mpError && !mlConnected && !mlError) return;
     // Limpa os query params depois de mostrar o resultado, pra não reaparecer num refresh.
     const timeout = setTimeout(() => router.replace("/dashboard/integrations"), 4000);
     return () => clearTimeout(timeout);
-  }, [mpConnected, mpError, router]);
+  }, [mpConnected, mpError, mlConnected, mlError, router]);
 
   async function loadIntegrations() {
     setLoading(true);
@@ -74,6 +76,16 @@ function IntegrationsPageContent() {
         {mpError && (
           <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
             <AlertCircle size={16} /> Falha ao conectar Mercado Pago: {mpError}
+          </div>
+        )}
+        {mlConnected && (
+          <div className="flex items-center gap-2 rounded-xl border border-neon-green/30 bg-neon-green/10 px-4 py-3 text-sm text-neon-green">
+            <CheckCircle2 size={16} /> Mercado Livre conectado com sucesso.
+          </div>
+        )}
+        {mlError && (
+          <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <AlertCircle size={16} /> Falha ao conectar Mercado Livre: {mlError}
           </div>
         )}
 

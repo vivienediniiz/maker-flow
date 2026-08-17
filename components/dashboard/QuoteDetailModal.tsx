@@ -245,6 +245,20 @@ export function QuoteDetailModal({
             onChange={(status) => onStatusChange(quote.id, status)}
           />
         </div>
+
+        {quote.status !== "cancelled" && quote.status !== "expired" && (
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm("Cancelar esta venda? Ela vai contar como venda cancelada no Financeiro.")) {
+                onStatusChange(quote.id, "cancelled");
+              }
+            }}
+            className="w-full rounded-xl border border-red-500/30 py-2 text-xs font-medium text-red-400 hover:bg-red-500/10"
+          >
+            Cancelar Venda
+          </button>
+        )}
       </div>
     </Modal>
   );

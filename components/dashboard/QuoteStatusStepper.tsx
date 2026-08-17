@@ -33,6 +33,14 @@ export function QuoteStatusStepper({
     );
   }
 
+  if (status === "cancelled") {
+    return (
+      <div className="flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-xs text-red-300">
+        <AlertTriangle size={13} /> Venda cancelada
+      </div>
+    );
+  }
+
   const currentIndex = QUOTE_STATUS_ORDER.indexOf(status);
   const daysLeft = status === "sent" ? quoteDaysUntilExpiry(sentAt) : null;
 

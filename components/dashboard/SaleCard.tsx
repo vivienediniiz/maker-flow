@@ -13,6 +13,7 @@ const STATUS_PILL_STYLES: Record<QuoteStatus, string> = {
   in_production: "bg-neon-pink/15 text-neon-pink border-neon-pink/30",
   shipped: "bg-neon-purple/15 text-neon-purple border-neon-purple/30",
   expired: "bg-red-500/15 text-red-400 border-red-500/30",
+  cancelled: "bg-red-500/15 text-red-400 border-red-500/30",
 };
 
 const STATUS_PILL_LABELS: Record<QuoteStatus, string> = {
@@ -21,6 +22,7 @@ const STATUS_PILL_LABELS: Record<QuoteStatus, string> = {
   in_production: "Em Produção",
   shipped: "Concluído",
   expired: "Expirado",
+  cancelled: "Cancelado",
 };
 
 export function SaleCard({

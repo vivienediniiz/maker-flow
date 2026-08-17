@@ -20,10 +20,12 @@ const STATUS_FILTERS: { key: "all" | QuoteStatus; label: string }[] = [
   { key: "in_production", label: QUOTE_STATUS_LABELS.in_production },
   { key: "shipped", label: "Pedido Concluído" },
   { key: "expired", label: QUOTE_STATUS_LABELS.expired },
+  { key: "cancelled", label: QUOTE_STATUS_LABELS.cancelled },
 ];
 
 const SOURCE_FILTERS: { key: "all" | QuoteSource; label: string }[] = [
   { key: "all", label: "Todas as Origens" },
+  { key: "mercado_livre", label: QUOTE_SOURCE_LABELS.mercado_livre },
   { key: "tiktok_shop", label: QUOTE_SOURCE_LABELS.tiktok_shop },
   { key: "shopee", label: QUOTE_SOURCE_LABELS.shopee },
   { key: "mercado_pago", label: QUOTE_SOURCE_LABELS.mercado_pago },

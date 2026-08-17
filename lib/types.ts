@@ -66,9 +66,9 @@ export type QuoteChannel = "tiktok" | "whatsapp" | "presencial" | "shopee" | "me
 
 // Origem do REGISTRO (quem criou/atualizou essa venda) — diferente de `channel`
 // (canal de venda escolhido manualmente, usado em cálculo de taxa/margem).
-export type QuoteSource = "mercado_pago" | "shopee" | "tiktok_shop" | "manual";
+export type QuoteSource = "mercado_pago" | "mercado_livre" | "shopee" | "tiktok_shop" | "manual";
 
-export type QuoteStatus = "sent" | "paid" | "in_production" | "shipped" | "expired";
+export type QuoteStatus = "sent" | "paid" | "in_production" | "shipped" | "expired" | "cancelled";
 
 export type QuotePaymentMethod = "pix" | "credit_card" | "debit_card" | "cash" | "transfer" | "other";
 
@@ -238,7 +238,7 @@ export const QUOTE_CHANNEL_LABELS: Record<string, string> = {
   mercado_livre: "Mercado Livre",
 };
 
-export type IntegrationPlatform = "mercado_pago" | "shopee" | "tiktok_shop";
+export type IntegrationPlatform = "mercado_pago" | "mercado_livre" | "shopee" | "tiktok_shop";
 export type IntegrationStatus = "connected" | "disconnected" | "error";
 
 export interface Integration {

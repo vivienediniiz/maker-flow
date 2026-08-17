@@ -8,6 +8,7 @@ export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
   in_production: "Em Produção",
   shipped: "Pedido Enviado",
   expired: "Expirado",
+  cancelled: "Cancelado",
 };
 
 // Rótulos curtos, usados embaixo de cada bolinha da barra de status.
@@ -17,6 +18,7 @@ export const QUOTE_STATUS_SHORT_LABELS: Record<QuoteStatus, string> = {
   in_production: "Produção",
   shipped: "Enviado",
   expired: "Expirado",
+  cancelled: "Cancelado",
 };
 
 export const QUOTE_STATUS_ORDER: QuoteStatus[] = ["sent", "paid", "in_production", "shipped"];
@@ -35,6 +37,7 @@ export const QUOTE_CHANNEL_LABELS: Record<string, string> = {
 
 export const QUOTE_SOURCE_LABELS: Record<QuoteSource, string> = {
   mercado_pago: "Mercado Pago",
+  mercado_livre: "Mercado Livre",
   shopee: "Shopee",
   tiktok_shop: "TikTok Shop",
   manual: "Manual",
@@ -42,6 +45,7 @@ export const QUOTE_SOURCE_LABELS: Record<QuoteSource, string> = {
 
 export const QUOTE_SOURCE_BADGE_STYLES: Record<QuoteSource, string> = {
   mercado_pago: "bg-sky-500/15 text-sky-400 border-sky-500/30",
+  mercado_livre: "bg-yellow-400/15 text-yellow-400 border-yellow-400/30",
   shopee: "bg-neon-orange/15 text-neon-orange border-neon-orange/30",
   tiktok_shop: "bg-white/15 text-text-primary border-white/30",
   manual: "bg-white/10 text-text-secondary border-white/10",
@@ -56,8 +60,10 @@ export function nextQuoteAction(status: QuoteStatus): { next: QuoteStatus; label
     in_production: "Marcar Enviado",
     shipped: "",
     expired: "Reabrir",
+    cancelled: "",
   };
   if (status === "expired") return { next: "sent", label: actionLabels.expired };
+  if (status === "cancelled") return null;
   const idx = order.indexOf(status);
   if (idx === -1 || idx === order.length - 1) return null;
   const next = order[idx + 1];

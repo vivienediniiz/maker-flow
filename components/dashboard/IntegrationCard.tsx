@@ -9,19 +9,21 @@ import type { Integration, IntegrationPlatform } from "@/lib/types";
 
 const PLATFORM_LABELS: Record<IntegrationPlatform, string> = {
   mercado_pago: "Mercado Pago",
+  mercado_livre: "Mercado Livre",
   shopee: "Shopee",
   tiktok_shop: "TikTok Shop",
 };
 
 const PLATFORM_DESCRIPTIONS: Record<IntegrationPlatform, string> = {
   mercado_pago: "Autorize o StudioMaker a acessar sua conta e receber vendas automaticamente.",
+  mercado_livre: "Conecte sua conta vendedora pra receber pedidos do Mercado Livre automaticamente.",
   shopee: "Conecte sua loja pra receber pedidos automaticamente.",
   tiktok_shop: "Conecte sua loja pra receber pedidos automaticamente.",
 };
 
-// Mercado Pago já conecta de verdade via OAuth. Shopee/TikTok Shop ficam
-// desabilitados até o app do StudioMaker ser aprovado nas duas plataformas.
-const AVAILABLE_PLATFORMS: IntegrationPlatform[] = ["mercado_pago"];
+// Mercado Pago e Mercado Livre já conectam de verdade via OAuth. Shopee/TikTok
+// Shop ficam desabilitados até o app do StudioMaker ser aprovado nas duas plataformas.
+const AVAILABLE_PLATFORMS: IntegrationPlatform[] = ["mercado_pago", "mercado_livre"];
 
 // As pastas de rota de /api/integrations/*/connect usam hífen (padrão de URL),
 // mas o valor do tipo/enum usa underscore (padrão de coluna) — os dois nomes
@@ -29,6 +31,7 @@ const AVAILABLE_PLATFORMS: IntegrationPlatform[] = ["mercado_pago"];
 // em vez de usar `platform` direto na URL.
 const PLATFORM_CONNECT_SLUGS: Record<IntegrationPlatform, string> = {
   mercado_pago: "mercado-pago",
+  mercado_livre: "mercado-livre",
   shopee: "shopee",
   tiktok_shop: "tiktok-shop",
 };

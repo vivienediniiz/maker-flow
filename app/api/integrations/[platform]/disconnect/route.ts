@@ -4,7 +4,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { deleteIntegrationCredential } from "@/lib/vault";
 import type { IntegrationPlatform } from "@/lib/types";
 
-const VALID_PLATFORMS: IntegrationPlatform[] = ["mercado_pago", "shopee", "tiktok_shop"];
+const VALID_PLATFORMS: IntegrationPlatform[] = ["mercado_pago", "mercado_livre", "shopee", "tiktok_shop"];
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);

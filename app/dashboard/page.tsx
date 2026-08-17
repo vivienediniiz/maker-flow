@@ -1,6 +1,8 @@
 import { Topbar } from "@/components/dashboard/Topbar";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { PrinterCard } from "@/components/dashboard/PrinterCard";
+import { SalesPeriodSummary } from "@/components/dashboard/SalesPeriodSummary";
+import { TopProductsCard } from "@/components/dashboard/TopProductsCard";
 import { GlassAccordion } from "@/components/ui/GlassAccordion";
 import { FinancialChart } from "@/components/charts/FinancialChart";
 import { NeonButton } from "@/components/ui/NeonButton";
@@ -41,6 +43,12 @@ export default async function DashboardPage() {
             <Plus size={16} /> Novo Orçamento
           </NeonButton>
         </div>
+
+        {/* Resumo de vendas por período + produtos mais vendidos */}
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <SalesPeriodSummary />
+          <TopProductsCard />
+        </section>
 
         {/* KPI Cards */}
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
