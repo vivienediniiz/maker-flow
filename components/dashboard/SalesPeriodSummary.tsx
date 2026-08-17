@@ -17,7 +17,9 @@ const PERIOD_OPTIONS: { key: PeriodKey; label: string }[] = [
   { key: "month", label: "Este mês" },
 ];
 
-const SOURCES: QuoteSource[] = ["mercado_livre", "mercado_pago", "shopee", "tiktok_shop", "manual"];
+// Mercado Pago escondido aqui (segue o mesmo tratamento da tela de Integrações),
+// mas os totais acima (Total Vendido/Custos/Lucro Real) continuam somando tudo.
+const SOURCES: QuoteSource[] = ["mercado_livre", "shopee", "tiktok_shop", "manual"];
 
 function periodStart(period: PeriodKey): Date {
   const now = new Date();
