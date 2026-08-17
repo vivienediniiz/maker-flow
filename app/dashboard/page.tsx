@@ -12,8 +12,10 @@ import { formatBRL } from "@/lib/utils";
 import { DollarSign, TrendingUp, Layers, Server, Plus } from "lucide-react";
 import type { Printer } from "@/lib/types";
 
-// Seção "Impressoras em Tempo Real" escondida por enquanto — troque pra true pra reativar.
-const SHOW_PRINTER_FARM = false;
+// Seção "Impressoras em Tempo Real" (telemetria via bridge/webhook) escondida
+// por padrão, substituída pelo controle patrimonial em Cadastros → Impressoras.
+// Reative via env var NEXT_PUBLIC_ENABLE_REALTIME_TELEMETRY=true.
+const SHOW_PRINTER_FARM = process.env.NEXT_PUBLIC_ENABLE_REALTIME_TELEMETRY === "true";
 
 async function getPrinters(): Promise<Printer[]> {
   const supabase = createClient();

@@ -196,6 +196,35 @@ export interface ExtraPurchase {
   created_at: string;
 }
 
+export type PrinterAssetStatus = "active" | "maintenance" | "inactive" | "sold";
+
+export interface PrinterAsset {
+  id: string;
+  user_id: string;
+  branch_id: string | null;
+  model: string;
+  serial_number: string | null;
+  purchase_date: string | null;
+  purchase_price: number | null;
+  supplier: string | null;
+  invoice_url: string | null;
+  warranty_expiry_date: string | null;
+  status: PrinterAssetStatus;
+  estimated_usage_hours: number;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface PrinterMaintenanceLog {
+  id: string;
+  printer_asset_id: string;
+  user_id: string;
+  description: string;
+  performed_at: string;
+  cost: number | null;
+  created_at: string;
+}
+
 export interface Client {
   id: string;
   user_id: string;
