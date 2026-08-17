@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Zap, Check } from "lucide-react";
+import { Zap, Check, ArrowLeft } from "lucide-react";
 import { PLANS, type BillingCycle, type PlanId, getPlan, priceFor } from "@/lib/plans";
 import { BillingToggle } from "@/components/marketing/BillingToggle";
 import { PlanCard } from "@/components/marketing/PlanCard";
@@ -18,6 +18,11 @@ export default function PricingPage() {
   const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pixTarget, setPixTarget] = useState<PlanId | null>(null);
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setLoggedIn(!!user));
+  }, []);
 
   async function requireSession() {
     const {
@@ -78,9 +83,18 @@ export default function PricingPage() {
           </div>
           <span className="font-display text-lg tracking-wide">StudioMaker</span>
         </Link>
-        <Link href="/login" className="text-sm text-text-secondary hover:text-text-primary">
-          Já tenho conta
-        </Link>
+        {loggedIn ? (
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary"
+          >
+            <ArrowLeft size={14} /> Voltar ao Dashboard
+          </Link>
+        ) : (
+          <Link href="/login" className="text-sm text-text-secondary hover:text-text-primary">
+            Já tenho conta
+          </Link>
+        )}
       </header>
 
       <main className="px-6 pb-24 md:px-12">

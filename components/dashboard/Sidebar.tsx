@@ -94,6 +94,8 @@ export function Sidebar({ studioName, avatarUrl, tier, cycle }: SidebarProps) {
       <div className="border-t border-border-glass p-4">
         <Link
           href="/pricing"
+          target="_blank"
+          rel="noopener noreferrer"
           className="glass-card block space-y-2.5 px-3 py-3 transition-colors hover:border-neon-pink/40 hover:bg-white/[0.04]"
         >
           <div className="flex items-center gap-3">
