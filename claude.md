@@ -22,11 +22,11 @@ SaaS de gestão para makers/estúdios de impressão 3D. Next.js 14 (App Router) 
 
 Tabelas principais: `profiles`, `printers`, `filaments`, `quotes`, `orders` (não usada ativamente — `quotes` virou a fonte única de verdade pro fluxo de vendas), `products`, `settings`, `clients`, `categories`, `sales`, `branches`, `supplies`, `extra_purchases`, `integrations`.
 
-`quotes` é o coração do sistema de Vendas (tela antes chamada "Pedidos"): tem `status` (`sent`/`paid`/`in_production`/`shipped`/`expired`), `order_number` (sequencial automático via trigger), `channel` (canal de venda escolhido manualmente), `source` (`mercado_pago`/`shopee`/`tiktok_shop`/`manual` — origem do *registro*, diferente de `channel`), `external_order_id` (idempotência de webhook, unique junto com `user_id`+`source`), `buyer_name`, `platform_fee`, `cost_amount`, `net_amount` (coluna gerada), `payment_method`, `shipping_cost`, `destination_cep`, `product_id` (vínculo opcional com um produto do catálogo).
+`quotes` é o coração do sistema de Vendas (tela antes chamada "Pedidos"): tem `status` (`sent`/`paid`/`in_production`/`shipped`/`expired`/`cancelled`), `order_number` (sequencial automático via trigger), `channel` (canal de venda escolhido manualmente), `source` (`mercado_pago`/`mercado_livre`/`shopee`/`tiktok_shop`/`manual` — origem do *registro*, diferente de `channel`), `external_order_id` (idempotência de webhook, unique junto com `user_id`+`source`), `buyer_name`, `platform_fee`, `cost_amount`, `net_amount` (coluna gerada), `payment_method`, `shipping_cost`, `destination_cep`, `product_id` (vínculo opcional com um produto do catálogo).
 
 `printers` guarda telemetria (`current_*`, `last_telemetry_at`) e câmera (`last_snapshot_at`) recebidas via `/api/v1/printers/telemetry` e `/api/v1/printers/snapshot`, autenticado por `api_key_webhook` (gerado automaticamente por impressora).
 
-`integrations` guarda a conexão do maker com plataformas de venda (Mercado Pago/Shopee/TikTok Shop). Credenciais **nunca** ficam em texto puro — vão pro Supabase Vault via funções `security definer` (`public.integration_set_credential`/`_get_credential`/`_delete_credential`, só acessíveis por `service_role`). `integrations.credential_secret_id` só guarda a referência.
+`integrations` guarda a conexão do maker com plataformas de venda (Mercado Pago/Mercado Livre/Shopee/TikTok Shop). Credenciais **nunca** ficam em texto puro — vão pro Supabase Vault via funções `security definer` (`public.integration_set_credential`/`_get_credential`/`_delete_credential`, só acessíveis por `service_role`). `integrations.credential_secret_id` só guarda a referência.
 
 `products.calc_inputs` (jsonb) guarda o snapshot completo dos parâmetros da Calculadora quando um produto é criado por lá — permite recarregar o cálculo depois.
 
@@ -38,13 +38,17 @@ Buckets de Storage: `avatars` (logo do estúdio), `products` (fotos de produto),
 - Dashboard, Calculadora (com seletor de produto existente, faixas de preço, marketplace vindo de Configurações)
 - Clientes (lista em tabela, busca)
 - Produtos (lista em tabela, foto, overlay de detalhe)
-- Vendas (ex-"Pedidos": grid de cards com badge de origem, Bruto/Custos/Líquido, filtro de status + canal de origem, overlay com barra de status **só avança**, doc. de envio em PDF)
+- Vendas (ex-"Pedidos": grid de cards com badge de origem, Bruto/Custos/Líquido, filtro de status + canal de origem, overlay com barra de status **só avança** exceto pelo botão "Cancelar Venda" que joga pro status `cancelled` a qualquer momento, doc. de envio em PDF)
 - Estoque 3D (Adicionar Estoque + venda com histórico real)
 - Cadastros (Impressoras, Filamentos, Insumos, Compras Extras, Filiais, Categorias — todas com CRUD real)
 - Insights & BI (rankings, matriz venda×lucro, prateleira de filamentos, filtro de período — dados reais de `sales`/`orders`/`filaments`)
-- Integrações: Mercado Pago conecta via OAuth automático (app "MakerFlow Vendas", separado do app de assinatura), um clique e volta conectado; webhook usa a Orders API (`GET /v1/orders/{id}`) roteado por `user_id` do payload (URL única pra aplicação inteira, não por maker); fallback "Sincronizar Pedidos" usa a Payments API de busca (não existe endpoint de busca documentado na Orders API) — as duas convergem no mesmo `external_order_id` (o id do pagamento, não do pedido) pra não duplicar venda. Shopee/TikTok Shop com estrutura de OAuth/webhook pronta, aguardando app aprovado nas duas plataformas.
+- Integrações: Mercado Pago conecta via OAuth automático (app "MakerFlow Vendas", separado do app de assinatura), um clique e volta conectado; webhook usa a Orders API (`GET /v1/orders/{id}`) roteado por `user_id` do payload (URL única pra aplicação inteira, não por maker); fallback "Sincronizar Pedidos" usa a Payments API de busca (não existe endpoint de busca documentado na Orders API) — as duas convergem no mesmo `external_order_id` (o id do pagamento, não do pedido) pra não duplicar venda. **Mercado Livre** conecta via OAuth próprio (`lib/mercadoLivre.ts`, app separado criado em developers.mercadolivre.com.br — token exchange é form-urlencoded, diferente do JSON do Mercado Pago), webhook no tópico `orders_v2`; extração de taxa (`payments[].marketplace_fee`) é best-effort, **validar contra payload real**. Shopee/TikTok Shop com estrutura de OAuth/webhook pronta, aguardando app aprovado nas duas plataformas.
 - Impressoras: cadastro real (Cadastros → Impressoras), wizard de conexão de 4 passos, telemetria + câmera via `bridge/` (ver acima)
 - Configurações (taxas de marketplace, frete do remetente — persistidos de verdade)
+- Financeiro (`/dashboard/finance`): KPIs de Receita Bruta/Custos Totais/Lucro Líquido Real/Vendas Canceladas, filtro de período+origem, gráfico de evolução, despesas via `extra_purchases` (botão "Nova Despesa"), exportar CSV e gerar relatório PDF — tudo com dados reais.
+- Suporte (`/dashboard/support`): card com link direto pro WhatsApp.
+- Assinatura (`/dashboard/subscription`): plano atual + comparação Starter/Pro/Studio (mesmo checkout do `/pricing`), item de menu separado do card "Meu estúdio/Assine agora" que já existia embaixo do Sidebar. Créditos avulsos (comprar cota extra sem trocar de plano) foi **discutido mas adiado** — não construído ainda.
+- Dashboard: card de resumo de vendas por período (Hoje/7d/30d/Este mês, com breakdown por origem e lucro real) e card de produtos mais vendidos do mês (quantidade = nº de vendas daquele produto, não existe campo de quantidade unitária no schema).
 - Assinatura StudioMaker: cartão automático (Mercado Pago preapproval) + Pix manual (com tolerância de 15 dias)
 - Perfil do estúdio com upload de logo
 
@@ -60,10 +64,12 @@ Buckets de Storage: `avatars` (logo do estúdio), `products` (fotos de produto),
 3. **tsconfig.json**: não usar `"ignoreDeprecations": "6.0"` (valor inválido, quebra o build) — se for mexer nisso, é `"5.0"`, mas geralmente é mais seguro nem mexer.
 4. Cache do TS Server do VS Code às vezes mostra "Cannot find module" fantasma pra arquivo que existe — `Ctrl+Shift+P` → `TypeScript: Restart TS Server` resolve.
 5. A câmera das impressoras Bambu Lab A1/A1 Mini/P1P/P1S **não é RTSP** (apesar de bastante coisa por aí dizer o contrário) — é um protocolo proprietário próprio na porta 6000 (implementado em `bridge/core.py`). Só X1/X1C usa RTSPS de verdade (porta 322).
-6. A doc de referência da Orders API do Mercado Pago (`GET /v1/orders/{id}`) não carrega via fetch de página (404 — parece SPA client-side-only). `lib/mercadoPago.ts` (`fetchMercadoPagoOrderForIntegration`/`upsertQuoteFromMercadoPagoOrder`) foi escrito com extração defensiva dos campos (fee/payer/items) com base em documentação parcial — **validar contra um payload real** assim que a primeira notificação de venda chegar de verdade.
+6. A doc de referência da Orders API do Mercado Pago (`GET /v1/orders/{id}`) não carrega via fetch de página (404 — parece SPA client-side-only). `lib/mercadoPago.ts` (`fetchMercadoPagoOrderForIntegration`/`upsertQuoteFromMercadoPagoOrder`) foi escrito com extração defensiva dos campos (fee/payer/items) com base em documentação parcial — **validar contra um payload real** assim que a primeira notificação de venda chegar de verdade. Mesma ressalva vale pra `lib/mercadoLivre.ts` (doc do Mercado Livre bloqueou o fetch com 403).
+7. A MCP do Supabase desconectou no meio da sessão uma vez — nesse caso, migrations (ex: adicionar `cancelled`/`mercado_livre` aos check constraints de `quotes`/`integrations`) tiveram que ser entregues como SQL pra colar manualmente no SQL Editor do painel, em vez de aplicadas direto. Se voltar a acontecer, confirme com o usuário se prefere reconectar a MCP ou receber o SQL.
 
 ## Ideias guardadas pro roadmap (ainda não construídas)
 
 - Shopee e TikTok Shop: falta só o app ser aprovado nas respectivas plataformas (Shopee Open Platform / TikTok Shop Partner Center) — código já está pronto, só configurar `SHOPEE_PARTNER_ID`/`SHOPEE_PARTNER_KEY`/`TIKTOK_APP_KEY`/`TIKTOK_APP_SECRET`
 - Emissão de Nota Fiscal real (precisa de provedor fiscal certificado tipo NFE.io/Focus NFe — botão já existe desativado no overlay de Vendas)
 - Link de cobrança real por pedido (pro cliente do maker pagar), com webhook próprio separado da assinatura do StudioMaker
+- Créditos avulsos na Assinatura: comprar cota extra de orçamentos sem trocar de plano — adiado, precisa definir preço/quantidade do pacote e forma de cobrança antes de construir
