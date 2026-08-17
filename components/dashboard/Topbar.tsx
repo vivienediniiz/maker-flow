@@ -3,10 +3,11 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Bell, Search, LogOut, User, Menu } from "lucide-react";
+import { Search, LogOut, User, Menu } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { CompanyProfileModal } from "./CompanyProfileModal";
 import { useMobileSidebar } from "./MobileSidebarContext";
+import { NotificationsBell } from "./NotificationsBell";
 
 interface TopbarProps {
   title: string;
@@ -75,7 +76,7 @@ export function Topbar({ title, searchValue, onSearchChange, searchPlaceholder }
       </div>
 
       <div className="flex items-center gap-3">
-        {onSearchChange ? (
+        {onSearchChange && (
           <div className="hidden items-center gap-2 rounded-pill border border-border-glass bg-white/[0.03] px-4 py-2 sm:flex">
             <Search size={14} className="text-text-muted" />
             <input
@@ -85,16 +86,8 @@ export function Topbar({ title, searchValue, onSearchChange, searchPlaceholder }
               className="w-48 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
             />
           </div>
-        ) : (
-          <div className="hidden items-center gap-2 rounded-pill border border-border-glass bg-white/[0.03] px-4 py-2 text-sm text-text-muted sm:flex">
-            <Search size={14} />
-            <span>Buscar pedidos, clientes...</span>
-          </div>
         )}
-        <button className="relative flex h-9 w-9 items-center justify-center rounded-full border border-border-glass bg-white/[0.03] text-text-secondary hover:text-text-primary">
-          <Bell size={16} />
-          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-neon-pink" />
-        </button>
+        <NotificationsBell />
 
         <button
           ref={avatarRef}
