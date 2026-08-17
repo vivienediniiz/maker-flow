@@ -1,3 +1,4 @@
+import { CreditCard, ShoppingCart, ShoppingBag, Video, Store, type LucideIcon } from "lucide-react";
 import type { QuoteStatus, QuoteSource } from "./types";
 
 export const QUOTE_EXPIRY_DAYS = 15;
@@ -43,11 +44,21 @@ export const QUOTE_SOURCE_LABELS: Record<QuoteSource, string> = {
   manual: "Manual",
 };
 
+export const QUOTE_SOURCE_ICONS: Record<QuoteSource, LucideIcon> = {
+  mercado_pago: CreditCard,
+  mercado_livre: ShoppingCart,
+  shopee: ShoppingBag,
+  tiktok_shop: Video,
+  manual: Store,
+};
+
+// Cores reais de cada marca (não são tokens do design system — hex direto
+// da identidade visual de cada plataforma). "Manual" não é uma marca, fica neutro.
 export const QUOTE_SOURCE_BADGE_STYLES: Record<QuoteSource, string> = {
-  mercado_pago: "bg-sky-500/15 text-sky-400 border-sky-500/30",
-  mercado_livre: "bg-yellow-400/15 text-yellow-400 border-yellow-400/30",
-  shopee: "bg-neon-orange/15 text-neon-orange border-neon-orange/30",
-  tiktok_shop: "bg-white/15 text-text-primary border-white/30",
+  mercado_pago: "bg-[#00B1EA]/15 text-[#00B1EA] border-[#00B1EA]/30",
+  mercado_livre: "bg-[#FFE600]/15 text-[#FFE600] border-[#FFE600]/40",
+  shopee: "bg-[#EE4D2D]/15 text-[#EE4D2D] border-[#EE4D2D]/30",
+  tiktok_shop: "bg-[#FE2C55]/15 text-[#FE2C55] border-[#FE2C55]/30",
   manual: "bg-white/10 text-text-secondary border-white/10",
 };
 

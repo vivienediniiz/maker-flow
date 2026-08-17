@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatBRL } from "@/lib/utils";
-import { QUOTE_SOURCE_LABELS, QUOTE_SOURCE_BADGE_STYLES } from "@/lib/quotes";
+import { QUOTE_SOURCE_LABELS, QUOTE_SOURCE_BADGE_STYLES, QUOTE_SOURCE_ICONS } from "@/lib/quotes";
 import { Loader2 } from "lucide-react";
 import type { Quote, QuoteSource } from "@/lib/types";
 
@@ -108,17 +108,21 @@ export function SalesPeriodSummary() {
 
           {bySource.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {bySource.map(({ source, total }) => (
-                <span
-                  key={source}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-xs font-medium",
-                    QUOTE_SOURCE_BADGE_STYLES[source]
-                  )}
-                >
-                  {QUOTE_SOURCE_LABELS[source]} · {formatBRL(total)}
-                </span>
-              ))}
+              {bySource.map(({ source, total }) => {
+                const Icon = QUOTE_SOURCE_ICONS[source];
+                return (
+                  <span
+                    key={source}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-xs font-medium",
+                      QUOTE_SOURCE_BADGE_STYLES[source]
+                    )}
+                  >
+                    <Icon size={12} />
+                    {QUOTE_SOURCE_LABELS[source]} · {formatBRL(total)}
+                  </span>
+                );
+              })}
             </div>
           )}
 
