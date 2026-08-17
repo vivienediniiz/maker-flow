@@ -80,37 +80,61 @@ export default function InventoryPage() {
               selecione um produto já cadastrado no catálogo.
             </GlassCard>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {inStock.map((p) => (
-                <GlassCard key={p.id} hover padding="md" className="space-y-3">
-                  <div className="flex h-24 items-center justify-center overflow-hidden rounded-xl bg-neon-gradient-soft">
-                    {p.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.image_url} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <span className="text-2xl">📦</span>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">{p.name}</p>
-                    <p className="text-xs text-text-muted">{p.category || "Sem categoria"}</p>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-numeric text-sm font-semibold text-neon-pink">
-                      {formatBRL(p.sale_price)}
-                    </span>
-                    <span className="text-xs text-text-secondary">{p.stock_quantity} disponíveis</span>
-                  </div>
-                  <button
-                    onClick={() => setSaleTarget(p)}
-                    className="neon-btn w-full py-2 text-xs"
-                    disabled={p.stock_quantity === 0}
-                  >
-                    <ShoppingBag size={13} /> Registrar venda
-                  </button>
-                </GlassCard>
-              ))}
-            </div>
+            <GlassCard padding="none" className="overflow-hidden">
+              <div className="overflow-x-auto scrollbar-glass">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
+                      <th className="px-6 py-4 font-medium">Produto</th>
+                      <th className="px-6 py-4 font-medium">Categoria</th>
+                      <th className="px-6 py-4 font-medium">Preço</th>
+                      <th className="px-6 py-4 font-medium">Estoque</th>
+                      <th className="w-44 px-6 py-4" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inStock.map((p) => (
+                      <tr
+                        key={p.id}
+                        onClick={() => p.stock_quantity > 0 && setSaleTarget(p)}
+                        className="cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neon-gradient-soft">
+                              {p.image_url ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={p.image_url} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                <span className="text-base">📦</span>
+                              )}
+                            </div>
+                            <span className="font-medium text-text-primary">{p.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-text-secondary">{p.category || "Sem categoria"}</td>
+                        <td className="px-6 py-4 font-numeric font-semibold text-neon-pink">
+                          {formatBRL(p.sale_price)}
+                        </td>
+                        <td className="px-6 py-4 text-text-secondary">{p.stock_quantity} disponíveis</td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSaleTarget(p);
+                            }}
+                            className="neon-btn w-full justify-center py-2 text-xs"
+                            disabled={p.stock_quantity === 0}
+                          >
+                            <ShoppingBag size={13} /> Registrar venda
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </GlassCard>
           )
         ) : sales.length === 0 ? (
           <GlassCard padding="lg" className="text-center text-sm text-text-muted">

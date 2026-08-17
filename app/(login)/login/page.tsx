@@ -37,33 +37,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-bg">
-      {/* Fundo: 3 blobs orgânicos animados, cada um com gradiente/trajetória/duração própria */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="animate-blob-1 absolute -left-[15%] -top-[15%] h-[62vw] w-[62vw] opacity-25 blur-[90px]"
-          style={{
-            background: "linear-gradient(135deg, #E86333 0%, #FF4EDF 55%, #AA17DB 100%)",
-            borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%",
-          }}
-        />
-        <div
-          className="animate-blob-2 absolute -right-[18%] top-[2%] h-[55vw] w-[55vw] opacity-20 blur-[90px]"
-          style={{
-            background: "linear-gradient(210deg, #FF4EDF 0%, #AA17DB 55%, #E86333 100%)",
-            borderRadius: "50% 50% 40% 60% / 60% 40% 60% 40%",
-            animationDelay: "-11s",
-          }}
-        />
-        <div
-          className="animate-blob-3 absolute -bottom-[20%] left-[18%] h-[58vw] w-[58vw] opacity-20 blur-[100px]"
-          style={{
-            background: "linear-gradient(300deg, #AA17DB 0%, #E86333 55%, #FF4EDF 100%)",
-            borderRadius: "45% 55% 65% 35% / 40% 60% 40% 60%",
-            animationDelay: "-23s",
-          }}
-        />
-      </div>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Fundo: gradiente estático rosa → roxo → laranja */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ background: "linear-gradient(100deg, #FF4EDF 0%, #AA17DB 55%, #E86333 100%)" }}
+      />
 
       {/* Logo fixo no canto superior esquerdo */}
       <div className="absolute left-6 top-6 z-20 flex items-center gap-2 sm:left-10 sm:top-8">
@@ -81,7 +60,7 @@ export default function LoginPage() {
 
         {/* Lado direito: painel de vidro líquido com o formulário */}
         <div className="flex items-center justify-center px-6 py-24 sm:px-12">
-          <div className="glass-card animate-panel-in w-full max-w-sm space-y-6 p-8 opacity-0 shadow-neon-glow">
+          <div className="glass-card animate-panel-in w-full max-w-sm space-y-6 bg-bg/80 p-8 opacity-0 shadow-neon-glow">
             <div>
               <h2 className="font-display text-2xl">Bem-vindo de volta</h2>
               <p className="mt-1 text-sm text-text-secondary">Entre para acessar seu estúdio.</p>

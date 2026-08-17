@@ -6,11 +6,17 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteDetailModal } from "@/components/dashboard/QuoteDetailModal";
 import { NewSaleModal } from "@/components/dashboard/NewSaleModal";
-import { SaleCard } from "@/components/dashboard/SaleCard";
 import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
-import { QUOTE_STATUS_LABELS, QUOTE_SOURCE_LABELS, isQuoteSentExpired } from "@/lib/quotes";
-import { Loader2, Plus, RefreshCw } from "lucide-react";
+import { cn, formatBRL } from "@/lib/utils";
+import {
+  QUOTE_STATUS_LABELS,
+  QUOTE_SOURCE_LABELS,
+  QUOTE_SOURCE_BADGE_STYLES,
+  formatOrderNumber,
+  isQuoteSentExpired,
+  nextQuoteAction,
+} from "@/lib/quotes";
+import { Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { QuoteWithClient, QuoteStatus, QuoteSource, Integration } from "@/lib/types";
 
 const STATUS_FILTERS: { key: "all" | QuoteStatus; label: string }[] = [
@@ -31,6 +37,15 @@ const SOURCE_FILTERS: { key: "all" | QuoteSource; label: string }[] = [
   { key: "mercado_pago", label: QUOTE_SOURCE_LABELS.mercado_pago },
   { key: "manual", label: QUOTE_SOURCE_LABELS.manual },
 ];
+
+const STATUS_PILL_STYLES: Record<QuoteStatus, string> = {
+  sent: "bg-neon-orange/15 text-neon-orange border-neon-orange/30",
+  paid: "bg-neon-green/15 text-neon-green border-neon-green/30",
+  in_production: "bg-neon-pink/15 text-neon-pink border-neon-pink/30",
+  shipped: "bg-neon-purple/15 text-neon-purple border-neon-purple/30",
+  expired: "bg-red-500/15 text-red-400 border-red-500/30",
+  cancelled: "bg-red-500/15 text-red-400 border-red-500/30",
+};
 
 function relativeTime(iso: string | null) {
   if (!iso) return null;
@@ -208,17 +223,96 @@ export default function OrdersPage() {
             Nenhuma venda encontrada.
           </GlassCard>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((q) => (
-              <SaleCard
-                key={q.id}
-                quote={q}
-                onOpen={() => setSelectedQuote(q)}
-                onDelete={(e) => handleDelete(q.id, e)}
-                onStatusChange={(status) => handleStatusChange(q.id, status)}
-              />
-            ))}
-          </div>
+          <GlassCard padding="none" className="overflow-hidden">
+            <div className="overflow-x-auto scrollbar-glass">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
+                    <th className="px-6 py-4 font-medium">Origem</th>
+                    <th className="px-6 py-4 font-medium">Pedido</th>
+                    <th className="px-6 py-4 font-medium">Cliente</th>
+                    <th className="px-6 py-4 font-medium">Data</th>
+                    <th className="px-6 py-4 font-medium">Status</th>
+                    <th className="px-6 py-4 font-medium">Bruto</th>
+                    <th className="px-6 py-4 font-medium">Custos</th>
+                    <th className="px-6 py-4 font-medium">Líquido</th>
+                    <th className="w-40 px-6 py-4" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((q) => {
+                    const buyerName = q.buyer_name || q.clients?.name || "Cliente não informado";
+                    const costs = q.platform_fee + q.cost_amount;
+                    const action = nextQuoteAction(q.status);
+                    return (
+                      <tr
+                        key={q.id}
+                        onClick={() => setSelectedQuote(q)}
+                        className="cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]"
+                      >
+                        <td className="px-6 py-4">
+                          <span
+                            className={cn(
+                              "rounded-pill border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                              QUOTE_SOURCE_BADGE_STYLES[q.source]
+                            )}
+                          >
+                            {QUOTE_SOURCE_LABELS[q.source]}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 font-numeric text-text-secondary">
+                          {q.external_order_id ?? formatOrderNumber(q.order_number)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="truncate text-sm font-medium text-text-primary">{buyerName}</p>
+                          <p className="truncate text-xs text-text-secondary">{q.project_name}</p>
+                        </td>
+                        <td className="px-6 py-4 text-xs text-text-muted">
+                          {new Date(q.sent_at).toLocaleString("pt-BR")}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={cn(
+                              "rounded-pill border px-2.5 py-1 text-[11px] font-medium",
+                              STATUS_PILL_STYLES[q.status]
+                            )}
+                          >
+                            {QUOTE_STATUS_LABELS[q.status]}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(q.final_price)}</td>
+                        <td className="px-6 py-4 font-numeric text-red-400">{formatBRL(costs)}</td>
+                        <td className="px-6 py-4 font-numeric text-neon-green">{formatBRL(q.net_amount)}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-3">
+                            {action && action.label && (
+                              <NeonButton
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(q.id, action.next);
+                                }}
+                              >
+                                {action.label}
+                              </NeonButton>
+                            )}
+                            <button
+                              onClick={(e) => handleDelete(q.id, e)}
+                              className="text-text-muted hover:text-red-400"
+                              aria-label="Excluir venda"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </GlassCard>
         )}
       </main>
 
