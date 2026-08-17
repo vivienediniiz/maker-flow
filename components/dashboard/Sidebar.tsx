@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { planDisplayLabel } from "@/lib/plans";
+import { useMobileSidebar } from "./MobileSidebarContext";
 import type { SubscriptionTier } from "@/lib/types";
 import {
   LayoutDashboard,
@@ -49,9 +50,17 @@ interface SidebarProps {
 export function Sidebar({ studioName, avatarUrl, tier }: SidebarProps) {
   const pathname = usePathname();
   const planLabel = planDisplayLabel(tier);
+  const { open, close } = useMobileSidebar();
 
   return (
-    <aside className="glass-card fixed bottom-4 left-4 top-4 z-40 hidden w-64 flex-col overflow-hidden shadow-neon-glow md:flex">
+    <>
+      {open && <div className="fixed inset-0 z-40 bg-black/60 md:hidden" onClick={close} />}
+      <aside
+        className={cn(
+          "glass-card fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-hidden shadow-neon-glow transition-transform duration-200 md:inset-y-4 md:left-4 md:w-64 md:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
       <div className="flex items-center gap-2 px-6 py-6">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-gradient shadow-neon-glow">
           <Zap size={18} className="text-white" />
@@ -66,6 +75,7 @@ export function Sidebar({ studioName, avatarUrl, tier }: SidebarProps) {
             <Link
               key={href}
               href={href}
+              onClick={close}
               className={cn(
                 "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
                 active
@@ -114,6 +124,7 @@ export function Sidebar({ studioName, avatarUrl, tier }: SidebarProps) {
           </p>
         </Link>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

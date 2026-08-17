@@ -107,7 +107,7 @@ function InsightsPageContent() {
     const cutoff = start.toISOString();
     const cutoffDate = cutoff.slice(0, 10);
 
-    const [salesRes, ordersRes, filamentsRes, extraPurchasesRes] = await Promise.all([
+    const [salesRes, quotesForClientsRes, filamentsRes, extraPurchasesRes] = await Promise.all([
       supabase
         .from("sales")
         .select(
@@ -116,10 +116,11 @@ function InsightsPageContent() {
         .eq("user_id", user.id)
         .gte("sold_at", cutoff),
       supabase
-        .from("orders")
-        .select("id, client_id, total_value, created_at, clients(id, name)")
+        .from("quotes")
+        .select("id, client_id, final_price, sent_at, clients(id, name)")
         .eq("user_id", user.id)
-        .gte("created_at", cutoff),
+        .in("status", ["paid", "in_production", "shipped"])
+        .gte("sent_at", cutoff),
       supabase.from("filaments").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase
         .from("extra_purchases")
@@ -162,11 +163,11 @@ function InsightsPageContent() {
     }
 
     const clientAgg = new Map<string, { name: string; total: number; count: number }>();
-    for (const row of ordersRes.data ?? []) {
+    for (const row of quotesForClientsRes.data ?? []) {
       const client = one<{ id: string; name: string }>(row.clients as never);
       if (row.client_id && client) {
         const entry = clientAgg.get(row.client_id) ?? { name: client.name, total: 0, count: 0 };
-        entry.total += Number(row.total_value);
+        entry.total += Number(row.final_price);
         entry.count += 1;
         clientAgg.set(row.client_id, entry);
       }

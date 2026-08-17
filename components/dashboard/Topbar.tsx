@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Bell, Search, LogOut, User } from "lucide-react";
+import { Bell, Search, LogOut, User, Menu } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { CompanyProfileModal } from "./CompanyProfileModal";
+import { useMobileSidebar } from "./MobileSidebarContext";
 
 interface TopbarProps {
   title: string;
@@ -17,6 +18,7 @@ interface TopbarProps {
 export function Topbar({ title, searchValue, onSearchChange, searchPlaceholder }: TopbarProps) {
   const router = useRouter();
   const supabase = createClient();
+  const { toggle: toggleSidebar } = useMobileSidebar();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
@@ -60,8 +62,17 @@ export function Topbar({ title, searchValue, onSearchChange, searchPlaceholder }
   }
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border-glass bg-bg/70 px-6 py-4 backdrop-blur-glass md:px-8">
-      <h1 className="font-display text-xl text-text-primary">{title}</h1>
+    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border-glass bg-bg/70 px-4 py-4 backdrop-blur-glass md:px-8">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={toggleSidebar}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border-glass bg-white/[0.03] text-text-secondary hover:text-text-primary md:hidden"
+          aria-label="Abrir menu"
+        >
+          <Menu size={18} />
+        </button>
+        <h1 className="font-display text-xl text-text-primary">{title}</h1>
+      </div>
 
       <div className="flex items-center gap-3">
         {onSearchChange ? (

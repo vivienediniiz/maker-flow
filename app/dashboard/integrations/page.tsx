@@ -8,8 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import type { Integration, IntegrationPlatform } from "@/lib/types";
 
-// Mercado Pago escondido da aba (Vendas continua recebendo webhook normalmente
-// se algum maker já tiver conectado antes) — reative incluindo "mercado_pago" aqui de novo.
+// Mercado Pago escondido da aba de propósito (Vendas continua recebendo
+// webhook normalmente se algum maker já tiver conectado antes).
 const PLATFORMS: IntegrationPlatform[] = ["mercado_livre", "shopee", "tiktok_shop"];
 
 export default function IntegrationsPage() {
@@ -27,8 +27,6 @@ function IntegrationsPageContent() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const mpConnected = searchParams.get("mp_connected");
-  const mpError = searchParams.get("mp_error");
   const mlConnected = searchParams.get("ml_connected");
   const mlError = searchParams.get("ml_error");
 
@@ -37,11 +35,11 @@ function IntegrationsPageContent() {
   }, []);
 
   useEffect(() => {
-    if (!mpConnected && !mpError && !mlConnected && !mlError) return;
+    if (!mlConnected && !mlError) return;
     // Limpa os query params depois de mostrar o resultado, pra não reaparecer num refresh.
     const timeout = setTimeout(() => router.replace("/dashboard/integrations"), 4000);
     return () => clearTimeout(timeout);
-  }, [mpConnected, mpError, mlConnected, mlError, router]);
+  }, [mlConnected, mlError, router]);
 
   async function loadIntegrations() {
     setLoading(true);
@@ -70,16 +68,6 @@ function IntegrationsPageContent() {
           importar nada manualmente.
         </p>
 
-        {mpConnected && (
-          <div className="flex items-center gap-2 rounded-xl border border-neon-green/30 bg-neon-green/10 px-4 py-3 text-sm text-neon-green">
-            <CheckCircle2 size={16} /> Mercado Pago conectado com sucesso.
-          </div>
-        )}
-        {mpError && (
-          <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-            <AlertCircle size={16} /> Falha ao conectar Mercado Pago: {mpError}
-          </div>
-        )}
         {mlConnected && (
           <div className="flex items-center gap-2 rounded-xl border border-neon-green/30 bg-neon-green/10 px-4 py-3 text-sm text-neon-green">
             <CheckCircle2 size={16} /> Mercado Livre conectado com sucesso.
