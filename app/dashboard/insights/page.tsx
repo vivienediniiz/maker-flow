@@ -5,6 +5,8 @@ import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { FilamentTank } from "@/components/dashboard/FilamentTank";
+import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
+import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import { Trophy, Users, Layers, Percent, Package, Repeat, Wallet, Loader2 } from "lucide-react";
@@ -59,6 +61,26 @@ interface ProductAgg {
 }
 
 export default function InsightsPage() {
+  const { paid } = useSubscription();
+
+  if (!paid) {
+    return (
+      <>
+        <Topbar title="Insights & BI" />
+        <main className="px-6 py-8 md:px-8">
+          <UpgradeGate
+            title="Insights & BI é recurso pago"
+            description="Rankings, matriz venda x lucro e prateleira de filamentos — disponível nos planos Mensal e Trimestral."
+          />
+        </main>
+      </>
+    );
+  }
+
+  return <InsightsPageContent />;
+}
+
+function InsightsPageContent() {
   const supabase = createClient();
   const [period, setPeriod] = useState<Period>("30d");
   const [loading, setLoading] = useState(true);

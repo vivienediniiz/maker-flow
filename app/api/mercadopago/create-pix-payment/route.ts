@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getPlan, priceFor, encodeExternalReference, type PlanId, type BillingCycle } from "@/lib/plans";
+import { getPlan, encodeExternalReference, type PlanId } from "@/lib/plans";
 
 const BodySchema = z.object({
-  planId: z.enum(["starter", "pro", "studio"]),
-  cycle: z.enum(["monthly", "yearly"]),
+  planId: z.enum(["monthly", "quarterly"]),
 });
 
 /**
@@ -38,15 +37,14 @@ export async function POST(req: NextRequest) {
   }
 
   const planId = parsed.data.planId as PlanId;
-  const cycle = parsed.data.cycle as BillingCycle;
   const plan = getPlan(planId);
-  const amount = priceFor(plan, cycle);
+  const amount = plan.price;
 
   const paymentBody = {
     transaction_amount: amount,
-    description: `StudioMaker - Plano ${plan.name} (${cycle === "monthly" ? "Mensal" : "Anual"})`,
+    description: `StudioMaker - Plano ${plan.name}`,
     payment_method_id: "pix",
-    external_reference: encodeExternalReference(user.id, planId, cycle, "pix"),
+    external_reference: encodeExternalReference(user.id, planId, "pix"),
     payer: { email: user.email },
   };
 
@@ -55,7 +53,7 @@ export async function POST(req: NextRequest) {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
-      "X-Idempotency-Key": `${user.id}-${planId}-${cycle}-${Date.now()}`,
+      "X-Idempotency-Key": `${user.id}-${planId}-${Date.now()}`,
     },
     body: JSON.stringify(paymentBody),
   });

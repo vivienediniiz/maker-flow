@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 
@@ -21,9 +22,10 @@ export function QuickSaleModal({
   itemName: string;
   unitPrice: number;
   maxQuantity: number;
-  onConfirm?: (data: { quantity: number; channel: string }) => void;
+  onConfirm?: (data: { quantity: number; channel: string; stockAdjustedAutomatically: boolean }) => void;
 }) {
   const supabase = createClient();
+  const { paid } = useSubscription();
   const [quantity, setQuantity] = useState(1);
   const [channel, setChannel] = useState("presencial");
   const [error, setError] = useState<string | null>(null);
@@ -69,20 +71,23 @@ export function QuickSaleModal({
       return;
     }
 
-    // ...e desconta do estoque do produto.
-    const { error: stockError } = await supabase
-      .from("products")
-      .update({ stock_quantity: maxQuantity - quantity })
-      .eq("id", productId);
+    // Baixa automática de estoque é recurso pago — no plano Grátis, a venda
+    // fica registrada no histórico, mas o estoque precisa ser ajustado à mão.
+    if (paid) {
+      const { error: stockError } = await supabase
+        .from("products")
+        .update({ stock_quantity: maxQuantity - quantity })
+        .eq("id", productId);
 
-    setSaving(false);
-
-    if (stockError) {
-      setError(stockError.message);
-      return;
+      if (stockError) {
+        setSaving(false);
+        setError(stockError.message);
+        return;
+      }
     }
 
-    onConfirm?.({ quantity, channel });
+    setSaving(false);
+    onConfirm?.({ quantity, channel, stockAdjustedAutomatically: paid });
     onClose();
   }
 

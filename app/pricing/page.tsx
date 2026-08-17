@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Zap, Check, ArrowLeft } from "lucide-react";
-import { PLANS, type BillingCycle, type PlanId, getPlan, priceFor } from "@/lib/plans";
-import { BillingToggle } from "@/components/marketing/BillingToggle";
+import { PLANS, type PlanId, getPlan } from "@/lib/plans";
 import { PlanCard } from "@/components/marketing/PlanCard";
+import { PlanComparisonTable } from "@/components/marketing/PlanComparisonTable";
 import { PixCheckoutModal } from "@/components/marketing/PixCheckoutModal";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { createClient } from "@/lib/supabase/client";
@@ -14,7 +14,6 @@ import { createClient } from "@/lib/supabase/client";
 export default function PricingPage() {
   const router = useRouter();
   const supabase = createClient();
-  const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pixTarget, setPixTarget] = useState<PlanId | null>(null);
@@ -44,7 +43,7 @@ export default function PricingPage() {
       const res = await fetch("/api/mercadopago/create-preapproval", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, cycle }),
+        body: JSON.stringify({ planId }),
       });
       const data = await res.json();
 
@@ -77,7 +76,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen">
       <header className="flex items-center justify-between px-6 py-6 md:px-12">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href={loggedIn ? "/dashboard" : "/"} className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-gradient shadow-neon-glow">
             <Zap size={18} className="text-white" />
           </div>
@@ -100,28 +99,45 @@ export default function PricingPage() {
       <main className="px-6 pb-24 md:px-12">
         <div className="mx-auto max-w-3xl text-center">
           <h1 className="font-display text-4xl md:text-5xl">
-            Planos que crescem <span className="neon-text">com o seu farm</span>
+            Comece grátis, <span className="neon-text">cresça quando fizer sentido</span>
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-text-secondary">
-            Assine automaticamente pelo cartão, ou pague manualmente via Pix a cada ciclo —
-            sem depender de cartão de crédito. Cancele quando quiser.
+            14 dias de acesso completo, sem pedir cartão. Depois, continue no plano Grátis pra sempre, ou assine
+            Mensal/Trimestral pra manter tudo liberado. Pague por cartão (automático) ou Pix (manual). Cancele
+            quando quiser.
           </p>
-        </div>
-
-        <div className="mt-10 flex justify-center">
-          <BillingToggle value={cycle} onChange={setCycle} />
         </div>
 
         {error && (
           <p className="mx-auto mt-6 max-w-md text-center text-sm text-red-400">{error}</p>
         )}
 
-        <div className="mx-auto mt-10 grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-3">
+          <GlassCard padding="lg" className="flex flex-col gap-6">
+            <div>
+              <h3 className="font-display text-xl">Grátis</h3>
+              <p className="mt-1 text-sm text-text-secondary">Pra sempre, com limites — dá pra testar o essencial.</p>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-numeric text-4xl font-semibold text-text-primary">R$ 0</span>
+            </div>
+            <ul className="space-y-3 text-sm">
+              {["Até 10 clientes e 10 produtos", "Até 5 rolos de filamento", "1 filial (matriz)", "Vendas manuais"].map((f) => (
+                <li key={f} className="flex items-start gap-2.5 text-text-secondary">
+                  <Check size={16} className="mt-0.5 shrink-0 text-neon-green" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <Link href="/signup" className="mt-auto rounded-pill border border-border-glassStrong px-6 py-3 text-center text-sm font-semibold hover:bg-white/5">
+              Começar grátis
+            </Link>
+          </GlassCard>
+
           {PLANS.map((plan) => (
             <PlanCard
               key={plan.id}
               plan={plan}
-              cycle={cycle}
               loading={loadingPlan === plan.id}
               onSubscribeCard={() => handleSubscribeCard(plan.id)}
               onPayPix={() => handlePayPix(plan.id)}
@@ -129,34 +145,9 @@ export default function PricingPage() {
           ))}
         </div>
 
-        <GlassCard padding="lg" className="mx-auto mt-8 flex max-w-5xl flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="font-display text-lg">Free</p>
-            <p className="text-sm text-text-secondary">
-              1 impressora, 10 orçamentos/mês, catálogo básico. Ideal pra testar antes de assinar.
-            </p>
-          </div>
-          <Link href="/signup" className="neon-btn">
-            Começar grátis
-          </Link>
-        </GlassCard>
-
-        <div className="mx-auto mt-16 max-w-3xl">
-          <h2 className="mb-6 text-center font-display text-2xl">Todos os planos incluem</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {[
-              "Dashboard com KPIs em tempo real",
-              "Calculadora de orçamentos multi-mesa",
-              "Autenticação segura via Supabase",
-              "Exportação de dados",
-              "Atualizações contínuas",
-              "Suporte por e-mail",
-            ].map((f) => (
-              <div key={f} className="flex items-center gap-2.5 text-sm text-text-secondary">
-                <Check size={15} className="text-neon-green" /> {f}
-              </div>
-            ))}
-          </div>
+        <div className="mx-auto mt-16 max-w-4xl">
+          <h2 className="mb-6 text-center font-display text-2xl">O que cada plano inclui</h2>
+          <PlanComparisonTable />
         </div>
       </main>
 
@@ -166,8 +157,7 @@ export default function PricingPage() {
           onClose={() => setPixTarget(null)}
           planId={pixTarget}
           planName={getPlan(pixTarget).name}
-          cycle={cycle}
-          amount={priceFor(getPlan(pixTarget), cycle)}
+          amount={getPlan(pixTarget).price}
           onApproved={handlePixApproved}
         />
       )}

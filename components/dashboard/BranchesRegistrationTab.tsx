@@ -1,19 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2, Lock } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { BranchModal } from "@/components/dashboard/BranchModal";
+import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
+import { canCreateMore, limitFor } from "@/lib/entitlements";
 import type { Branch } from "@/lib/types";
 
 export function BranchesRegistrationTab() {
   const supabase = createClient();
+  const { tier } = useSubscription();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
+  const canCreate = canCreateMore(tier, "branches", branches.length);
 
   useEffect(() => {
     loadBranches();
@@ -64,10 +68,26 @@ export function BranchesRegistrationTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-display text-lg">Filiais</h3>
-        <NeonButton size="sm" onClick={openCreate}>
-          <Plus size={14} /> Nova Filial
+        <NeonButton
+          size="sm"
+          onClick={() => canCreate && openCreate()}
+          disabled={!canCreate}
+          className={!canCreate ? "opacity-40" : undefined}
+          title={!canCreate ? "Plano Grátis permite só a matriz" : undefined}
+        >
+          {canCreate ? <Plus size={14} /> : <Lock size={14} />} Nova Filial
         </NeonButton>
       </div>
+
+      {!canCreate && (
+        <p className="text-xs text-amber-400">
+          O plano Grátis permite só {limitFor(tier, "branches")} filial (a matriz).{" "}
+          <a href="/dashboard/subscription" className="underline hover:text-amber-300">
+            Assine um plano
+          </a>{" "}
+          pra ter filiais ilimitadas.
+        </p>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-16 text-text-muted">

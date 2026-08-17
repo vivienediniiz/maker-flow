@@ -1,20 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2, Lock } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { FilamentModal } from "@/components/dashboard/FilamentModal";
+import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
+import { canCreateMore, limitFor, hasFeature } from "@/lib/entitlements";
 import type { Filament } from "@/lib/types";
 
 export function FilamentsRegistrationTab() {
   const supabase = createClient();
+  const { tier } = useSubscription();
   const [filaments, setFilaments] = useState<Filament[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingFilament, setEditingFilament] = useState<Filament | null>(null);
+  const canCreate = canCreateMore(tier, "filaments", filaments.length);
+  const showLowStockAlert = hasFeature(tier);
 
   useEffect(() => {
     loadFilaments();
@@ -65,10 +70,26 @@ export function FilamentsRegistrationTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-display text-lg">Filamentos</h3>
-        <NeonButton size="sm" onClick={openCreate}>
-          <Plus size={14} /> Novo Filamento
+        <NeonButton
+          size="sm"
+          onClick={() => canCreate && openCreate()}
+          disabled={!canCreate}
+          className={!canCreate ? "opacity-40" : undefined}
+          title={!canCreate ? `Limite do plano Grátis (${limitFor(tier, "filaments")} rolos) atingido` : undefined}
+        >
+          {canCreate ? <Plus size={14} /> : <Lock size={14} />} Novo Filamento
         </NeonButton>
       </div>
+
+      {!canCreate && (
+        <p className="text-xs text-amber-400">
+          Você atingiu o limite de {limitFor(tier, "filaments")} rolos do plano Grátis.{" "}
+          <a href="/dashboard/subscription" className="underline hover:text-amber-300">
+            Assine um plano
+          </a>{" "}
+          pra cadastrar sem limite.
+        </p>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-16 text-text-muted">
@@ -113,8 +134,8 @@ export function FilamentsRegistrationTab() {
                   />
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className={isLow ? "font-medium text-red-400" : "text-text-secondary"}>
-                    {f.remaining_weight_g}g / {total}g {isLow && "· estoque baixo"}
+                  <span className={isLow && showLowStockAlert ? "font-medium text-red-400" : "text-text-secondary"}>
+                    {f.remaining_weight_g}g / {total}g {isLow && showLowStockAlert && "· estoque baixo"}
                   </span>
                   <span className="text-text-muted">{formatBRL(f.price_per_kg)}/kg</span>
                 </div>

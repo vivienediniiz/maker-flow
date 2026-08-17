@@ -7,6 +7,8 @@ import { GlassAccordion } from "@/components/ui/GlassAccordion";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { ExtraPurchaseModal } from "@/components/dashboard/ExtraPurchaseModal";
+import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
+import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { FinancialEvolutionChart, type FinancialEvolutionPoint } from "@/components/charts/FinancialEvolutionChart";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
@@ -41,6 +43,26 @@ function periodStart(period: PeriodKey): Date {
 }
 
 export default function FinancePage() {
+  const { paid } = useSubscription();
+
+  if (!paid) {
+    return (
+      <>
+        <Topbar title="Financeiro" />
+        <main className="px-6 py-8 md:px-8">
+          <UpgradeGate
+            title="Financeiro é recurso pago"
+            description="Receita bruta, custos, lucro líquido real, vendas canceladas e gráfico de evolução — disponível nos planos Mensal e Trimestral."
+          />
+        </main>
+      </>
+    );
+  }
+
+  return <FinancePageContent />;
+}
+
+function FinancePageContent() {
   const supabase = createClient();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [expenses, setExpenses] = useState<ExtraPurchase[]>([]);

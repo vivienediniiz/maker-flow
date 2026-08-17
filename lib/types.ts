@@ -1,5 +1,7 @@
-export type SubscriptionTier = "free" | "starter" | "pro" | "studio";
-export type BillingCycle = "monthly" | "yearly";
+export type SubscriptionTier = "free" | "monthly" | "quarterly";
+// Legado — billing_cycle na prática espelha o próprio subscription_tier
+// ("monthly"/"quarterly" não são mais um eixo independente de plano).
+export type BillingCycle = "monthly" | "quarterly";
 export type SubscriptionStatus = "inactive" | "active" | "paused" | "cancelled";
 
 export type PaymentMethodType = "card" | "pix" | null;

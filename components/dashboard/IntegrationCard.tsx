@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, CircleDashed, AlertCircle, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CheckCircle2, CircleDashed, AlertCircle, Loader2, Lock } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { cn } from "@/lib/utils";
 import type { Integration, IntegrationPlatform } from "@/lib/types";
 
@@ -50,6 +52,8 @@ export function IntegrationCard({
   integration: Integration | null;
   onDisconnected: () => void;
 }) {
+  const router = useRouter();
+  const { paid } = useSubscription();
   const [disconnecting, setDisconnecting] = useState(false);
   const status = integration?.status ?? "disconnected";
   const available = AVAILABLE_PLATFORMS.includes(platform);
@@ -67,6 +71,10 @@ export function IntegrationCard({
   }
 
   function handleConnect() {
+    if (!paid) {
+      router.push("/dashboard/subscription");
+      return;
+    }
     window.location.href = `/api/integrations/${PLATFORM_CONNECT_SLUGS[platform]}/connect`;
   }
 
@@ -91,7 +99,7 @@ export function IntegrationCard({
           </NeonButton>
         ) : available ? (
           <NeonButton size="sm" onClick={handleConnect}>
-            Conectar
+            {!paid && <Lock size={14} />} Conectar
           </NeonButton>
         ) : (
           <NeonButton size="sm" disabled className="opacity-40" title="Aguardando aprovação do app na plataforma">
@@ -101,6 +109,9 @@ export function IntegrationCard({
       </div>
       {!available && status !== "connected" && (
         <p className="text-[11px] text-amber-400">Aguardando aprovação do app — em breve.</p>
+      )}
+      {available && !paid && status !== "connected" && (
+        <p className="text-[11px] text-amber-400">Recurso pago — assine um plano pra conectar.</p>
       )}
       {platform === "mercado_pago" && status === "connected" && (
         <p className="text-[11px] text-text-muted">

@@ -1,23 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { BillingToggle } from "@/components/marketing/BillingToggle";
 import { PlanCard } from "@/components/marketing/PlanCard";
+import { PlanComparisonTable } from "@/components/marketing/PlanComparisonTable";
 import { PixCheckoutModal } from "@/components/marketing/PixCheckoutModal";
 import { createClient } from "@/lib/supabase/client";
-import { PLANS, getPlan, priceFor, planDisplayLabel, type BillingCycle, type PlanId } from "@/lib/plans";
+import { PLANS, getPlan, planDisplayLabel, type PlanId } from "@/lib/plans";
 import { trialDaysRemaining } from "@/lib/trial";
 import { pixBillingState, pixDaysUntilDue } from "@/lib/pix";
-import { Loader2 } from "lucide-react";
 import type { Profile } from "@/lib/types";
 
 export default function SubscriptionPage() {
   const supabase = createClient();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pixTarget, setPixTarget] = useState<PlanId | null>(null);
@@ -37,7 +36,6 @@ export default function SubscriptionPage() {
     }
     const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
     setProfile(data as Profile);
-    if (data?.billing_cycle) setCycle(data.billing_cycle as BillingCycle);
     setLoading(false);
   }
 
@@ -48,7 +46,7 @@ export default function SubscriptionPage() {
       const res = await fetch("/api/mercadopago/create-preapproval", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, cycle }),
+        body: JSON.stringify({ planId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -81,20 +79,39 @@ export default function SubscriptionPage() {
   const tier = profile?.subscription_tier ?? "free";
   const isPix = profile?.payment_method === "pix";
   const pixState = isPix ? pixBillingState(profile?.paid_until) : null;
+  const isPaying = profile?.subscription_status === "active";
+  const daysRemaining = trialDaysRemaining(profile?.trial_ends_at);
+  const inTrial = !isPaying && tier !== "free" && daysRemaining > 0;
 
   return (
     <>
       <Topbar title="Assinatura" />
       <main className="space-y-8 px-6 py-8 md:px-8">
+        {inTrial && (
+          <GlassCard padding="lg" className="flex items-center gap-4 border-neon-orange/40 bg-neon-orange/5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-neon-gradient shadow-neon-glow">
+              <Sparkles size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="font-display text-base">Você está no período de teste completo</p>
+              <p className="text-sm text-text-secondary">
+                Acesso liberado a tudo dos planos pagos por mais{" "}
+                <strong className="font-numeric">{daysRemaining} {daysRemaining === 1 ? "dia" : "dias"}</strong> —
+                sem custo, sem cartão cadastrado. Assine antes de acabar pra não perder o acesso.
+              </p>
+            </div>
+          </GlassCard>
+        )}
+
         <GlassCard padding="lg" className="space-y-2">
           <p className="text-xs uppercase tracking-wider text-text-muted">Plano atual</p>
-          <p className="font-display text-2xl">{planDisplayLabel(tier, profile?.billing_cycle ?? null)}</p>
+          <p className="font-display text-2xl">{planDisplayLabel(tier)}</p>
           {tier === "free" ? (
             <p className="text-sm text-text-secondary">
-              {trialDaysRemaining(profile?.trial_ends_at) > 0
-                ? `${trialDaysRemaining(profile?.trial_ends_at)} ${trialDaysRemaining(profile?.trial_ends_at) === 1 ? "dia restante" : "dias restantes"} do período gratuito.`
-                : "Seu período gratuito acabou — assine um plano abaixo para continuar."}
+              Plano gratuito com limites — assine um dos planos abaixo pra desbloquear tudo.
             </p>
+          ) : inTrial ? (
+            <p className="text-sm text-text-secondary">Em período de teste — ainda não há cobrança ativa.</p>
           ) : isPix ? (
             <p className="text-sm text-text-secondary">
               Pagamento via Pix (manual) ·{" "}
@@ -110,25 +127,26 @@ export default function SubscriptionPage() {
         </GlassCard>
 
         <div>
-          <h2 className="mb-4 font-display text-xl">Trocar de plano</h2>
-          <div className="flex justify-center">
-            <BillingToggle value={cycle} onChange={setCycle} />
-          </div>
+          <h2 className="mb-4 font-display text-xl">{tier === "free" || inTrial ? "Assinar agora" : "Trocar de plano"}</h2>
 
-          {error && <p className="mx-auto mt-4 max-w-md text-center text-sm text-red-400">{error}</p>}
+          {error && <p className="mx-auto mb-4 max-w-md text-center text-sm text-red-400">{error}</p>}
 
-          <div className="mx-auto mt-8 grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="mx-auto grid max-w-3xl grid-cols-1 gap-6 md:grid-cols-2">
             {PLANS.map((plan) => (
               <PlanCard
                 key={plan.id}
                 plan={plan}
-                cycle={cycle}
                 loading={loadingPlan === plan.id}
                 onSubscribeCard={() => handleSubscribeCard(plan.id)}
                 onPayPix={() => setPixTarget(plan.id)}
               />
             ))}
           </div>
+        </div>
+
+        <div>
+          <h2 className="mb-4 font-display text-xl">O que cada plano inclui</h2>
+          <PlanComparisonTable />
         </div>
       </main>
 
@@ -138,8 +156,7 @@ export default function SubscriptionPage() {
           onClose={() => setPixTarget(null)}
           planId={pixTarget}
           planName={getPlan(pixTarget).name}
-          cycle={cycle}
-          amount={priceFor(getPlan(pixTarget), cycle)}
+          amount={getPlan(pixTarget).price}
           onApproved={handlePixApproved}
         />
       )}

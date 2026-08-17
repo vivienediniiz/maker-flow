@@ -26,12 +26,15 @@ create table if not exists public.profiles (
   bio text,
   avatar_url text,
   subscription_tier text not null default 'free'
-    check (subscription_tier in ('free', 'starter', 'pro', 'studio')),
+    check (subscription_tier in ('free', 'monthly', 'quarterly')),
   billing_cycle text
-    check (billing_cycle in ('monthly', 'yearly')),
+    check (billing_cycle in ('monthly', 'quarterly')),
   subscription_status text not null default 'inactive'
     check (subscription_status in ('inactive', 'active', 'paused', 'cancelled')),
-  trial_ends_at timestamptz not null default (now() + interval '7 days'),
+  -- Reverse trial: 14 dias de acesso completo (tier 'monthly' setado no
+  -- insert do handle_new_user() abaixo), rebaixado pra 'free' via lazy-check
+  -- na aplicação (app/dashboard/layout.tsx) quando o prazo vence.
+  trial_ends_at timestamptz not null default (now() + interval '14 days'),
   mp_customer_id text,
   mp_subscription_id text,
   created_at timestamptz not null default now(),
@@ -176,8 +179,10 @@ create policy "settings_crud_own" on public.settings
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, email, full_name)
-  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'full_name', ''));
+  -- Reverse trial: conta nova ja nasce com subscription_tier = 'monthly'
+  -- (acesso completo por 14 dias, sem pedir cartao).
+  insert into public.profiles (id, email, full_name, subscription_tier)
+  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'full_name', ''), 'monthly');
 
   insert into public.settings (user_id) values (new.id);
 
@@ -202,4 +207,14 @@ create trigger on_auth_user_created
 -- Migration log:
 --   2026-08-07  add_trial_period.sql
 --   Adiciona trial_ends_at (7 dias a partir do signup) em profiles.
+-- ---------------------------------------------------------
+
+-- ---------------------------------------------------------
+-- Migration log (applied directly on the live project via MCP):
+--   2026-08-17  reverse_trial_plans.sql
+--   Redesigns subscription_tier free|starter|pro|studio -> free|monthly|
+--   quarterly, billing_cycle monthly|yearly -> monthly|quarterly, trial de
+--   7 pra 14 dias, e handle_new_user() passa a inserir subscription_tier =
+--   'monthly' direto (reverse trial: acesso completo automatico, rebaixado
+--   pra 'free' via lazy-check em app/dashboard/layout.tsx quando o trial vence).
 -- ---------------------------------------------------------

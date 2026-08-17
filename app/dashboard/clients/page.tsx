@@ -5,16 +5,20 @@ import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { NewClientModal } from "@/components/dashboard/NewClientModal";
+import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
-import { Search, Plus, Loader2, Trash2 } from "lucide-react";
+import { canCreateMore, limitFor } from "@/lib/entitlements";
+import { Search, Plus, Loader2, Trash2, Lock } from "lucide-react";
 import type { Client } from "@/lib/types";
 
 export default function ClientsPage() {
   const supabase = createClient();
+  const { tier } = useSubscription();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const canCreate = canCreateMore(tier, "clients", clients.length);
 
   useEffect(() => {
     loadClients();
@@ -67,10 +71,25 @@ export default function ClientsPage() {
               className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
             />
           </div>
-          <NeonButton onClick={() => setModalOpen(true)}>
-            <Plus size={16} /> Novo Cliente
+          <NeonButton
+            onClick={() => canCreate && setModalOpen(true)}
+            disabled={!canCreate}
+            className={!canCreate ? "opacity-40" : undefined}
+            title={!canCreate ? `Limite do plano Grátis (${limitFor(tier, "clients")} clientes) atingido` : undefined}
+          >
+            {canCreate ? <Plus size={16} /> : <Lock size={16} />} Novo Cliente
           </NeonButton>
         </div>
+
+        {!canCreate && (
+          <p className="text-xs text-amber-400">
+            Você atingiu o limite de {limitFor(tier, "clients")} clientes do plano Grátis.{" "}
+            <a href="/dashboard/subscription" className="underline hover:text-amber-300">
+              Assine um plano
+            </a>{" "}
+            pra cadastrar sem limite.
+          </p>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-16 text-text-muted">

@@ -167,12 +167,18 @@ export default function InventoryPage() {
           itemName={saleTarget.name}
           unitPrice={saleTarget.sale_price}
           maxQuantity={saleTarget.stock_quantity}
-          onConfirm={({ quantity }) => {
-            setProducts((prev) =>
-              prev.map((p) =>
-                p.id === saleTarget.id ? { ...p, stock_quantity: p.stock_quantity - quantity } : p
-              )
-            );
+          onConfirm={({ quantity, stockAdjustedAutomatically }) => {
+            if (stockAdjustedAutomatically) {
+              setProducts((prev) =>
+                prev.map((p) =>
+                  p.id === saleTarget.id ? { ...p, stock_quantity: p.stock_quantity - quantity } : p
+                )
+              );
+            } else {
+              alert(
+                "Venda registrada. No plano Grátis a baixa de estoque é manual — ajuste a quantidade em Produtos."
+              );
+            }
             loadData(); // recarrega pra atualizar o histórico de vendas também
           }}
         />

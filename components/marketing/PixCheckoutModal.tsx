@@ -5,14 +5,13 @@ import { Check, Copy, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { formatBRL } from "@/lib/utils";
-import type { PlanId, BillingCycle } from "@/lib/plans";
+import type { PlanId } from "@/lib/plans";
 
 interface PixCheckoutModalProps {
   open: boolean;
   onClose: () => void;
   planId: PlanId;
   planName: string;
-  cycle: BillingCycle;
   amount: number;
   onApproved: () => void;
 }
@@ -24,7 +23,6 @@ export function PixCheckoutModal({
   onClose,
   planId,
   planName,
-  cycle,
   amount,
   onApproved,
 }: PixCheckoutModalProps) {
@@ -48,7 +46,7 @@ export function PixCheckoutModal({
         const res = await fetch("/api/mercadopago/create-pix-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ planId, cycle }),
+          body: JSON.stringify({ planId }),
         });
         const data = await res.json();
 
@@ -71,7 +69,7 @@ export function PixCheckoutModal({
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [open, planId, cycle]);
+  }, [open, planId]);
 
   useEffect(() => {
     if (step !== "ready" || !paymentId) return;

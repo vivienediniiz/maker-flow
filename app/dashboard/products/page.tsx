@@ -6,13 +6,16 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { ProductDetailModal } from "@/components/dashboard/ProductDetailModal";
+import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
-import { SlidersHorizontal, PackagePlus, Sparkles, Loader2, Trash2 } from "lucide-react";
+import { canCreateMore, limitFor } from "@/lib/entitlements";
+import { SlidersHorizontal, PackagePlus, Sparkles, Loader2, Trash2, Lock } from "lucide-react";
 import type { Product } from "@/lib/types";
 
 export default function ProductsPage() {
   const supabase = createClient();
+  const { tier } = useSubscription();
   const [showFilters, setShowFilters] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -20,6 +23,7 @@ export default function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const canCreate = canCreateMore(tier, "products", products.length);
 
   useEffect(() => {
     loadProducts();
@@ -103,11 +107,27 @@ export default function ProductsPage() {
                 </div>
               )}
             </div>
-            <NeonButton size="sm" onClick={() => setModalOpen(true)}>
-              <PackagePlus size={14} /> Novo Produto
+            <NeonButton
+              size="sm"
+              onClick={() => canCreate && setModalOpen(true)}
+              disabled={!canCreate}
+              className={!canCreate ? "opacity-40" : undefined}
+              title={!canCreate ? `Limite do plano Grátis (${limitFor(tier, "products")} produtos) atingido` : undefined}
+            >
+              {canCreate ? <PackagePlus size={14} /> : <Lock size={14} />} Novo Produto
             </NeonButton>
           </div>
         </div>
+
+        {!canCreate && (
+          <p className="text-xs text-amber-400">
+            Você atingiu o limite de {limitFor(tier, "products")} produtos do plano Grátis.{" "}
+            <a href="/dashboard/subscription" className="underline hover:text-amber-300">
+              Assine um plano
+            </a>{" "}
+            pra cadastrar sem limite.
+          </p>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-16 text-text-muted">

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getPlan, priceFor, encodeExternalReference, type PlanId, type BillingCycle } from "@/lib/plans";
+import { getPlan, encodeExternalReference, type PlanId } from "@/lib/plans";
 
 const BodySchema = z.object({
-  planId: z.enum(["starter", "pro", "studio"]),
-  cycle: z.enum(["monthly", "yearly"]),
+  planId: z.enum(["monthly", "quarterly"]),
 });
 
 /**
@@ -39,19 +38,17 @@ export async function POST(req: NextRequest) {
   }
 
   const planId = parsed.data.planId as PlanId;
-  const cycle = parsed.data.cycle as BillingCycle;
   const plan = getPlan(planId);
-  const amount = priceFor(plan, cycle);
 
   const preapprovalBody = {
-    reason: `StudioMaker - Plano ${plan.name} (${cycle === "monthly" ? "Mensal" : "Anual"})`,
-    external_reference: encodeExternalReference(user.id, planId, cycle),
+    reason: `StudioMaker - Plano ${plan.name}`,
+    external_reference: encodeExternalReference(user.id, planId),
     payer_email: user.email,
     back_url: `${req.nextUrl.origin}/dashboard/settings?subscription=success`,
     auto_recurring: {
-      frequency: cycle === "monthly" ? 1 : 12,
+      frequency: plan.frequencyMonths,
       frequency_type: "months",
-      transaction_amount: amount,
+      transaction_amount: plan.price,
       currency_id: "BRL",
     },
     status: "pending",

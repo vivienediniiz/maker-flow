@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { decodeExternalReference } from "@/lib/plans";
+import { decodeExternalReference, getPlan } from "@/lib/plans";
 
 function adminClient() {
   return createClient(
@@ -21,11 +21,11 @@ const MP_STATUS_TO_SUBSCRIPTION_STATUS: Record<string, "active" | "paused" | "ca
  * (nunca confiamos só no corpo do POST). Dois fluxos possíveis, identificados pelo `topic`:
  *
  *  - "subscription_preapproval" / "preapproval" → assinatura automática por cartão.
- *    external_reference no formato "userId|planId|cycle|card".
+ *    external_reference no formato "userId|planId|card".
  *
  *  - "payment" → pagamento avulso via Pix (renovação manual).
- *    external_reference no formato "userId|planId|cycle|pix".
- *    Quando aprovado, estende profiles.paid_until em +30 ou +365 dias.
+ *    external_reference no formato "userId|planId|pix".
+ *    Quando aprovado, estende profiles.paid_until em +30 (mensal) ou +90 (trimestral) dias.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -61,16 +61,12 @@ export async function POST(req: NextRequest) {
       const mpStatus: string = subscription.status;
       const subscriptionStatus = MP_STATUS_TO_SUBSCRIPTION_STATUS[mpStatus] ?? "inactive";
       const isEffectivelyActive = subscriptionStatus === "active";
-      const cycleMonths = subscription.auto_recurring?.frequency_type === "months"
-        ? subscription.auto_recurring?.frequency
-        : null;
-      const billingCycle = cycleMonths === 12 ? "yearly" : "monthly";
 
       const { error } = await supabase
         .from("profiles")
         .update({
           subscription_tier: isEffectivelyActive ? planId : "free",
-          billing_cycle: isEffectivelyActive ? billingCycle : null,
+          billing_cycle: isEffectivelyActive ? planId : null,
           subscription_status: subscriptionStatus,
           payment_method: isEffectivelyActive ? "card" : null,
           paid_until: null,
@@ -101,21 +97,21 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true, skipped: "unrecognized_reference" }, { status: 200 });
       }
 
-      const { userId, planId, cycle, method } = decodeExternalReference(rawRef);
+      const { userId, planId, method } = decodeExternalReference(rawRef);
 
       if (method !== "pix") {
         return NextResponse.json({ received: true, skipped: "not_pix" }, { status: 200 });
       }
 
       if (payment.status === "approved") {
-        const periodDays = cycle === "yearly" ? 365 : 30;
+        const periodDays = getPlan(planId).frequencyMonths * 30;
         const paidUntil = new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000).toISOString();
 
         const { error } = await supabase
           .from("profiles")
           .update({
             subscription_tier: planId,
-            billing_cycle: cycle,
+            billing_cycle: planId,
             subscription_status: "active",
             payment_method: "pix",
             paid_until: paidUntil,

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { planDisplayLabel } from "@/lib/plans";
-import type { SubscriptionTier, BillingCycle } from "@/lib/types";
+import type { SubscriptionTier } from "@/lib/types";
 import {
   LayoutDashboard,
   Calculator,
@@ -44,12 +44,11 @@ interface SidebarProps {
   studioName?: string;
   avatarUrl?: string | null;
   tier: SubscriptionTier;
-  cycle: BillingCycle | null;
 }
 
-export function Sidebar({ studioName, avatarUrl, tier, cycle }: SidebarProps) {
+export function Sidebar({ studioName, avatarUrl, tier }: SidebarProps) {
   const pathname = usePathname();
-  const planLabel = planDisplayLabel(tier, cycle);
+  const planLabel = planDisplayLabel(tier);
 
   return (
     <aside className="glass-card fixed bottom-4 left-4 top-4 z-40 hidden w-64 flex-col overflow-hidden shadow-neon-glow md:flex">

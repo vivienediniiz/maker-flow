@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, Truck, Loader2 } from "lucide-react";
+import { FileText, Truck, Loader2, Lock } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteStatusStepper } from "@/components/dashboard/QuoteStatusStepper";
+import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { formatOrderNumber, QUOTE_CHANNEL_LABELS, QUOTE_SOURCE_LABELS, QUOTE_SOURCE_BADGE_STYLES } from "@/lib/quotes";
@@ -29,6 +30,7 @@ export function QuoteDetailModal({
   onStatusChange: (quoteId: string, status: QuoteStatus) => void;
 }) {
   const supabase = createClient();
+  const { paid } = useSubscription();
   const [generatingLabel, setGeneratingLabel] = useState(false);
 
   if (!quote) return null;
@@ -228,14 +230,36 @@ export function QuoteDetailModal({
 
         {/* Documentos */}
         <div className="grid grid-cols-2 gap-2">
-          <NeonButton variant="outline" size="sm" onClick={handlePrintShippingDocument} disabled={generatingLabel}>
-            {generatingLabel ? <Loader2 size={14} className="animate-spin" /> : <Truck size={14} />}
+          <NeonButton
+            variant="outline"
+            size="sm"
+            onClick={handlePrintShippingDocument}
+            disabled={generatingLabel || !paid}
+            className={!paid ? "opacity-40" : undefined}
+            title={!paid ? "PDF de orçamento é recurso pago" : undefined}
+          >
+            {generatingLabel ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : !paid ? (
+              <Lock size={14} />
+            ) : (
+              <Truck size={14} />
+            )}
             Doc. de Envio
           </NeonButton>
           <NeonButton variant="ghost" size="sm" disabled className="opacity-40" title="Em breve — precisa de um provedor fiscal">
             <FileText size={14} /> Emitir NF
           </NeonButton>
         </div>
+        {!paid && (
+          <p className="text-[11px] text-amber-400">
+            Gerar PDF de orçamento é recurso pago —{" "}
+            <a href="/dashboard/subscription" className="underline hover:text-amber-300">
+              assine um plano
+            </a>{" "}
+            pra liberar.
+          </p>
+        )}
 
         <div>
           <p className="mb-3 text-xs font-medium uppercase tracking-wider text-text-muted">Status do pedido</p>
