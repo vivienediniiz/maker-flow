@@ -63,7 +63,7 @@ export function Topbar({ title, searchValue, onSearchChange, searchPlaceholder }
   }
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border-glass bg-bg/70 px-4 py-4 backdrop-blur-glass md:px-8">
+    <header className="glass-card sticky top-4 z-30 mx-4 flex items-center justify-between px-4 py-4 md:mx-8 md:px-8">
       <div className="flex items-center gap-3">
         <button
           onClick={toggleSidebar}
