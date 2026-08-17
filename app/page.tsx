@@ -149,6 +149,9 @@ export default function HomePage() {
           <Link href="/privacy-policy" className="hover:text-text-secondary">
             Política de Privacidade
           </Link>
+          <Link href="/data-deletion" className="hover:text-text-secondary">
+            Exclusão de Dados
+          </Link>
         </nav>
       </footer>
     </div>
