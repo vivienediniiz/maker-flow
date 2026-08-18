@@ -157,3 +157,67 @@ export async function fetchMelhorEnvioAccount(
   }
   return res.json();
 }
+
+export interface ShippingCalculateParams {
+  originCep: string;
+  destinationCep: string;
+  /** Gramas — convertido pra kg antes de chamar a API. */
+  weightG: number;
+  heightCm: number;
+  widthCm: number;
+  lengthCm: number;
+}
+
+export interface ShippingQuote {
+  id: number;
+  company: string;
+  companyLogo: string | null;
+  service: string;
+  price: number;
+  deliveryDays: number;
+}
+
+/**
+ * POST /me/shipment/calculate — testado ao vivo contra a conta sandbox já
+ * conectada (companies com id 2, "Jadlog", responderam price/delivery_time
+ * reais). Ignora entradas com campo `error` (transportadora sem contrato
+ * disponível pra essa conta) em vez de quebrar a cotação inteira.
+ */
+export async function calculateShipping(
+  admin: SupabaseClient,
+  integration: { id: string; credential_secret_id: string | null },
+  params: ShippingCalculateParams
+): Promise<ShippingQuote[]> {
+  const res = await melhorEnvioFetchForIntegration(admin, integration, "/me/shipment/calculate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: { postal_code: params.originCep.replace(/\D/g, "") },
+      to: { postal_code: params.destinationCep.replace(/\D/g, "") },
+      package: {
+        height: params.heightCm,
+        width: params.widthCm,
+        length: params.lengthCm,
+        weight: params.weightG / 1000,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Melhor Envio respondeu ${res.status} ao calcular o frete`);
+  }
+
+  const data = await res.json();
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .filter((item) => !item.error && item.price)
+    .map((item) => ({
+      id: item.id,
+      company: item.company?.name ?? "Transportadora",
+      companyLogo: item.company?.picture ?? null,
+      service: item.name,
+      price: Number(item.price),
+      deliveryDays: item.delivery_time ?? item.custom_delivery_time ?? 0,
+    }));
+}

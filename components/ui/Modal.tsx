@@ -1,9 +1,14 @@
 "use client";
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
+
+// Pilha global dos modais abertos no momento — com vários Modal empilhados
+// (ex: Nova Venda Manual -> Cadastrar Produto -> Calcular Custo Unitário),
+// Esc precisa fechar só o de cima, não todos de uma vez.
+const openModalStack: symbol[] = [];
 
 export function Modal({
   open,
@@ -22,12 +27,25 @@ export function Modal({
   /** Classe de largura máxima do painel. */
   maxWidthClass?: string;
 }) {
+  const instanceId = useRef(Symbol("modal")).current;
+
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    openModalStack.push(instanceId);
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      // Só o modal do topo da pilha (o último aberto) responde ao Esc.
+      if (openModalStack[openModalStack.length - 1] === instanceId) onClose();
+    };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      const idx = openModalStack.indexOf(instanceId);
+      if (idx !== -1) openModalStack.splice(idx, 1);
+    };
+  }, [open, onClose, instanceId]);
 
   if (!open || typeof document === "undefined") return null;
 
