@@ -5,6 +5,7 @@ import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { NewClientModal } from "@/components/dashboard/NewClientModal";
+import { ClientDetailModal } from "@/components/dashboard/ClientDetailModal";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { canCreateMore, limitFor } from "@/lib/entitlements";
@@ -19,6 +20,7 @@ export default function ClientsPage() {
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const canCreate = canCreateMore(tier, "clients", clients.length);
 
   useEffect(() => {
@@ -43,7 +45,8 @@ export default function ClientsPage() {
     setLoading(false);
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
     if (!confirm("Remover este cliente?")) return;
     await supabase.from("clients").delete().eq("id", id);
     setClients((prev) => prev.filter((c) => c.id !== id));
@@ -118,7 +121,11 @@ export default function ClientsPage() {
                 </thead>
                 <tbody>
                   {filtered.map((c) => (
-                    <tr key={c.id} className="border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]">
+                    <tr
+                      key={c.id}
+                      onClick={() => setSelectedClient(c)}
+                      className="cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]"
+                    >
                       <td className="px-6 py-4 font-medium text-text-primary">{c.name}</td>
                       <td className="px-6 py-4 text-text-secondary">{c.phone || "—"}</td>
                       <td className="px-6 py-4 text-text-secondary">{c.email || "—"}</td>
@@ -127,14 +134,17 @@ export default function ClientsPage() {
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
                           <button
-                            onClick={() => setEditingClient(c)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingClient(c);
+                            }}
                             className="text-text-muted hover:text-neon-pink"
                             aria-label="Editar cliente"
                           >
                             <Pencil size={14} />
                           </button>
                           <button
-                            onClick={() => handleDelete(c.id)}
+                            onClick={(e) => handleDelete(c.id, e)}
                             className="text-text-muted hover:text-red-400"
                             aria-label="Remover cliente"
                           >
@@ -164,6 +174,7 @@ export default function ClientsPage() {
           )
         }
       />
+      <ClientDetailModal client={selectedClient} onClose={() => setSelectedClient(null)} />
     </>
   );
 }

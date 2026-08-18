@@ -43,15 +43,37 @@ export function ClientDetailModal({
 
   if (!client) return null;
 
+  const hasStructuredAddress = !!(client.street || client.city);
+  const structuredAddressLine = [
+    [client.street, client.number].filter(Boolean).join(", "),
+    client.complement,
+  ]
+    .filter(Boolean)
+    .join(" - ");
+  const structuredAddressLine2 = [
+    client.neighborhood,
+    client.city && client.state ? `${client.city} - ${client.state}` : client.city || client.state,
+    client.cep,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <Modal open={!!client} onClose={onClose} title={client.name}>
       <div className="max-h-[70vh] space-y-5 overflow-y-auto scrollbar-glass pr-1">
         <div className="glass-card space-y-1 p-4 text-sm">
           {client.phone && <p className="text-text-secondary">📱 {client.phone}</p>}
           {client.email && <p className="text-text-secondary">✉️ {client.email}</p>}
-          {client.address && <p className="text-text-secondary">📍 {client.address}</p>}
+          {hasStructuredAddress ? (
+            <div className="text-text-secondary">
+              <p>📍 {structuredAddressLine}</p>
+              {structuredAddressLine2 && <p className="pl-5 text-text-muted">{structuredAddressLine2}</p>}
+            </div>
+          ) : (
+            client.address && <p className="text-text-secondary">📍 {client.address}</p>
+          )}
           {client.notes && <p className="text-text-muted">{client.notes}</p>}
-          {!client.phone && !client.email && !client.address && !client.notes && (
+          {!client.phone && !client.email && !client.address && !hasStructuredAddress && !client.notes && (
             <p className="text-text-muted">Sem informações de contato ainda.</p>
           )}
         </div>
