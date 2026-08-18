@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { melhorEnvioAuthorizeUrl } from "@/lib/melhorEnvio";
 
+// Essa rota decide o redirect com base no cookie de sessão de quem chama —
+// nunca pode ser cacheada pelo CDN, senão a resposta de um request vira a
+// resposta de todo mundo (foi exatamente isso que aconteceu em producao).
+export const dynamic = "force-dynamic";
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://maker-flow.netlify.app";
 
 /**

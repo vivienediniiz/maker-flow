@@ -3,6 +3,9 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { setIntegrationCredential } from "@/lib/vault";
 import { exchangeMercadoPagoCode } from "@/lib/mercadoPago";
 
+// Nunca cachear: cada chamada troca um `code` de uso único por um token real.
+export const dynamic = "force-dynamic";
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://maker-flow.netlify.app";
 
 function adminClient() {
