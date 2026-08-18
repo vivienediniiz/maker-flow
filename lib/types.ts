@@ -102,6 +102,9 @@ export interface Quote {
   shipping_service_id: string | null;
   shipping_tracking_code: string | null;
   shipping_label_url: string | null;
+  quantity: number | null;
+  unit_price: number | null;
+  price_tier_label: string | null;
 }
 
 export interface QuoteWithClient extends Quote {

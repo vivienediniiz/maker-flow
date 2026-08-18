@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Pencil } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
+import { buildPriceTierRanges } from "@/lib/priceTiers";
 import type { Client, Product, QuoteWithClient, QuotePaymentMethod, QuoteChannel } from "@/lib/types";
 import { QUOTE_CHANNEL_LABELS } from "@/lib/quotes";
 
@@ -60,6 +62,11 @@ export function NewSaleModal({
   const [selectedProductId, setSelectedProductId] = useState("");
   const [projectName, setProjectName] = useState(initialProjectName);
   const [finalPrice, setFinalPrice] = useState(initialFinalPrice != null ? String(initialFinalPrice.toFixed(2)) : "");
+  const [quantity, setQuantity] = useState("1");
+  const [unitPrice, setUnitPrice] = useState("");
+  // "" = produto sem faixas (não se aplica); "custom" = valor customizado pra
+  // essa venda; string numérica = índice da faixa escolhida em product.price_tiers.
+  const [tierChoice, setTierChoice] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<QuotePaymentMethod>("pix");
   const [channel, setChannel] = useState<QuoteChannel>("whatsapp");
   const [shippingCost, setShippingCost] = useState("");
@@ -83,6 +90,11 @@ export function NewSaleModal({
       setSelectedProductId(quote.product_id ?? "");
       setProjectName(quote.project_name);
       setFinalPrice(String(quote.final_price.toFixed(2)));
+      // Sempre recarrega em modo "custom": reproduz o valor exato da venda
+      // já salva, sem depender de as faixas do produto ainda serem as mesmas.
+      setQuantity(quote.quantity != null ? String(quote.quantity) : "1");
+      setUnitPrice(quote.unit_price != null ? String(quote.unit_price.toFixed(2)) : "");
+      setTierChoice(quote.product_id ? "custom" : "");
       setPaymentMethod(quote.payment_method ?? "pix");
       setChannel(quote.channel ?? "whatsapp");
       setShippingCost(quote.shipping_cost != null ? String(quote.shipping_cost) : "");
@@ -93,6 +105,9 @@ export function NewSaleModal({
       setSelectedProductId("");
       setProjectName(initialProjectName);
       setFinalPrice(initialFinalPrice != null ? String(initialFinalPrice.toFixed(2)) : "");
+      setQuantity("1");
+      setUnitPrice("");
+      setTierChoice("");
       setPaymentMethod("pix");
       setChannel("whatsapp");
       setShippingCost("");
@@ -114,9 +129,28 @@ export function NewSaleModal({
     const product = products.find((p) => p.id === productId);
     if (product) {
       setProjectName(product.name);
-      setFinalPrice(String(product.sale_price.toFixed(2)));
+      setUnitPrice(String(product.sale_price.toFixed(2)));
+      setQuantity("1");
+      // Preço da faixa (product.sale_price) por padrão não corresponde a
+      // nenhuma faixa específica — fica em "custom" até o usuário escolher uma.
+      setTierChoice(product.price_tiers.length > 0 ? "custom" : "");
     }
   }
+
+  function handleTierChange(value: string, tierRanges: ReturnType<typeof buildPriceTierRanges>) {
+    setTierChoice(value);
+    if (value === "custom") return;
+    const tier = tierRanges.find((r) => String(r.originalIndex) === value);
+    if (tier) setUnitPrice(tier.price.toFixed(2));
+  }
+
+  const selectedProduct = products.find((p) => p.id === selectedProductId) ?? null;
+  const showUnitPricing = productMode === "select" && !!selectedProduct;
+  const tierRanges = selectedProduct ? buildPriceTierRanges(selectedProduct.price_tiers) : [];
+  const unitPriceLocked = tierRanges.length > 0 && tierChoice !== "custom" && tierChoice !== "";
+  const computedTotal = showUnitPricing
+    ? (Number(unitPrice) || 0) * (Number(quantity) || 0)
+    : Number(finalPrice) || 0;
 
   async function loadClients() {
     const {
@@ -135,11 +169,23 @@ export function NewSaleModal({
       setError("Informe o nome do produto/projeto.");
       return;
     }
-    const price = Number(finalPrice);
-    if (!price || price <= 0) {
+
+    if (showUnitPricing) {
+      const qty = Number(quantity);
+      if (!Number.isInteger(qty) || qty < 1) {
+        setError("Quantidade deve ser um número inteiro de pelo menos 1.");
+        return;
+      }
+      if (!unitPrice || Number(unitPrice) <= 0) {
+        setError("Informe um valor unitário válido.");
+        return;
+      }
+    } else if (!finalPrice || Number(finalPrice) <= 0) {
       setError("Informe um valor final válido.");
       return;
     }
+
+    const price = computedTotal;
 
     setSaving(true);
 
@@ -181,6 +227,11 @@ export function NewSaleModal({
       return;
     }
 
+    const appliedTierLabel =
+      showUnitPricing && tierChoice !== "custom" && tierChoice !== ""
+        ? tierRanges.find((r) => String(r.originalIndex) === tierChoice)?.label ?? null
+        : null;
+
     const sharedPayload = {
       project_name: projectName || "Projeto sem nome",
       final_price: price,
@@ -190,6 +241,9 @@ export function NewSaleModal({
       channel,
       shipping_cost: shippingCost ? Number(shippingCost) : null,
       destination_cep: destinationCep || null,
+      quantity: showUnitPricing ? Number(quantity) : null,
+      unit_price: showUnitPricing ? Number(unitPrice) : null,
+      price_tier_label: appliedTierLabel,
     };
 
     const { error: quoteError } = isEditing
@@ -268,7 +322,75 @@ export function NewSaleModal({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        {showUnitPricing ? (
+          <>
+            {tierRanges.length > 0 && (
+              <div>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className="text-xs text-text-muted">Faixa de Preço</label>
+                  {unitPriceLocked && (
+                    <button
+                      type="button"
+                      onClick={() => setTierChoice("custom")}
+                      className="flex items-center gap-1 text-[11px] text-neon-pink hover:underline"
+                    >
+                      <Pencil size={11} /> Editar valor
+                    </button>
+                  )}
+                </div>
+                <select
+                  value={tierChoice}
+                  onChange={(e) => handleTierChange(e.target.value, tierRanges)}
+                  className="glass-input w-full"
+                >
+                  {tierRanges.map((r) => (
+                    <option key={r.originalIndex} value={r.originalIndex} className="bg-bg-raised">
+                      {r.label}
+                    </option>
+                  ))}
+                  <option value="custom" className="bg-bg-raised">
+                    Personalizado
+                  </option>
+                </select>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1.5 block text-xs text-text-muted">Valor Unitário (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={unitPrice}
+                  onChange={(e) => {
+                    setUnitPrice(e.target.value);
+                    setTierChoice("custom");
+                  }}
+                  disabled={unitPriceLocked}
+                  className={`glass-input w-full ${unitPriceLocked ? "cursor-not-allowed opacity-60" : ""}`}
+                  placeholder="0,00"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs text-text-muted">Quantidade</label>
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  className="glass-input w-full"
+                />
+              </div>
+            </div>
+
+            <div className="glass-card flex items-center justify-between px-4 py-3">
+              <span className="text-xs text-text-muted">Valor Total</span>
+              <span className="neon-text font-numeric text-lg font-semibold">{formatBRL(computedTotal)}</span>
+            </div>
+          </>
+        ) : (
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Valor final (R$)</label>
             <input
@@ -281,20 +403,21 @@ export function NewSaleModal({
               placeholder="0,00"
             />
           </div>
-          <div>
-            <label className="mb-1.5 block text-xs text-text-muted">Forma de pagamento</label>
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value as QuotePaymentMethod)}
-              className="glass-input w-full"
-            >
-              {PAYMENT_METHODS.map((pm) => (
-                <option key={pm.value} value={pm.value} className="bg-bg-raised">
-                  {pm.label}
-                </option>
-              ))}
-            </select>
-          </div>
+        )}
+
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">Forma de pagamento</label>
+          <select
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(e.target.value as QuotePaymentMethod)}
+            className="glass-input w-full"
+          >
+            {PAYMENT_METHODS.map((pm) => (
+              <option key={pm.value} value={pm.value} className="bg-bg-raised">
+                {pm.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -401,7 +524,7 @@ export function NewSaleModal({
           </div>
         )}
 
-        {finalPrice && !isNaN(Number(finalPrice)) && (
+        {!showUnitPricing && finalPrice && !isNaN(Number(finalPrice)) && (
           <div className="glass-card flex items-center justify-between px-4 py-3">
             <span className="text-xs text-text-muted">Valor</span>
             <span className="neon-text font-numeric text-lg font-semibold">{formatBRL(Number(finalPrice))}</span>
