@@ -10,6 +10,7 @@ import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { GenerateQuoteModal } from "@/components/dashboard/GenerateQuoteModal";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
+import { calculateCost } from "@/lib/costCalculator";
 import { Plus, Trash2, FileDown, Link2, Rocket, PackagePlus } from "lucide-react";
 import type { Product } from "@/lib/types";
 
@@ -118,34 +119,23 @@ export default function CalculatorPage() {
     setBeds((b) => b.map((bed) => (bed.id === id ? { ...bed, ...patch } : bed)));
   }
 
-  const calc = useMemo(() => {
-    const totalWeightG = beds.reduce((sum, b) => sum + (b.weightG || 0), 0);
-    const totalHours = beds.reduce((sum, b) => sum + (b.timeH || 0) + (b.timeM || 0) / 60, 0);
-    const energyCost = beds.reduce((sum, b) => {
-      const hours = (b.timeH || 0) + (b.timeM || 0) / 60;
-      return sum + (b.watts / 1000) * hours * kwhRate;
-    }, 0);
-    const filamentCost = (totalWeightG / 1000) * filamentPricePerKg;
-    const laborCost = laborHours * hourlyRate;
-    const paint = paintedByHand ? paintCost : 0;
-
-    const baseCost = filamentCost + energyCost + laborCost + extras + paint;
-    const priceWithMargin = baseCost * (1 + marginPercent / 100);
-    const finalPrice = marketplaceFee > 0 ? priceWithMargin / (1 - marketplaceFee / 100) : priceWithMargin;
-    const pricePerPiece = finalPrice / Math.max(quantity, 1);
-
-    return {
-      totalWeightG,
-      totalHours,
-      energyCost,
-      filamentCost,
-      laborCost,
-      paint,
-      baseCost,
-      finalPrice,
-      pricePerPiece,
-    };
-  }, [beds, filamentPricePerKg, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, marketplaceFee, marginPercent, quantity]);
+  const calc = useMemo(
+    () =>
+      calculateCost({
+        beds,
+        filamentPricePerKg,
+        kwhRate,
+        laborHours,
+        hourlyRate,
+        extras,
+        paintedByHand,
+        paintCost,
+        marketplaceFee,
+        marginPercent,
+        quantity,
+      }),
+    [beds, filamentPricePerKg, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, marketplaceFee, marginPercent, quantity]
+  );
 
   return (
     <>

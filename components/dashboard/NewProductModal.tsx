@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2, Calculator } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { CategorySelect } from "@/components/dashboard/CategorySelect";
 import { PriceTierEditor } from "@/components/dashboard/PriceTierEditor";
+import { CostCalculatorModal } from "@/components/dashboard/CostCalculatorModal";
 import { createClient } from "@/lib/supabase/client";
 import type { Product, PriceTier, CalcInputs } from "@/lib/types";
 
@@ -41,6 +42,7 @@ export function NewProductModal({
   const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -181,15 +183,26 @@ export function NewProductModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Custo (R$)</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              required
-              value={costPrice}
-              onChange={(e) => setCostPrice(e.target.value)}
-              className="glass-input w-full"
-            />
+            <div className="relative">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                value={costPrice}
+                onChange={(e) => setCostPrice(e.target.value)}
+                className="glass-input w-full pr-9"
+              />
+              <button
+                type="button"
+                onClick={() => setCalculatorOpen(true)}
+                className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-lg text-text-muted hover:bg-white/5 hover:text-neon-pink"
+                aria-label="Calcular custo unitário"
+                title="Calcular custo unitário"
+              >
+                <Calculator size={14} />
+              </button>
+            </div>
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Venda (R$)</label>
@@ -230,6 +243,15 @@ export function NewProductModal({
           </NeonButton>
         </div>
       </form>
+
+      <CostCalculatorModal
+        open={calculatorOpen}
+        onClose={() => setCalculatorOpen(false)}
+        onApply={(cost, sale) => {
+          setCostPrice(cost.toFixed(2));
+          setSalePrice(sale.toFixed(2));
+        }}
+      />
     </Modal>
   );
 }
