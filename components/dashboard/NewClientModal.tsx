@@ -42,6 +42,7 @@ export function NewClientModal({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [instagram, setInstagram] = useState("");
   const [notes, setNotes] = useState("");
   const [cep, setCep] = useState("");
   const [street, setStreet] = useState("");
@@ -60,6 +61,7 @@ export function NewClientModal({
     setName(client?.name ?? "");
     setPhone(client?.phone ?? "");
     setEmail(client?.email ?? "");
+    setInstagram(client?.instagram ?? "");
     setNotes(client?.notes ?? "");
     setCep(client?.cep ?? "");
     setStreet(client?.street ?? "");
@@ -118,6 +120,7 @@ export function NewClientModal({
       name,
       phone: phone || null,
       email: email || null,
+      instagram: instagram ? instagram.trim().replace(/^@/, "") : null,
       notes: notes || null,
       cep: cep || null,
       street: street || null,
@@ -183,6 +186,15 @@ export function NewClientModal({
             onChange={(e) => setEmail(e.target.value)}
             className="glass-input w-full"
             placeholder="cliente@email.com"
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">Instagram</label>
+          <input
+            value={instagram}
+            onChange={(e) => setInstagram(e.target.value)}
+            className="glass-input w-full"
+            placeholder="@perfil_do_cliente"
           />
         </div>
 

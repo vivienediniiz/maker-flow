@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { WhatsAppLink } from "@/components/ui/WhatsAppLink";
+import { InstagramLink } from "@/components/ui/InstagramLink";
 import { QuoteStatusStepper } from "@/components/dashboard/QuoteStatusStepper";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
@@ -70,6 +71,11 @@ export function ClientDetailModal({
             </p>
           )}
           {client.email && <p className="text-text-secondary">✉️ {client.email}</p>}
+          {client.instagram && (
+            <p className="text-text-secondary">
+              <InstagramLink handle={client.instagram} />
+            </p>
+          )}
           {hasStructuredAddress ? (
             <div className="text-text-secondary">
               <p>📍 {structuredAddressLine}</p>
@@ -79,7 +85,7 @@ export function ClientDetailModal({
             client.address && <p className="text-text-secondary">📍 {client.address}</p>
           )}
           {client.notes && <p className="text-text-muted">{client.notes}</p>}
-          {!client.phone && !client.email && !client.address && !hasStructuredAddress && !client.notes && (
+          {!client.phone && !client.email && !client.instagram && !client.address && !hasStructuredAddress && !client.notes && (
             <p className="text-text-muted">Sem informações de contato ainda.</p>
           )}
         </div>

@@ -245,6 +245,7 @@ export interface Client {
   neighborhood: string | null;
   city: string | null;
   state: string | null;
+  instagram: string | null;
 }
 
 export interface Sale {
