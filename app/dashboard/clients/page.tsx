@@ -7,6 +7,7 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { NewClientModal } from "@/components/dashboard/NewClientModal";
 import { ClientDetailModal } from "@/components/dashboard/ClientDetailModal";
 import { WhatsAppLink } from "@/components/ui/WhatsAppLink";
+import { InstagramLink } from "@/components/ui/InstagramLink";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { canCreateMore, limitFor } from "@/lib/entitlements";
@@ -129,7 +130,10 @@ export default function ClientsPage() {
                     >
                       <td className="px-6 py-4 font-medium text-text-primary">{c.name}</td>
                       <td className="px-6 py-4 text-text-secondary">
-                        {c.phone ? <WhatsAppLink phone={c.phone} /> : "—"}
+                        <div className="flex items-center gap-3">
+                          {c.phone ? <WhatsAppLink phone={c.phone} /> : "—"}
+                          {c.instagram && <InstagramLink handle={c.instagram} iconOnly />}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-text-secondary">{c.email || "—"}</td>
                       <td className="max-w-[220px] truncate px-6 py-4 text-text-secondary">{c.address || "—"}</td>
