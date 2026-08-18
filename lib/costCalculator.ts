@@ -66,7 +66,10 @@ export function calculateCost(input: CalcInput): CalcResult {
   const paint = paintedByHand ? paintCost : 0;
 
   const baseCost = filamentCost + energyCost + laborCost + extras + paint + suppliesCost;
-  const priceWithMargin = baseCost * (1 + marginPercent / 100);
+  // Margem sobre o preço de venda (não markup sobre custo): só é válida abaixo de 100%,
+  // já que nesse ponto o preço tenderia ao infinito — a UI restringe a faixa (0-99%) via slider.
+  const clampedMargin = Math.min(Math.max(marginPercent, 0), 99);
+  const priceWithMargin = baseCost / (1 - clampedMargin / 100);
   const finalPrice = marketplaceFee > 0 ? priceWithMargin / (1 - marketplaceFee / 100) : priceWithMargin;
   const pricePerPiece = finalPrice / Math.max(quantity, 1);
 

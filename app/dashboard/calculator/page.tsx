@@ -5,6 +5,7 @@ import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { Toggle } from "@/components/ui/Toggle";
+import { MarginSlider } from "@/components/ui/MarginSlider";
 import { NewSaleModal } from "@/components/dashboard/NewSaleModal";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { GenerateQuoteModal } from "@/components/dashboard/GenerateQuoteModal";
@@ -44,7 +45,7 @@ export default function CalculatorPage() {
   const [paintedByHand, setPaintedByHand] = useState(false);
   const [paintCost, setPaintCost] = useState(35);
   const [marketplaceFee, setMarketplaceFee] = useState(16);
-  const [marginPercent, setMarginPercent] = useState(180);
+  const [marginPercent, setMarginPercent] = useState(50);
   const [quantity, setQuantity] = useState(1);
 
   const [orderModalOpen, setOrderModalOpen] = useState(false);
@@ -104,7 +105,7 @@ export default function CalculatorPage() {
       setPaintedByHand(ci.paintedByHand);
       setPaintCost(ci.paintCost);
       setMarketplaceFee(ci.marketplaceFee);
-      setMarginPercent(ci.marginPercent);
+      setMarginPercent(Math.min(Math.max(ci.marginPercent, 0), 99));
       setQuantity(ci.quantity);
     }
   }
@@ -326,36 +327,33 @@ export default function CalculatorPage() {
             <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
               Precificação
             </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Margem de lucro (%)">
-                <input type="number" value={marginPercent} onChange={(e) => setMarginPercent(Number(e.target.value))} className="glass-input w-full" />
-              </Field>
-              <Field label="Taxa de marketplace">
-                <div className="space-y-2">
-                  <select
-                    value={selectedMarketplace}
-                    onChange={(e) => handleSelectMarketplace(e.target.value)}
-                    className="glass-input w-full"
-                  >
-                    <option value="" className="bg-bg-raised">
-                      {marketplaces.length === 0 ? "Nenhum cadastrado em Configurações" : "Selecione..."}
+            <MarginSlider value={marginPercent} onChange={setMarginPercent} />
+
+            <Field label="Taxa de marketplace">
+              <div className="space-y-2">
+                <select
+                  value={selectedMarketplace}
+                  onChange={(e) => handleSelectMarketplace(e.target.value)}
+                  className="glass-input w-full"
+                >
+                  <option value="" className="bg-bg-raised">
+                    {marketplaces.length === 0 ? "Nenhum cadastrado em Configurações" : "Selecione..."}
+                  </option>
+                  {marketplaces.map((mp) => (
+                    <option key={mp.name} value={mp.name} className="bg-bg-raised">
+                      {mp.name} ({mp.fee}%)
                     </option>
-                    {marketplaces.map((mp) => (
-                      <option key={mp.name} value={mp.name} className="bg-bg-raised">
-                        {mp.name} ({mp.fee}%)
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    value={marketplaceFee}
-                    onChange={(e) => setMarketplaceFee(Number(e.target.value))}
-                    className="glass-input w-full"
-                    placeholder="Ajustar % manualmente"
-                  />
-                </div>
-              </Field>
-            </div>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  value={marketplaceFee}
+                  onChange={(e) => setMarketplaceFee(Number(e.target.value))}
+                  className="glass-input w-full"
+                  placeholder="Ajustar % manualmente"
+                />
+              </div>
+            </Field>
           </GlassCard>
 
           {/* Cadastrar Produto — logo abaixo dos campos preenchidos, destacado */}

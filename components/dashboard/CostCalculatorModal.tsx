@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { MarginSlider } from "@/components/ui/MarginSlider";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import { calculateCost, type CalcBed } from "@/lib/costCalculator";
@@ -41,7 +42,7 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
   const [selectedFilamentId, setSelectedFilamentId] = useState("");
   const [kwhRate, setKwhRate] = useState(0.95);
   const [supplyLines, setSupplyLines] = useState<SupplyLine[]>([]);
-  const [marginPercent, setMarginPercent] = useState(180);
+  const [marginPercent, setMarginPercent] = useState(50);
   const [filaments, setFilaments] = useState<Filament[]>([]);
   const [supplies, setSupplies] = useState<Supply[]>([]);
 
@@ -50,7 +51,7 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
     setBeds([newBed(1)]);
     setSelectedFilamentId("");
     setSupplyLines([]);
-    setMarginPercent(180);
+    setMarginPercent(50);
     loadReferenceData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -309,14 +310,7 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
         </div>
 
         {/* Margem */}
-        <MiniField label="Margem de lucro desejada (%)">
-          <input
-            type="number"
-            value={marginPercent}
-            onChange={(e) => setMarginPercent(Number(e.target.value))}
-            className="glass-input w-full"
-          />
-        </MiniField>
+        <MarginSlider value={marginPercent} onChange={setMarginPercent} label="Margem de Lucro Desejada" />
 
         {/* Resumo */}
         <div className="glass-card space-y-2 p-4 text-sm">
