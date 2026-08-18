@@ -3,9 +3,11 @@ import { getIntegrationCredential, setIntegrationCredential } from "@/lib/vault"
 
 // Escopos cobrindo cotação, carrinho, compra, geração e impressão de
 // etiqueta, além de rastreio — precisam estar habilitados no cadastro do
-// app no painel do Melhor Envio, senão a autorização é rejeitada.
+// app no painel do Melhor Envio, senão a autorização é rejeitada com
+// "invalid_scope". "shipping-cart" não existe como escopo (causou o erro);
+// o nome correto pra adicionar/ler o carrinho é cart-write/cart-read.
 const OAUTH_SCOPES =
-  "shipping-calculate shipping-cart shipping-checkout shipping-generate shipping-preview shipping-print shipping-tracking";
+  "shipping-calculate shipping-checkout shipping-generate shipping-preview shipping-print shipping-tracking cart-read cart-write";
 
 function melhorEnvioHost() {
   // Sandbox não usa "www." — só a produção.
