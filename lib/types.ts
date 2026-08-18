@@ -238,6 +238,13 @@ export interface Client {
   email: string | null;
   address: string | null;
   notes: string | null;
+  cep: string | null;
+  street: string | null;
+  number: string | null;
+  complement: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
 }
 
 export interface Sale {

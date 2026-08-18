@@ -8,7 +8,7 @@ import { NewClientModal } from "@/components/dashboard/NewClientModal";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { canCreateMore, limitFor } from "@/lib/entitlements";
-import { Search, Plus, Loader2, Trash2, Lock } from "lucide-react";
+import { Search, Plus, Loader2, Trash2, Lock, Pencil } from "lucide-react";
 import type { Client } from "@/lib/types";
 
 export default function ClientsPage() {
@@ -18,6 +18,7 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const canCreate = canCreateMore(tier, "clients", clients.length);
 
   useEffect(() => {
@@ -124,13 +125,22 @@ export default function ClientsPage() {
                       <td className="max-w-[220px] truncate px-6 py-4 text-text-secondary">{c.address || "—"}</td>
                       <td className="max-w-[220px] truncate px-6 py-4 text-text-muted">{c.notes || "—"}</td>
                       <td className="px-4 py-4">
-                        <button
-                          onClick={() => handleDelete(c.id)}
-                          className="text-text-muted hover:text-red-400"
-                          aria-label="Remover cliente"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => setEditingClient(c)}
+                            className="text-text-muted hover:text-neon-pink"
+                            aria-label="Editar cliente"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(c.id)}
+                            className="text-text-muted hover:text-red-400"
+                            aria-label="Remover cliente"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -142,9 +152,17 @@ export default function ClientsPage() {
       </main>
 
       <NewClientModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreated={(client) => setClients((prev) => [client, ...prev])}
+        open={modalOpen || !!editingClient}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingClient(null);
+        }}
+        client={editingClient}
+        onCreated={(client) =>
+          setClients((prev) =>
+            editingClient ? prev.map((c) => (c.id === client.id ? client : c)) : [client, ...prev]
+          )
+        }
       />
     </>
   );
