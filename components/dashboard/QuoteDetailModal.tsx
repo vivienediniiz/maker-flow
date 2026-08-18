@@ -5,6 +5,7 @@ import { FileText, Truck, Loader2, Lock } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteStatusStepper } from "@/components/dashboard/QuoteStatusStepper";
+import { WhatsAppLink } from "@/components/ui/WhatsAppLink";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
@@ -134,7 +135,11 @@ export function QuoteDetailModal({
           <p className="text-sm font-medium text-text-primary">
             {quote.clients?.name ?? quote.buyer_name ?? "Cliente não informado"}
           </p>
-          {quote.clients?.phone && <p className="text-xs text-text-secondary">📱 {quote.clients.phone}</p>}
+          {quote.clients?.phone && (
+            <p className="text-xs text-text-secondary">
+              <WhatsAppLink phone={quote.clients.phone} />
+            </p>
+          )}
           {quote.clients?.email && <p className="text-xs text-text-secondary">✉️ {quote.clients.email}</p>}
           {quote.clients?.address && <p className="text-xs text-text-secondary">📍 {quote.clients.address}</p>}
         </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { WhatsAppLink } from "@/components/ui/WhatsAppLink";
 import { QuoteStatusStepper } from "@/components/dashboard/QuoteStatusStepper";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
@@ -62,7 +63,11 @@ export function ClientDetailModal({
     <Modal open={!!client} onClose={onClose} title={client.name}>
       <div className="max-h-[70vh] space-y-5 overflow-y-auto scrollbar-glass pr-1">
         <div className="glass-card space-y-1 p-4 text-sm">
-          {client.phone && <p className="text-text-secondary">📱 {client.phone}</p>}
+          {client.phone && (
+            <p className="text-text-secondary">
+              <WhatsAppLink phone={client.phone} />
+            </p>
+          )}
           {client.email && <p className="text-text-secondary">✉️ {client.email}</p>}
           {hasStructuredAddress ? (
             <div className="text-text-secondary">
