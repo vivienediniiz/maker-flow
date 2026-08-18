@@ -6,7 +6,8 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { WhatsAppLink } from "@/components/ui/WhatsAppLink";
 import { QuoteStatusStepper } from "@/components/dashboard/QuoteStatusStepper";
 import { createClient } from "@/lib/supabase/client";
-import { formatBRL } from "@/lib/utils";
+import { formatBRL, cn } from "@/lib/utils";
+import { QUOTE_STATUS_LABELS, QUOTE_STATUS_PILL_STYLES } from "@/lib/quotes";
 import { Loader2 } from "lucide-react";
 import type { Client, Quote, QuoteStatus } from "@/lib/types";
 
@@ -85,7 +86,7 @@ export function ClientDetailModal({
 
         <div>
           <p className="mb-3 text-xs font-medium uppercase tracking-wider text-text-muted">
-            Orçamentos
+            Vendas {quotes.length > 0 && <span className="text-text-muted/60">({quotes.length})</span>}
           </p>
 
           {loading ? (
@@ -94,15 +95,23 @@ export function ClientDetailModal({
             </div>
           ) : quotes.length === 0 ? (
             <p className="text-sm text-text-muted">
-              Nenhum orçamento ainda. Gere um pela Calculadora e vincule a este cliente.
+              Nenhuma venda ainda. Gere um orçamento pela Calculadora e vincule a este cliente.
             </p>
           ) : (
             <div className="space-y-3">
               {quotes.map((q) => (
                 <GlassCard key={q.id} padding="md" className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-text-primary">{q.project_name}</p>
-                    <span className="font-numeric text-sm font-semibold text-neon-pink">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">{q.project_name}</p>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-pill border px-2.5 py-1 text-[11px] font-medium",
+                        QUOTE_STATUS_PILL_STYLES[q.status]
+                      )}
+                    >
+                      {QUOTE_STATUS_LABELS[q.status]}
+                    </span>
+                    <span className="shrink-0 font-numeric text-sm font-semibold text-neon-pink">
                       {formatBRL(q.final_price)}
                     </span>
                   </div>

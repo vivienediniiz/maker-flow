@@ -24,6 +24,15 @@ export const QUOTE_STATUS_SHORT_LABELS: Record<QuoteStatus, string> = {
 
 export const QUOTE_STATUS_ORDER: QuoteStatus[] = ["sent", "paid", "in_production", "shipped"];
 
+export const QUOTE_STATUS_PILL_STYLES: Record<QuoteStatus, string> = {
+  sent: "bg-neon-orange/15 text-neon-orange border-neon-orange/30",
+  paid: "bg-neon-green/15 text-neon-green border-neon-green/30",
+  in_production: "bg-neon-pink/15 text-neon-pink border-neon-pink/30",
+  shipped: "bg-neon-purple/15 text-neon-purple border-neon-purple/30",
+  expired: "bg-red-500/15 text-red-400 border-red-500/30",
+  cancelled: "bg-red-500/15 text-red-400 border-red-500/30",
+};
+
 export function formatOrderNumber(n: number) {
   return `#${String(n).padStart(4, "0")}`;
 }

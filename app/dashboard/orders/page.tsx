@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn, formatBRL } from "@/lib/utils";
 import {
   QUOTE_STATUS_LABELS,
+  QUOTE_STATUS_PILL_STYLES,
   QUOTE_SOURCE_LABELS,
   QUOTE_SOURCE_BADGE_STYLES,
   formatOrderNumber,
@@ -37,15 +38,6 @@ const SOURCE_FILTERS: { key: "all" | QuoteSource; label: string }[] = [
   { key: "mercado_pago", label: QUOTE_SOURCE_LABELS.mercado_pago },
   { key: "manual", label: QUOTE_SOURCE_LABELS.manual },
 ];
-
-const STATUS_PILL_STYLES: Record<QuoteStatus, string> = {
-  sent: "bg-neon-orange/15 text-neon-orange border-neon-orange/30",
-  paid: "bg-neon-green/15 text-neon-green border-neon-green/30",
-  in_production: "bg-neon-pink/15 text-neon-pink border-neon-pink/30",
-  shipped: "bg-neon-purple/15 text-neon-purple border-neon-purple/30",
-  expired: "bg-red-500/15 text-red-400 border-red-500/30",
-  cancelled: "bg-red-500/15 text-red-400 border-red-500/30",
-};
 
 function relativeTime(iso: string | null) {
   if (!iso) return null;
@@ -275,7 +267,7 @@ export default function OrdersPage() {
                           <span
                             className={cn(
                               "rounded-pill border px-2.5 py-1 text-[11px] font-medium",
-                              STATUS_PILL_STYLES[q.status]
+                              QUOTE_STATUS_PILL_STYLES[q.status]
                             )}
                           >
                             {QUOTE_STATUS_LABELS[q.status]}
