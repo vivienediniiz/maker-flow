@@ -99,6 +99,9 @@ export interface Quote {
   platform_fee: number;
   cost_amount: number;
   net_amount: number;
+  shipping_service_id: string | null;
+  shipping_tracking_code: string | null;
+  shipping_label_url: string | null;
 }
 
 export interface QuoteWithClient extends Quote {
@@ -269,7 +272,7 @@ export const QUOTE_CHANNEL_LABELS: Record<string, string> = {
   mercado_livre: "Mercado Livre",
 };
 
-export type IntegrationPlatform = "mercado_pago" | "mercado_livre" | "shopee" | "tiktok_shop";
+export type IntegrationPlatform = "mercado_pago" | "mercado_livre" | "shopee" | "tiktok_shop" | "melhor_envio";
 export type IntegrationStatus = "connected" | "disconnected" | "error";
 
 export interface Integration {

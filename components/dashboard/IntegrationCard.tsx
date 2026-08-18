@@ -14,6 +14,7 @@ const PLATFORM_LABELS: Record<IntegrationPlatform, string> = {
   mercado_livre: "Mercado Livre",
   shopee: "Shopee",
   tiktok_shop: "TikTok Shop",
+  melhor_envio: "Melhor Envio",
 };
 
 const PLATFORM_DESCRIPTIONS: Record<IntegrationPlatform, string> = {
@@ -21,11 +22,12 @@ const PLATFORM_DESCRIPTIONS: Record<IntegrationPlatform, string> = {
   mercado_livre: "Conecte sua conta vendedora pra receber pedidos do Mercado Livre automaticamente.",
   shopee: "Conecte sua loja pra receber pedidos automaticamente.",
   tiktok_shop: "Conecte sua loja pra receber pedidos automaticamente.",
+  melhor_envio: "Conecte sua conta pra cotar frete, comprar e imprimir etiquetas direto pelo StudioMaker.",
 };
 
-// Mercado Pago e Mercado Livre já conectam de verdade via OAuth. Shopee/TikTok
-// Shop ficam desabilitados até o app do StudioMaker ser aprovado nas duas plataformas.
-const AVAILABLE_PLATFORMS: IntegrationPlatform[] = ["mercado_pago", "mercado_livre"];
+// Mercado Pago, Mercado Livre e Melhor Envio já conectam de verdade via OAuth.
+// Shopee/TikTok Shop ficam desabilitados até o app do StudioMaker ser aprovado nas duas plataformas.
+const AVAILABLE_PLATFORMS: IntegrationPlatform[] = ["mercado_pago", "mercado_livre", "melhor_envio"];
 
 // As pastas de rota de /api/integrations/*/connect usam hífen (padrão de URL),
 // mas o valor do tipo/enum usa underscore (padrão de coluna) — os dois nomes
@@ -36,6 +38,7 @@ const PLATFORM_CONNECT_SLUGS: Record<IntegrationPlatform, string> = {
   mercado_livre: "mercado-livre",
   shopee: "shopee",
   tiktok_shop: "tiktok-shop",
+  melhor_envio: "melhor-envio",
 };
 
 function formatLastEvent(iso: string | null) {

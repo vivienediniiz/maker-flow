@@ -10,7 +10,7 @@ import type { Integration, IntegrationPlatform } from "@/lib/types";
 
 // Mercado Pago escondido da aba de propósito (Vendas continua recebendo
 // webhook normalmente se algum maker já tiver conectado antes).
-const PLATFORMS: IntegrationPlatform[] = ["mercado_livre", "shopee", "tiktok_shop"];
+const PLATFORMS: IntegrationPlatform[] = ["mercado_livre", "shopee", "tiktok_shop", "melhor_envio"];
 
 export default function IntegrationsPage() {
   return (
@@ -29,17 +29,19 @@ function IntegrationsPageContent() {
 
   const mlConnected = searchParams.get("ml_connected");
   const mlError = searchParams.get("ml_error");
+  const meConnected = searchParams.get("me_connected");
+  const meError = searchParams.get("me_error");
 
   useEffect(() => {
     loadIntegrations();
   }, []);
 
   useEffect(() => {
-    if (!mlConnected && !mlError) return;
+    if (!mlConnected && !mlError && !meConnected && !meError) return;
     // Limpa os query params depois de mostrar o resultado, pra não reaparecer num refresh.
     const timeout = setTimeout(() => router.replace("/dashboard/integrations"), 4000);
     return () => clearTimeout(timeout);
-  }, [mlConnected, mlError, router]);
+  }, [mlConnected, mlError, meConnected, meError, router]);
 
   async function loadIntegrations() {
     setLoading(true);
@@ -76,6 +78,16 @@ function IntegrationsPageContent() {
         {mlError && (
           <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
             <AlertCircle size={16} /> Falha ao conectar Mercado Livre: {mlError}
+          </div>
+        )}
+        {meConnected && (
+          <div className="flex items-center gap-2 rounded-xl border border-neon-green/30 bg-neon-green/10 px-4 py-3 text-sm text-neon-green">
+            <CheckCircle2 size={16} /> Melhor Envio conectado com sucesso.
+          </div>
+        )}
+        {meError && (
+          <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <AlertCircle size={16} /> Falha ao conectar Melhor Envio: {meError}
           </div>
         )}
 
