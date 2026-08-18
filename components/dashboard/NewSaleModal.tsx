@@ -5,7 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
-import type { Client, Product, QuotePaymentMethod, QuoteChannel } from "@/lib/types";
+import type { Client, Product, QuoteWithClient, QuotePaymentMethod, QuoteChannel } from "@/lib/types";
 import { QUOTE_CHANNEL_LABELS } from "@/lib/quotes";
 
 interface NewSaleModalProps {
@@ -20,6 +20,8 @@ interface NewSaleModalProps {
   energyCost?: number;
   filamentCost?: number;
   marginPercent?: number;
+  /** Quando presente, o modal edita essa venda em vez de criar uma nova. */
+  quote?: QuoteWithClient | null;
   onCreated?: () => void;
 }
 
@@ -42,9 +44,11 @@ export function NewSaleModal({
   energyCost = 0,
   filamentCost = 0,
   marginPercent = 0,
+  quote = null,
   onCreated,
 }: NewSaleModalProps) {
   const supabase = createClient();
+  const isEditing = !!quote;
   const [mode, setMode] = useState<"select" | "new">("select");
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -68,20 +72,33 @@ export function NewSaleModal({
     loadClients();
     loadProducts();
     setMode("select");
-    setSelectedClientId("");
     setNewName("");
     setNewPhone("");
     setNewEmail("");
-    setProductMode("new");
-    setSelectedProductId("");
-    setProjectName(initialProjectName);
-    setFinalPrice(initialFinalPrice != null ? String(initialFinalPrice.toFixed(2)) : "");
-    setPaymentMethod("pix");
-    setChannel("whatsapp");
-    setShippingCost("");
-    setDestinationCep("");
     setError(null);
-  }, [open, initialProjectName, initialFinalPrice]);
+
+    if (quote) {
+      setSelectedClientId(quote.client_id ?? "");
+      setProductMode(quote.product_id ? "select" : "new");
+      setSelectedProductId(quote.product_id ?? "");
+      setProjectName(quote.project_name);
+      setFinalPrice(String(quote.final_price.toFixed(2)));
+      setPaymentMethod(quote.payment_method ?? "pix");
+      setChannel(quote.channel ?? "whatsapp");
+      setShippingCost(quote.shipping_cost != null ? String(quote.shipping_cost) : "");
+      setDestinationCep(quote.destination_cep ?? "");
+    } else {
+      setSelectedClientId("");
+      setProductMode("new");
+      setSelectedProductId("");
+      setProjectName(initialProjectName);
+      setFinalPrice(initialFinalPrice != null ? String(initialFinalPrice.toFixed(2)) : "");
+      setPaymentMethod("pix");
+      setChannel("whatsapp");
+      setShippingCost("");
+      setDestinationCep("");
+    }
+  }, [open, quote, initialProjectName, initialFinalPrice]);
 
   async function loadProducts() {
     const {
@@ -164,24 +181,30 @@ export function NewSaleModal({
       return;
     }
 
-    const { error: quoteError } = await supabase.from("quotes").insert({
-      user_id: user.id,
+    const sharedPayload = {
       project_name: projectName || "Projeto sem nome",
-      weight_g: weightG,
-      print_time_min: printTimeMin,
-      energy_cost: energyCost,
-      filament_cost: filamentCost,
-      margin_percent: marginPercent,
       final_price: price,
       client_id: clientId,
       product_id: productMode === "select" && selectedProductId ? selectedProductId : null,
-      status: "paid",
       payment_method: paymentMethod,
       channel,
       shipping_cost: shippingCost ? Number(shippingCost) : null,
       destination_cep: destinationCep || null,
-      source: "manual",
-    });
+    };
+
+    const { error: quoteError } = isEditing
+      ? await supabase.from("quotes").update(sharedPayload).eq("id", quote!.id)
+      : await supabase.from("quotes").insert({
+          ...sharedPayload,
+          user_id: user.id,
+          weight_g: weightG,
+          print_time_min: printTimeMin,
+          energy_cost: energyCost,
+          filament_cost: filamentCost,
+          margin_percent: marginPercent,
+          status: "paid",
+          source: "manual",
+        });
 
     setSaving(false);
 
@@ -195,7 +218,7 @@ export function NewSaleModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Nova Venda Manual">
+    <Modal open={open} onClose={onClose} title={isEditing ? "Editar Venda" : "Nova Venda Manual"}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Produto</label>
@@ -313,7 +336,7 @@ export function NewSaleModal({
           />
         </div>
 
-        <p className="text-[11px] text-text-muted">Entra em Vendas já como Pago.</p>
+        {!isEditing && <p className="text-[11px] text-text-muted">Entra em Vendas já como Pago.</p>}
 
         <div className="glass-card flex gap-1 p-1">
           <button
@@ -392,7 +415,7 @@ export function NewSaleModal({
             Cancelar
           </NeonButton>
           <NeonButton type="submit" disabled={saving}>
-            {saving ? "Salvando..." : "Criar Venda"}
+            {saving ? "Salvando..." : isEditing ? "Salvar Alterações" : "Criar Venda"}
           </NeonButton>
         </div>
       </form>

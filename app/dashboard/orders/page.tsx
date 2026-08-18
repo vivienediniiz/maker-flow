@@ -16,7 +16,7 @@ import {
   isQuoteSentExpired,
   nextQuoteAction,
 } from "@/lib/quotes";
-import { Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Trash2, Pencil } from "lucide-react";
 import type { QuoteWithClient, QuoteStatus, QuoteSource, Integration } from "@/lib/types";
 
 const STATUS_FILTERS: { key: "all" | QuoteStatus; label: string }[] = [
@@ -69,6 +69,7 @@ export default function OrdersPage() {
   const [search, setSearch] = useState("");
   const [selectedQuote, setSelectedQuote] = useState<QuoteWithClient | null>(null);
   const [newSaleModalOpen, setNewSaleModalOpen] = useState(false);
+  const [editingQuote, setEditingQuote] = useState<QuoteWithClient | null>(null);
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
@@ -298,6 +299,16 @@ export default function OrdersPage() {
                               </NeonButton>
                             )}
                             <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingQuote(q);
+                              }}
+                              className="text-text-muted hover:text-neon-pink"
+                              aria-label="Editar venda"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
                               onClick={(e) => handleDelete(q.id, e)}
                               className="text-text-muted hover:text-red-400"
                               aria-label="Excluir venda"
@@ -321,7 +332,15 @@ export default function OrdersPage() {
         onClose={() => setSelectedQuote(null)}
         onStatusChange={handleStatusChange}
       />
-      <NewSaleModal open={newSaleModalOpen} onClose={() => setNewSaleModalOpen(false)} onCreated={loadAll} />
+      <NewSaleModal
+        open={newSaleModalOpen || !!editingQuote}
+        onClose={() => {
+          setNewSaleModalOpen(false);
+          setEditingQuote(null);
+        }}
+        quote={editingQuote}
+        onCreated={loadAll}
+      />
     </>
   );
 }

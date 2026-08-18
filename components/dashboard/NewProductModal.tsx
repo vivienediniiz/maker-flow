@@ -14,6 +14,8 @@ interface NewProductModalProps {
   open: boolean;
   onClose: () => void;
   onCreated: (product: Product) => void;
+  /** Quando presente, o modal edita esse produto em vez de criar um novo. */
+  product?: Product | null;
   initialName?: string;
   initialDescription?: string;
   initialCostPrice?: number;
@@ -25,6 +27,7 @@ export function NewProductModal({
   open,
   onClose,
   onCreated,
+  product = null,
   initialName = "",
   initialDescription = "",
   initialCostPrice,
@@ -32,6 +35,7 @@ export function NewProductModal({
   calcInputs,
 }: NewProductModalProps) {
   const supabase = createClient();
+  const isEditing = !!product;
   const [name, setName] = useState(initialName);
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState(initialDescription);
@@ -45,7 +49,16 @@ export function NewProductModal({
   const [calculatorOpen, setCalculatorOpen] = useState(false);
 
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    if (product) {
+      setName(product.name);
+      setDescription(product.description ?? "");
+      setCostPrice(String(product.cost_price.toFixed(2)));
+      setSalePrice(String(product.sale_price.toFixed(2)));
+      setCategory(product.category ?? "");
+      setPriceTiers(product.price_tiers ?? []);
+      setImageUrl(product.image_url ?? null);
+    } else {
       setName(initialName);
       setDescription(initialDescription);
       setCostPrice(initialCostPrice != null ? String(initialCostPrice.toFixed(2)) : "");
@@ -53,9 +66,9 @@ export function NewProductModal({
       setCategory("");
       setPriceTiers([]);
       setImageUrl(null);
-      setError(null);
     }
-  }, [open, initialName, initialDescription, initialCostPrice, initialSalePrice]);
+    setError(null);
+  }, [open, product, initialName, initialDescription, initialCostPrice, initialSalePrice]);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -103,27 +116,28 @@ export function NewProductModal({
       return;
     }
 
-    const { data, error: insertError } = await supabase
-      .from("products")
-      .insert({
-        user_id: user.id,
-        name,
-        category: category || null,
-        description: description || null,
-        image_url: imageUrl,
-        cost_price: Number(costPrice) || 0,
-        sale_price: Number(salePrice) || 0,
-        stock_quantity: 0,
-        price_tiers: priceTiers.filter((t) => t.quantity > 0 && t.price > 0),
-        calc_inputs: calcInputs ?? null,
-      })
-      .select()
-      .single();
+    const payload = {
+      name,
+      category: category || null,
+      description: description || null,
+      image_url: imageUrl,
+      cost_price: Number(costPrice) || 0,
+      sale_price: Number(salePrice) || 0,
+      price_tiers: priceTiers.filter((t) => t.quantity > 0 && t.price > 0),
+    };
+
+    const { data, error: dbError } = isEditing
+      ? await supabase.from("products").update(payload).eq("id", product!.id).select().single()
+      : await supabase
+          .from("products")
+          .insert({ ...payload, user_id: user.id, stock_quantity: 0, calc_inputs: calcInputs ?? null })
+          .select()
+          .single();
 
     setSaving(false);
 
-    if (insertError) {
-      setError(insertError.message);
+    if (dbError) {
+      setError(dbError.message);
       return;
     }
 
@@ -132,7 +146,7 @@ export function NewProductModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Cadastrar Produto">
+    <Modal open={open} onClose={onClose} title={isEditing ? "Editar Produto" : "Cadastrar Produto"}>
       <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto scrollbar-glass pr-1">
         {/* Foto do produto */}
         <div className="flex flex-col items-center gap-2">
@@ -239,7 +253,7 @@ export function NewProductModal({
             Cancelar
           </NeonButton>
           <NeonButton type="submit" disabled={saving}>
-            {saving ? "Salvando..." : "Salvar Produto"}
+            {saving ? "Salvando..." : isEditing ? "Salvar Alterações" : "Salvar Produto"}
           </NeonButton>
         </div>
       </form>

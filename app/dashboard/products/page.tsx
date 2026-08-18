@@ -10,7 +10,7 @@ import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { canCreateMore, limitFor } from "@/lib/entitlements";
-import { SlidersHorizontal, PackagePlus, Sparkles, Loader2, Trash2, Lock } from "lucide-react";
+import { SlidersHorizontal, PackagePlus, Sparkles, Loader2, Trash2, Lock, Pencil } from "lucide-react";
 import type { Product } from "@/lib/types";
 
 export default function ProductsPage() {
@@ -23,6 +23,7 @@ export default function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const canCreate = canCreateMore(tier, "products", products.length);
 
   useEffect(() => {
@@ -185,13 +186,25 @@ export default function ProductsPage() {
                         <td className="px-6 py-4 font-numeric text-neon-pink">{margin.toFixed(0)}%</td>
                         <td className="px-6 py-4 text-text-secondary">{p.stock_quantity}</td>
                         <td className="px-4 py-4">
-                          <button
-                            onClick={(e) => handleDelete(p.id, e)}
-                            className="text-text-muted hover:text-red-400"
-                            aria-label="Excluir produto"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingProduct(p);
+                              }}
+                              className="text-text-muted hover:text-neon-pink"
+                              aria-label="Editar produto"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => handleDelete(p.id, e)}
+                              className="text-text-muted hover:text-red-400"
+                              aria-label="Excluir produto"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -204,9 +217,19 @@ export default function ProductsPage() {
       </main>
 
       <NewProductModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreated={(product) => setProducts((prev) => [product, ...prev])}
+        open={modalOpen || !!editingProduct}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingProduct(null);
+        }}
+        product={editingProduct}
+        onCreated={(product) =>
+          setProducts((prev) =>
+            editingProduct
+              ? prev.map((p) => (p.id === product.id ? product : p))
+              : [product, ...prev]
+          )
+        }
       />
       <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
     </>

@@ -7,9 +7,10 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { AddStockModal } from "@/components/dashboard/AddStockModal";
 import { QuickSaleModal } from "@/components/dashboard/QuickSaleModal";
+import { EditStockQuantityModal } from "@/components/dashboard/EditStockQuantityModal";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
-import { PackagePlus, ShoppingBag, Loader2 } from "lucide-react";
+import { PackagePlus, ShoppingBag, Loader2, Pencil } from "lucide-react";
 import type { Product, Sale } from "@/lib/types";
 
 export default function InventoryPage() {
@@ -20,6 +21,7 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [addStockOpen, setAddStockOpen] = useState(false);
   const [saleTarget, setSaleTarget] = useState<Product | null>(null);
+  const [editingStock, setEditingStock] = useState<Product | null>(null);
 
   useEffect(() => {
     loadData();
@@ -89,7 +91,7 @@ export default function InventoryPage() {
                       <th className="px-6 py-4 font-medium">Categoria</th>
                       <th className="px-6 py-4 font-medium">Preço</th>
                       <th className="px-6 py-4 font-medium">Estoque</th>
-                      <th className="w-44 px-6 py-4" />
+                      <th className="w-52 px-6 py-4" />
                     </tr>
                   </thead>
                   <tbody>
@@ -118,16 +120,29 @@ export default function InventoryPage() {
                         </td>
                         <td className="px-6 py-4 text-text-secondary">{p.stock_quantity} disponíveis</td>
                         <td className="px-6 py-4">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSaleTarget(p);
-                            }}
-                            className="neon-btn w-full justify-center py-2 text-xs"
-                            disabled={p.stock_quantity === 0}
-                          >
-                            <ShoppingBag size={13} /> Registrar venda
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSaleTarget(p);
+                              }}
+                              className="neon-btn flex-1 justify-center py-2 text-xs"
+                              disabled={p.stock_quantity === 0}
+                            >
+                              <ShoppingBag size={13} /> Registrar venda
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingStock(p);
+                              }}
+                              className="shrink-0 text-text-muted hover:text-neon-pink"
+                              aria-label="Editar estoque"
+                              title="Editar estoque"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -207,6 +222,14 @@ export default function InventoryPage() {
           }}
         />
       )}
+
+      <EditStockQuantityModal
+        product={editingStock}
+        onClose={() => setEditingStock(null)}
+        onUpdated={(updated) => {
+          setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+        }}
+      />
     </>
   );
 }
