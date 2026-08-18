@@ -130,9 +130,9 @@ export default function ClientsPage() {
                     >
                       <td className="px-6 py-4 font-medium text-text-primary">{c.name}</td>
                       <td className="px-6 py-4 text-text-secondary">
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                           {c.phone ? <WhatsAppLink phone={c.phone} /> : "—"}
-                          {c.instagram && <InstagramLink handle={c.instagram} iconOnly />}
+                          {c.instagram && <InstagramLink handle={c.instagram} />}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-text-secondary">{c.email || "—"}</td>
