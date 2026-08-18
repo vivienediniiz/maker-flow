@@ -105,6 +105,7 @@ export interface Quote {
   quantity: number | null;
   unit_price: number | null;
   price_tier_label: string | null;
+  discount_amount: number | null;
 }
 
 export interface QuoteWithClient extends Quote {

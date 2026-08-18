@@ -76,6 +76,8 @@ export function NewSaleModal({
   const [shippingValue, setShippingValue] = useState<number | null>(null);
   const [shippingSummary, setShippingSummary] = useState<string | null>(null);
   const [shippingDestinationCep, setShippingDestinationCep] = useState<string | null>(null);
+  const [discount, setDiscount] = useState("0");
+  const [discountWarning, setDiscountWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -106,6 +108,8 @@ export function NewSaleModal({
       setShippingValue(quote.shipping_cost ?? null);
       setShippingSummary(null);
       setShippingDestinationCep(quote.destination_cep ?? null);
+      setDiscount(quote.discount_amount != null ? String(quote.discount_amount.toFixed(2)) : "0");
+      setDiscountWarning(null);
     } else {
       setSelectedClientId("");
       setSelectedProductId("");
@@ -121,6 +125,8 @@ export function NewSaleModal({
       setShippingValue(null);
       setShippingSummary(null);
       setShippingDestinationCep(null);
+      setDiscount("0");
+      setDiscountWarning(null);
     }
   }, [open, quote, initialProjectName, initialFinalPrice]);
 
@@ -211,7 +217,20 @@ export function NewSaleModal({
     ? (Number(unitPrice) || 0) * (Number(quantity) || 0)
     : Number(finalPrice) || 0;
   const shippingAmount = shippingValue ?? 0;
-  const computedTotal = productValue + shippingAmount;
+  const maxDiscount = productValue + shippingAmount;
+  const discountAmount = Math.min(Number(discount) || 0, maxDiscount);
+  const computedTotal = productValue + shippingAmount - discountAmount;
+
+  function handleDiscountChange(raw: string) {
+    const value = Number(raw);
+    if (raw !== "" && !isNaN(value) && value > maxDiscount) {
+      setDiscount(maxDiscount.toFixed(2));
+      setDiscountWarning("Desconto ajustado para o valor máximo permitido (não pode deixar o total negativo).");
+      return;
+    }
+    setDiscountWarning(null);
+    setDiscount(raw);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -271,6 +290,7 @@ export function NewSaleModal({
       quantity: showUnitPricing ? Number(quantity) : null,
       unit_price: showUnitPricing ? Number(unitPrice) : null,
       price_tier_label: appliedTierLabel,
+      discount_amount: discountAmount || null,
     };
 
     const { error: quoteError } = isEditing
@@ -441,6 +461,40 @@ export function NewSaleModal({
         )}
 
         <div>
+          <label className="mb-1.5 block text-xs text-text-muted">Valor Frete (R$)</label>
+          <div className="relative">
+            <input
+              readOnly
+              value={shippingValue != null ? formatBRL(shippingValue) : ""}
+              className="glass-input w-full cursor-not-allowed py-2.5 pr-28 opacity-80"
+              placeholder="Nenhum frete calculado"
+            />
+            <button
+              type="button"
+              onClick={() => setShippingQuoteOpen(true)}
+              className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-1 rounded-lg bg-neon-gradient px-3 py-1.5 text-[11px] font-medium text-white hover:opacity-90"
+            >
+              <Truck size={11} /> {shippingValue != null ? "Recalcular" : "Calcular"}
+            </button>
+          </div>
+          {shippingSummary && <p className="mt-1 text-[11px] text-text-muted">{shippingSummary}</p>}
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">Desconto (R$)</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={discount}
+            onChange={(e) => handleDiscountChange(e.target.value)}
+            className="glass-input w-full"
+            placeholder="0,00"
+          />
+          {discountWarning && <p className="mt-1 text-[11px] text-amber-400">{discountWarning}</p>}
+        </div>
+
+        <div>
           <label className="mb-1.5 block text-xs text-text-muted">Forma de pagamento</label>
           <select
             value={paymentMethod}
@@ -468,26 +522,6 @@ export function NewSaleModal({
               </option>
             ))}
           </select>
-        </div>
-
-        <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <label className="text-xs text-text-muted">Valor Frete (R$)</label>
-            <button
-              type="button"
-              onClick={() => setShippingQuoteOpen(true)}
-              className="flex items-center gap-1 text-[11px] text-neon-pink hover:underline"
-            >
-              <Truck size={11} /> Calcular Frete
-            </button>
-          </div>
-          <input
-            readOnly
-            value={shippingValue != null ? formatBRL(shippingValue) : ""}
-            className="glass-input w-full cursor-not-allowed opacity-80"
-            placeholder="Nenhum frete calculado"
-          />
-          {shippingSummary && <p className="mt-1 text-[11px] text-text-muted">{shippingSummary}</p>}
         </div>
 
         {!isEditing && <p className="text-[11px] text-text-muted">Entra em Vendas já como Pago.</p>}
