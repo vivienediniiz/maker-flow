@@ -21,6 +21,9 @@ interface NewProductModalProps {
   initialCostPrice?: number;
   initialSalePrice?: number;
   calcInputs?: CalcInputs;
+  /** Pra empilhar por cima de outro modal já aberto (ex: Nova Venda Manual). */
+  zIndexClass?: string;
+  maxWidthClass?: string;
 }
 
 export function NewProductModal({
@@ -33,6 +36,8 @@ export function NewProductModal({
   initialCostPrice,
   initialSalePrice,
   calcInputs,
+  zIndexClass,
+  maxWidthClass,
 }: NewProductModalProps) {
   const supabase = createClient();
   const isEditing = !!product;
@@ -146,7 +151,13 @@ export function NewProductModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? "Editar Produto" : "Cadastrar Produto"}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEditing ? "Editar Produto" : "Cadastrar Produto"}
+      zIndexClass={zIndexClass}
+      maxWidthClass={maxWidthClass}
+    >
       <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto scrollbar-glass pr-1">
         {/* Foto do produto */}
         <div className="flex flex-col items-center gap-2">

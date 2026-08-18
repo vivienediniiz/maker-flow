@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Pencil } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { NewProductModal } from "@/components/dashboard/NewProductModal";
+import { NewClientModal } from "@/components/dashboard/NewClientModal";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import { buildPriceTierRanges } from "@/lib/priceTiers";
@@ -51,15 +53,12 @@ export function NewSaleModal({
 }: NewSaleModalProps) {
   const supabase = createClient();
   const isEditing = !!quote;
-  const [mode, setMode] = useState<"select" | "new">("select");
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState("");
-  const [newName, setNewName] = useState("");
-  const [newPhone, setNewPhone] = useState("");
-  const [newEmail, setNewEmail] = useState("");
-  const [productMode, setProductMode] = useState<"select" | "new">("new");
+  const [clientModalOpen, setClientModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState("");
+  const [productModalOpen, setProductModalOpen] = useState(false);
   const [projectName, setProjectName] = useState(initialProjectName);
   const [finalPrice, setFinalPrice] = useState(initialFinalPrice != null ? String(initialFinalPrice.toFixed(2)) : "");
   const [quantity, setQuantity] = useState("1");
@@ -78,15 +77,12 @@ export function NewSaleModal({
     if (!open) return;
     loadClients();
     loadProducts();
-    setMode("select");
-    setNewName("");
-    setNewPhone("");
-    setNewEmail("");
+    setClientModalOpen(false);
+    setProductModalOpen(false);
     setError(null);
 
     if (quote) {
       setSelectedClientId(quote.client_id ?? "");
-      setProductMode(quote.product_id ? "select" : "new");
       setSelectedProductId(quote.product_id ?? "");
       setProjectName(quote.project_name);
       setFinalPrice(String(quote.final_price.toFixed(2)));
@@ -101,7 +97,6 @@ export function NewSaleModal({
       setDestinationCep(quote.destination_cep ?? "");
     } else {
       setSelectedClientId("");
-      setProductMode("new");
       setSelectedProductId("");
       setProjectName(initialProjectName);
       setFinalPrice(initialFinalPrice != null ? String(initialFinalPrice.toFixed(2)) : "");
@@ -124,17 +119,43 @@ export function NewSaleModal({
     setProducts((data as Product[]) ?? []);
   }
 
+  async function loadClients() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from("clients").select("*").eq("user_id", user.id).order("name");
+    setClients((data as Client[]) ?? []);
+  }
+
+  /** Aplica um produto (já cadastrado ou recém-criado) aos campos de preço da venda. */
+  function applyProduct(product: Product) {
+    setSelectedProductId(product.id);
+    setProjectName(product.name);
+    setUnitPrice(String(product.sale_price.toFixed(2)));
+    setQuantity("1");
+    // Preço do produto (sale_price) por padrão não corresponde a nenhuma
+    // faixa específica — fica em "custom" até o usuário escolher uma.
+    setTierChoice(product.price_tiers.length > 0 ? "custom" : "");
+  }
+
   function handleSelectProduct(productId: string) {
-    setSelectedProductId(productId);
     const product = products.find((p) => p.id === productId);
-    if (product) {
-      setProjectName(product.name);
-      setUnitPrice(String(product.sale_price.toFixed(2)));
-      setQuantity("1");
-      // Preço da faixa (product.sale_price) por padrão não corresponde a
-      // nenhuma faixa específica — fica em "custom" até o usuário escolher uma.
-      setTierChoice(product.price_tiers.length > 0 ? "custom" : "");
-    }
+    if (product) applyProduct(product);
+    else setSelectedProductId(productId);
+  }
+
+  function handleProductCreated(product: Product) {
+    setProducts((prev) => [...prev, product].sort((a, b) => a.name.localeCompare(b.name)));
+    applyProduct(product);
+    setProductModalOpen(false);
+  }
+
+  function handleClientCreated(client: Client) {
+    setClients((prev) => [...prev, client].sort((a, b) => a.name.localeCompare(b.name)));
+    setSelectedClientId(client.id);
+    if (client.cep && !destinationCep) setDestinationCep(client.cep);
+    setClientModalOpen(false);
   }
 
   function handleTierChange(value: string, tierRanges: ReturnType<typeof buildPriceTierRanges>) {
@@ -145,21 +166,12 @@ export function NewSaleModal({
   }
 
   const selectedProduct = products.find((p) => p.id === selectedProductId) ?? null;
-  const showUnitPricing = productMode === "select" && !!selectedProduct;
+  const showUnitPricing = !!selectedProduct;
   const tierRanges = selectedProduct ? buildPriceTierRanges(selectedProduct.price_tiers) : [];
   const unitPriceLocked = tierRanges.length > 0 && tierChoice !== "custom" && tierChoice !== "";
   const computedTotal = showUnitPricing
     ? (Number(unitPrice) || 0) * (Number(quantity) || 0)
     : Number(finalPrice) || 0;
-
-  async function loadClients() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data } = await supabase.from("clients").select("*").eq("user_id", user.id).order("name");
-    setClients((data as Client[]) ?? []);
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -185,6 +197,11 @@ export function NewSaleModal({
       return;
     }
 
+    if (!selectedClientId) {
+      setError("Selecione ou cadastre um cliente.");
+      return;
+    }
+
     const price = computedTotal;
 
     setSaving(true);
@@ -199,34 +216,6 @@ export function NewSaleModal({
       return;
     }
 
-    let clientId = selectedClientId;
-
-    if (mode === "new") {
-      if (!newName.trim()) {
-        setError("Informe o nome do cliente.");
-        setSaving(false);
-        return;
-      }
-      const { data: newClient, error: clientError } = await supabase
-        .from("clients")
-        .insert({ user_id: user.id, name: newName, phone: newPhone || null, email: newEmail || null })
-        .select()
-        .single();
-
-      if (clientError || !newClient) {
-        setError(clientError?.message ?? "Falha ao criar cliente.");
-        setSaving(false);
-        return;
-      }
-      clientId = newClient.id;
-    }
-
-    if (!clientId) {
-      setError("Selecione ou cadastre um cliente.");
-      setSaving(false);
-      return;
-    }
-
     const appliedTierLabel =
       showUnitPricing && tierChoice !== "custom" && tierChoice !== ""
         ? tierRanges.find((r) => String(r.originalIndex) === tierChoice)?.label ?? null
@@ -235,8 +224,8 @@ export function NewSaleModal({
     const sharedPayload = {
       project_name: projectName || "Projeto sem nome",
       final_price: price,
-      client_id: clientId,
-      product_id: productMode === "select" && selectedProductId ? selectedProductId : null,
+      client_id: selectedClientId,
+      product_id: selectedProductId || null,
       payment_method: paymentMethod,
       channel,
       shipping_cost: shippingCost ? Number(shippingCost) : null,
@@ -279,47 +268,33 @@ export function NewSaleModal({
           <div className="glass-card mb-2 flex gap-1 p-1">
             <button
               type="button"
-              onClick={() => setProductMode("select")}
-              className={`flex-1 rounded-pill py-2 text-xs font-medium transition-colors ${
-                productMode === "select" ? "bg-neon-gradient text-white" : "text-text-secondary"
-              }`}
+              className="flex-1 rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white"
             >
               Produto já cadastrado
             </button>
             <button
               type="button"
-              onClick={() => setProductMode("new")}
-              className={`flex-1 rounded-pill py-2 text-xs font-medium transition-colors ${
-                productMode === "new" ? "bg-neon-gradient text-white" : "text-text-secondary"
-              }`}
+              onClick={() => setProductModalOpen(true)}
+              className="flex-1 rounded-pill py-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary"
             >
-              Digitar produto
+              Cadastrar Produto
             </button>
           </div>
 
-          {productMode === "select" ? (
-            <select
-              value={selectedProductId}
-              onChange={(e) => handleSelectProduct(e.target.value)}
-              className="glass-input w-full"
-            >
-              <option value="" className="bg-bg-raised">
-                {products.length === 0 ? "Nenhum produto cadastrado" : "Selecione..."}
+          <select
+            value={selectedProductId}
+            onChange={(e) => handleSelectProduct(e.target.value)}
+            className="glass-input w-full"
+          >
+            <option value="" className="bg-bg-raised">
+              {products.length === 0 ? "Nenhum produto cadastrado" : "Selecione..."}
+            </option>
+            {products.map((p) => (
+              <option key={p.id} value={p.id} className="bg-bg-raised">
+                {p.name}
               </option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id} className="bg-bg-raised">
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              className="glass-input w-full"
-              placeholder="Ex: Chaveiro personalizado"
-            />
-          )}
+            ))}
+          </select>
         </div>
 
         {showUnitPricing ? (
@@ -464,65 +439,33 @@ export function NewSaleModal({
         <div className="glass-card flex gap-1 p-1">
           <button
             type="button"
-            onClick={() => setMode("select")}
-            className={`flex-1 rounded-pill py-2 text-xs font-medium transition-colors ${
-              mode === "select" ? "bg-neon-gradient text-white" : "text-text-secondary"
-            }`}
+            className="flex-1 rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white"
           >
             Cliente existente
           </button>
           <button
             type="button"
-            onClick={() => setMode("new")}
-            className={`flex-1 rounded-pill py-2 text-xs font-medium transition-colors ${
-              mode === "new" ? "bg-neon-gradient text-white" : "text-text-secondary"
-            }`}
+            onClick={() => setClientModalOpen(true)}
+            className="flex-1 rounded-pill py-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary"
           >
             Novo cliente
           </button>
         </div>
 
-        {mode === "select" ? (
-          <select
-            value={selectedClientId}
-            onChange={(e) => setSelectedClientId(e.target.value)}
-            className="glass-input w-full"
-          >
-            <option value="" className="bg-bg-raised">
-              {clients.length === 0 ? "Nenhum cliente cadastrado" : "Selecione..."}
+        <select
+          value={selectedClientId}
+          onChange={(e) => setSelectedClientId(e.target.value)}
+          className="glass-input w-full"
+        >
+          <option value="" className="bg-bg-raised">
+            {clients.length === 0 ? "Nenhum cliente cadastrado" : "Selecione..."}
+          </option>
+          {clients.map((c) => (
+            <option key={c.id} value={c.id} className="bg-bg-raised">
+              {c.name}
             </option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id} className="bg-bg-raised">
-                {c.name}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <div className="space-y-3">
-            <input
-              required
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              className="glass-input w-full"
-              placeholder="Nome completo"
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                value={newPhone}
-                onChange={(e) => setNewPhone(e.target.value)}
-                className="glass-input w-full"
-                placeholder="WhatsApp"
-              />
-              <input
-                type="email"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                className="glass-input w-full"
-                placeholder="E-mail"
-              />
-            </div>
-          </div>
-        )}
+          ))}
+        </select>
 
         {!showUnitPricing && finalPrice && !isNaN(Number(finalPrice)) && (
           <div className="glass-card flex items-center justify-between px-4 py-3">
@@ -542,6 +485,19 @@ export function NewSaleModal({
           </NeonButton>
         </div>
       </form>
+
+      <NewProductModal
+        open={productModalOpen}
+        onClose={() => setProductModalOpen(false)}
+        onCreated={handleProductCreated}
+        zIndexClass="z-[60]"
+      />
+      <NewClientModal
+        open={clientModalOpen}
+        onClose={() => setClientModalOpen(false)}
+        onCreated={handleClientCreated}
+        zIndexClass="z-[60]"
+      />
     </Modal>
   );
 }

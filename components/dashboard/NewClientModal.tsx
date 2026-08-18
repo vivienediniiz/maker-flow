@@ -30,12 +30,17 @@ export function NewClientModal({
   onClose,
   onCreated,
   client = null,
+  zIndexClass,
+  maxWidthClass,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated?: (client: Client) => void;
   /** Quando presente, o modal edita esse cliente em vez de criar um novo. */
   client?: Client | null;
+  /** Pra empilhar por cima de outro modal já aberto (ex: Nova Venda Manual). */
+  zIndexClass?: string;
+  maxWidthClass?: string;
 }) {
   const supabase = createClient();
   const isEditing = !!client;
@@ -157,7 +162,13 @@ export function NewClientModal({
   const showLegacyAddressHint = isEditing && client?.address && !client?.street;
 
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? "Editar Cliente" : "Novo Cliente"}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEditing ? "Editar Cliente" : "Novo Cliente"}
+      zIndexClass={zIndexClass}
+      maxWidthClass={maxWidthClass}
+    >
       <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto scrollbar-glass pr-1">
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Nome completo</label>

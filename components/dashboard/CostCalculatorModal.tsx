@@ -136,7 +136,7 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
       open={open}
       onClose={onClose}
       title="Calcular Custo Unitário"
-      zIndexClass="z-[60]"
+      zIndexClass="z-[70]"
       maxWidthClass="max-w-2xl"
     >
       <div className="max-h-[70vh] space-y-5 overflow-y-auto scrollbar-glass pr-1">
