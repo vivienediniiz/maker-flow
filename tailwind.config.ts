@@ -142,6 +142,10 @@ const config: Config = {
           "25%, 85%": { transform: "scale(1)" },
           "100%": { opacity: "1", transform: "scale(1)" },
         },
+        twinkle: {
+          "0%, 100%": { opacity: "0.15" },
+          "50%": { opacity: "var(--peak-opacity, 1)" },
+        },
       },
       animation: {
         "pulse-glow": "pulse-glow 2.4s ease-in-out infinite",
@@ -153,6 +157,7 @@ const config: Config = {
         "float-y": "float-y 6s ease-in-out infinite",
         "panel-in": "panel-in 0.7s cubic-bezier(0.16,1,0.3,1) forwards",
         "splash-logo": "splash-logo 3s ease-out forwards",
+        twinkle: "twinkle 3s ease-in-out infinite",
       },
     },
   },
