@@ -155,6 +155,22 @@ export default function PricingPage() {
         </div>
       </main>
 
+      <footer className="space-y-2 border-t border-border-glass px-6 py-8 text-center text-xs text-text-muted md:px-12">
+        <p>© 2026 StudioMaker. Feito para a comunidade Maker.</p>
+        <p className="text-[11px] text-text-muted/60">
+          Desenvolvido por{" "}
+          <a
+            href="https://instagram.com/agencia_diniiz"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-text-secondary"
+          >
+            Agência Diniz
+          </a>{" "}
+          — CNPJ 64.411.407/0001-94 — @agencia_diniiz
+        </p>
+      </footer>
+
       {pixTarget && (
         <PixCheckoutModal
           open={!!pixTarget}
