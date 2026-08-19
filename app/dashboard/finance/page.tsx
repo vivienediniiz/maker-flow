@@ -378,21 +378,21 @@ function FinancePageContent() {
                           {e.due_day ? ` · vence dia ${e.due_day}` : ""}
                         </p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-3">
+                      <div className="-mr-1.5 flex shrink-0 items-center gap-1">
                         <span className="font-numeric text-sm font-medium text-red-400">-{formatBRL(e.amount)}</span>
                         <button
                           onClick={() => {
                             setEditingFixedExpense(e);
                             setFixedExpenseModalOpen(true);
                           }}
-                          className="text-text-muted hover:text-neon-pink"
+                          className="p-2 text-text-muted hover:text-neon-pink"
                           aria-label="Editar despesa fixa"
                         >
                           <Pencil size={14} />
                         </button>
                         <button
                           onClick={() => handleDeleteFixedExpense(e.id)}
-                          className="text-text-muted hover:text-red-400"
+                          className="p-2 text-text-muted hover:text-red-400"
                           aria-label="Excluir despesa fixa"
                         >
                           <Trash2 size={14} />

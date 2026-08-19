@@ -61,8 +61,8 @@
   .glass-input {
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    @apply rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted
-      focus:border-neon-pink/60 focus:outline-none transition-colors;
+    @apply rounded-xl px-4 py-2.5 text-base text-text-primary placeholder:text-text-muted
+      focus:border-neon-pink/60 focus:outline-none transition-colors sm:text-sm;
   }
 
   .scrollbar-glass::-webkit-scrollbar {

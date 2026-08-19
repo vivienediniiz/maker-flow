@@ -77,14 +77,18 @@ export function Modal({
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className={cn("fixed inset-0 flex items-center justify-center px-4", zIndexClass)}>
+    <div className={cn("fixed inset-0 flex items-center justify-center px-4 py-8", zIndexClass)}>
       <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" onClick={onClose} aria-hidden />
       <div
-        className={cn("glass-card relative w-full p-6 shadow-neon-glow", maxWidthClass, dragging && "select-none")}
+        className={cn(
+          "glass-card relative flex max-h-[85vh] w-full flex-col p-5 shadow-neon-glow sm:p-6",
+          maxWidthClass,
+          dragging && "select-none"
+        )}
         style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
       >
         <div
-          className="mb-5 flex cursor-move touch-none items-center justify-between"
+          className="mb-4 flex shrink-0 cursor-move touch-none items-center justify-between gap-3 sm:mb-5"
           onPointerDown={handleDragStart}
           onPointerMove={handleDragMove}
           onPointerUp={handleDragEnd}
@@ -94,13 +98,13 @@ export function Modal({
           <button
             onClick={onClose}
             onPointerDown={(e) => e.stopPropagation()}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted hover:bg-white/5 hover:text-text-primary"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-white/5 hover:text-text-primary sm:h-8 sm:w-8"
             aria-label="Fechar"
           >
             <X size={16} />
           </button>
         </div>
-        {children}
+        <div className="min-h-0 overflow-y-auto scrollbar-glass">{children}</div>
       </div>
     </div>,
     document.body

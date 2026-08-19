@@ -150,7 +150,7 @@ export function PixCheckoutModal({
               <input
                 readOnly
                 value={qrCode}
-                className="glass-input w-full truncate text-xs"
+                className="glass-input w-full truncate text-base sm:text-xs"
                 onFocus={(e) => e.target.select()}
               />
               <button

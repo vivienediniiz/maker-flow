@@ -235,8 +235,8 @@ export function NewClientModal({
           {cepError && <p className="mt-1 text-[11px] text-red-400">{cepError}</p>}
         </div>
 
-        <div className="grid grid-cols-[1fr_120px] gap-3">
-          <div>
+        <div className="grid grid-cols-[1fr_100px] gap-3 sm:grid-cols-[1fr_120px]">
+          <div className="min-w-0">
             <label className="mb-1.5 block text-xs text-text-muted">Rua</label>
             <input value={street} onChange={(e) => setStreet(e.target.value)} className="glass-input w-full" placeholder="Rua/Logradouro" />
           </div>
@@ -262,8 +262,8 @@ export function NewClientModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-[1fr_90px] gap-3">
-          <div>
+        <div className="grid grid-cols-[1fr_80px] gap-3 sm:grid-cols-[1fr_90px]">
+          <div className="min-w-0">
             <label className="mb-1.5 block text-xs text-text-muted">Cidade</label>
             <input value={city} onChange={(e) => setCity(e.target.value)} className="glass-input w-full" />
           </div>

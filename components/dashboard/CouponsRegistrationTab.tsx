@@ -71,9 +71,9 @@ export function CouponsRegistrationTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-display text-lg">Cupons</h3>
-        <NeonButton size="sm" onClick={openCreate}>
+        <NeonButton size="sm" onClick={openCreate} className="whitespace-nowrap">
           <Plus size={14} /> Novo Cupom
         </NeonButton>
       </div>
@@ -118,12 +118,12 @@ export function CouponsRegistrationTab() {
                           {status}
                         </span>
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <button onClick={() => openEdit(c)} className="text-text-muted hover:text-text-primary" aria-label="Editar cupom">
+                      <td className="px-2 py-4">
+                        <div className="flex items-center">
+                          <button onClick={() => openEdit(c)} className="p-2.5 text-text-muted hover:text-text-primary" aria-label="Editar cupom">
                             <Pencil size={14} />
                           </button>
-                          <button onClick={() => handleDelete(c.id)} className="text-text-muted hover:text-red-400" aria-label="Excluir cupom">
+                          <button onClick={() => handleDelete(c.id)} className="p-2.5 text-text-muted hover:text-red-400" aria-label="Excluir cupom">
                             <Trash2 size={14} />
                           </button>
                         </div>

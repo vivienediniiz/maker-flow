@@ -78,13 +78,13 @@ export function SuppliesRegistrationTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-display text-lg">Insumos</h3>
-        <div className="flex items-center gap-2">
-          <NeonButton variant="outline" size="sm" onClick={() => openPurchase()} disabled={supplies.length === 0}>
+        <div className="flex flex-wrap items-center gap-2">
+          <NeonButton variant="outline" size="sm" onClick={() => openPurchase()} disabled={supplies.length === 0} className="whitespace-nowrap">
             <ShoppingCart size={14} /> Registrar Compra
           </NeonButton>
-          <NeonButton size="sm" onClick={openCreate}>
+          <NeonButton size="sm" onClick={openCreate} className="whitespace-nowrap">
             <Plus size={14} /> Novo Insumo
           </NeonButton>
         </div>
@@ -126,15 +126,15 @@ export function SuppliesRegistrationTab() {
                           {s.stock_quantity} {s.unit} {isLow && "· estoque baixo"}
                         </span>
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <button onClick={() => openPurchase(s.id)} className="text-text-muted hover:text-text-primary" aria-label="Registrar compra">
+                      <td className="px-2 py-4">
+                        <div className="flex items-center">
+                          <button onClick={() => openPurchase(s.id)} className="p-2 text-text-muted hover:text-text-primary" aria-label="Registrar compra">
                             <ShoppingCart size={14} />
                           </button>
-                          <button onClick={() => openEdit(s)} className="text-text-muted hover:text-text-primary" aria-label="Editar insumo">
+                          <button onClick={() => openEdit(s)} className="p-2 text-text-muted hover:text-text-primary" aria-label="Editar insumo">
                             <Pencil size={14} />
                           </button>
-                          <button onClick={() => handleDelete(s.id)} className="text-text-muted hover:text-red-400" aria-label="Excluir insumo">
+                          <button onClick={() => handleDelete(s.id)} className="p-2 text-text-muted hover:text-red-400" aria-label="Excluir insumo">
                             <Trash2 size={14} />
                           </button>
                         </div>

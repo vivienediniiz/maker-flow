@@ -92,9 +92,9 @@ export function PrinterAssetDetailModal({ asset, branch, onClose }: PrinterAsset
           {asset.notes && <p className="text-xs text-text-secondary">{asset.notes}</p>}
 
           <div>
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Histórico de Manutenção</p>
-              <NeonButton size="sm" variant="outline" onClick={() => setLogModalOpen(true)}>
+              <NeonButton size="sm" variant="outline" onClick={() => setLogModalOpen(true)} className="whitespace-nowrap">
                 <Plus size={12} /> Adicionar
               </NeonButton>
             </div>

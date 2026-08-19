@@ -68,13 +68,13 @@ export default function ClientsPage() {
       <Topbar title="Clientes" />
       <main className="space-y-6 px-6 py-8 md:px-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="glass-card flex items-center gap-2 px-4 py-2.5 sm:w-80">
-            <Search size={15} className="text-text-muted" />
+          <div className="glass-card flex w-full items-center gap-2 px-4 py-2.5 sm:w-80">
+            <Search size={15} className="shrink-0 text-text-muted" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar cliente por nome, telefone ou e-mail..."
-              className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
+              className="w-full min-w-0 bg-transparent text-base text-text-primary placeholder:text-text-muted focus:outline-none sm:text-sm"
             />
           </div>
           <NeonButton
@@ -138,21 +138,21 @@ export default function ClientsPage() {
                       <td className="px-6 py-4 text-text-secondary">{c.email || "—"}</td>
                       <td className="max-w-[220px] truncate px-6 py-4 text-text-secondary">{c.address || "—"}</td>
                       <td className="max-w-[220px] truncate px-6 py-4 text-text-muted">{c.notes || "—"}</td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
+                      <td className="px-2 py-4">
+                        <div className="flex items-center">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setEditingClient(c);
                             }}
-                            className="text-text-muted hover:text-neon-pink"
+                            className="p-2.5 text-text-muted hover:text-neon-pink"
                             aria-label="Editar cliente"
                           >
                             <Pencil size={14} />
                           </button>
                           <button
                             onClick={(e) => handleDelete(c.id, e)}
-                            className="text-text-muted hover:text-red-400"
+                            className="p-2.5 text-text-muted hover:text-red-400"
                             aria-label="Remover cliente"
                           >
                             <Trash2 size={14} />

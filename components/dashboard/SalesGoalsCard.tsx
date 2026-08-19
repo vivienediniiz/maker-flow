@@ -67,9 +67,9 @@ export function SalesGoalsCard() {
 
   return (
     <GlassCard padding="lg" className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">Metas do Mês</h3>
-        <NeonButton variant="outline" size="sm" onClick={() => setModalOpen(true)}>
+        <NeonButton variant="outline" size="sm" onClick={() => setModalOpen(true)} className="whitespace-nowrap">
           {goal ? <Pencil size={13} /> : <Target size={13} />} {goal ? "Editar Meta" : "Definir Meta"}
         </NeonButton>
       </div>

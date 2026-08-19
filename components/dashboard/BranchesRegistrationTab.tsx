@@ -8,6 +8,7 @@ import { BranchModal } from "@/components/dashboard/BranchModal";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { canCreateMore, limitFor } from "@/lib/entitlements";
+import { cn } from "@/lib/utils";
 import type { Branch } from "@/lib/types";
 
 export function BranchesRegistrationTab() {
@@ -66,13 +67,13 @@ export function BranchesRegistrationTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-display text-lg">Filiais</h3>
         <NeonButton
           size="sm"
           onClick={() => canCreate && openCreate()}
           disabled={!canCreate}
-          className={!canCreate ? "opacity-40" : undefined}
+          className={cn("whitespace-nowrap", !canCreate && "opacity-40")}
           title={!canCreate ? "Plano Grátis permite só a matriz" : undefined}
         >
           {canCreate ? <Plus size={14} /> : <Lock size={14} />} Nova Filial
@@ -106,11 +107,11 @@ export function BranchesRegistrationTab() {
                   <p className="text-sm font-medium text-text-primary">{b.name}</p>
                   <p className="text-xs text-text-muted">{b.type === "matriz" ? "Matriz" : "Filial"}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button onClick={() => openEdit(b)} className="text-text-muted hover:text-text-primary" aria-label="Editar filial">
+                <div className="-mr-1.5 -mt-1.5 flex items-center">
+                  <button onClick={() => openEdit(b)} className="p-1.5 text-text-muted hover:text-text-primary" aria-label="Editar filial">
                     <Pencil size={14} />
                   </button>
-                  <button onClick={() => handleDelete(b.id)} className="text-text-muted hover:text-red-400" aria-label="Excluir filial">
+                  <button onClick={() => handleDelete(b.id)} className="p-1.5 text-text-muted hover:text-red-400" aria-label="Excluir filial">
                     <Trash2 size={14} />
                   </button>
                 </div>

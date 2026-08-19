@@ -109,7 +109,7 @@ export function AdjustFilamentStockInline({ filament, onAdjusted }: AdjustFilame
           autoFocus
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          className="glass-input w-full py-1.5 text-xs"
+          className="glass-input w-full py-1.5 text-base sm:text-xs"
         />
         <span className="text-[11px] text-text-muted">g</span>
         <button

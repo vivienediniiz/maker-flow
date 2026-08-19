@@ -68,9 +68,9 @@ export function ExtraPurchasesRegistrationTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-display text-lg">Compras Extras</h3>
-        <NeonButton size="sm" onClick={openCreate}>
+        <NeonButton size="sm" onClick={openCreate} className="whitespace-nowrap">
           <Plus size={14} /> Nova Compra Extra
         </NeonButton>
       </div>
@@ -105,12 +105,12 @@ export function ExtraPurchasesRegistrationTab() {
                     <td className="px-6 py-4 text-text-secondary">{p.supplier || "—"}</td>
                     <td className="px-6 py-4 text-text-secondary">{formatDate(p.purchased_at)}</td>
                     <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(p.amount)}</td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        <button onClick={() => openEdit(p)} className="text-text-muted hover:text-text-primary" aria-label="Editar compra">
+                    <td className="px-2 py-4">
+                      <div className="flex items-center">
+                        <button onClick={() => openEdit(p)} className="p-2.5 text-text-muted hover:text-text-primary" aria-label="Editar compra">
                           <Pencil size={14} />
                         </button>
-                        <button onClick={() => handleDelete(p.id)} className="text-text-muted hover:text-red-400" aria-label="Excluir compra">
+                        <button onClick={() => handleDelete(p.id)} className="p-2.5 text-text-muted hover:text-red-400" aria-label="Excluir compra">
                           <Trash2 size={14} />
                         </button>
                       </div>

@@ -284,7 +284,7 @@ export default function CalculatorPage() {
                 type="button"
                 className="flex-1 rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white"
               >
-                Selecionar produto já cadastrado
+                Produto já cadastrado
               </button>
               <button
                 type="button"
@@ -318,11 +318,11 @@ export default function CalculatorPage() {
 
           {/* Print beds */}
           <GlassCard padding="lg" className="space-y-5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
                 Mesas de Impressão
               </h3>
-              <NeonButton variant="outline" size="sm" onClick={addBed}>
+              <NeonButton variant="outline" size="sm" onClick={addBed} className="whitespace-nowrap">
                 <Plus size={14} /> Adicionar mesa
               </NeonButton>
             </div>
@@ -468,9 +468,9 @@ export default function CalculatorPage() {
 
           {/* Insumos */}
           <GlassCard padding="lg" className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">Insumos Utilizados</h3>
-              <NeonButton variant="outline" size="sm" onClick={addSupplyLine} disabled={supplies.length === 0}>
+              <NeonButton variant="outline" size="sm" onClick={addSupplyLine} disabled={supplies.length === 0} className="whitespace-nowrap">
                 <Plus size={14} /> Adicionar insumo
               </NeonButton>
             </div>
@@ -569,7 +569,7 @@ export default function CalculatorPage() {
 
         {/* Right column: summary + actions */}
         <div className="space-y-6">
-          <GlassCard padding="lg" className="sticky top-[80px] space-y-5">
+          <GlassCard padding="lg" className="space-y-5 xl:sticky xl:top-[80px]">
             <h3 className="neon-text text-2xl font-bold uppercase tracking-wider">Resumo</h3>
 
             <Field label="Quantidade de Produtos Finais">

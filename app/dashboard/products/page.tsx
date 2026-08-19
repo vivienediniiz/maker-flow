@@ -365,21 +365,21 @@ export default function ProductsPage() {
                         <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(p.sale_price)}</td>
                         <td className="px-6 py-4 font-numeric text-neon-pink">{margin.toFixed(0)}%</td>
                         <td className="px-6 py-4 text-text-secondary">{p.stock_quantity}</td>
-                        <td className="px-4 py-4">
-                          <div className="flex items-center gap-3">
+                        <td className="px-2 py-4">
+                          <div className="flex items-center">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditingProduct(p);
                               }}
-                              className="text-text-muted hover:text-neon-pink"
+                              className="p-2.5 text-text-muted hover:text-neon-pink"
                               aria-label="Editar produto"
                             >
                               <Pencil size={14} />
                             </button>
                             <button
                               onClick={(e) => handleDelete(p.id, e)}
-                              className="text-text-muted hover:text-red-400"
+                              className="p-2.5 text-text-muted hover:text-red-400"
                               aria-label="Excluir produto"
                             >
                               <Trash2 size={14} />

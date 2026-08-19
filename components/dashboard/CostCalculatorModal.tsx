@@ -129,9 +129,9 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
       <div className="max-h-[70vh] space-y-5 overflow-y-auto scrollbar-glass pr-1">
         {/* Mesas de impressão */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-xs font-medium uppercase tracking-wider text-text-muted">Mesas de Impressão</h4>
-            <NeonButton type="button" variant="outline" size="sm" onClick={addBed}>
+            <NeonButton type="button" variant="outline" size="sm" onClick={addBed} className="whitespace-nowrap">
               <Plus size={14} /> Adicionar mesa
             </NeonButton>
           </div>

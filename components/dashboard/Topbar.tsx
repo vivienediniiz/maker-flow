@@ -63,44 +63,58 @@ export function Topbar({ title, searchValue, onSearchChange, searchPlaceholder }
   }
 
   return (
-    <header className="glass-card sticky top-4 z-30 mx-4 flex items-center justify-between px-4 py-4 md:mx-8 md:px-8">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={toggleSidebar}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border-glass bg-white/[0.03] text-text-secondary hover:text-text-primary md:hidden"
-          aria-label="Abrir menu"
-        >
-          <Menu size={18} />
-        </button>
-        <h1 className="font-display text-xl text-text-primary">{title}</h1>
-      </div>
+    <header className="glass-card sticky top-4 z-30 mx-4 flex flex-col gap-3 px-4 py-4 md:mx-8 md:px-8">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <button
+            onClick={toggleSidebar}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border-glass bg-white/[0.03] text-text-secondary hover:text-text-primary md:hidden"
+            aria-label="Abrir menu"
+          >
+            <Menu size={18} />
+          </button>
+          <h1 className="truncate font-display text-xl text-text-primary">{title}</h1>
+        </div>
 
-      <div className="flex items-center gap-3">
-        {onSearchChange && (
-          <div className="hidden items-center gap-2 rounded-pill border border-border-glass bg-white/[0.03] px-4 py-2 sm:flex">
-            <Search size={14} className="text-text-muted" />
-            <input
-              value={searchValue}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder={searchPlaceholder || "Buscar..."}
-              className="w-48 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
-            />
-          </div>
-        )}
-        <NotificationsBell />
-
-        <button
-          ref={avatarRef}
-          onClick={() => setMenuOpen((o) => !o)}
-          className="h-9 w-9 overflow-hidden rounded-full bg-neon-gradient"
-          aria-label="Menu da conta"
-        >
-          {avatarUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+        <div className="flex shrink-0 items-center gap-3">
+          {onSearchChange && (
+            <div className="hidden items-center gap-2 rounded-pill border border-border-glass bg-white/[0.03] px-4 py-2 sm:flex">
+              <Search size={14} className="text-text-muted" />
+              <input
+                value={searchValue}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder={searchPlaceholder || "Buscar..."}
+                className="w-48 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
+              />
+            </div>
           )}
-        </button>
+          <NotificationsBell />
+
+          <button
+            ref={avatarRef}
+            onClick={() => setMenuOpen((o) => !o)}
+            className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-neon-gradient"
+            aria-label="Menu da conta"
+          >
+            {avatarUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+            )}
+          </button>
+        </div>
       </div>
+
+      {onSearchChange && (
+        <div className="flex items-center gap-2 rounded-pill border border-border-glass bg-white/[0.03] px-4 py-2.5 sm:hidden">
+          <Search size={15} className="shrink-0 text-text-muted" />
+          <input
+            value={searchValue}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder={searchPlaceholder || "Buscar..."}
+            className="w-full min-w-0 bg-transparent text-base text-text-primary placeholder:text-text-muted focus:outline-none"
+          />
+        </div>
+      )}
 
       {menuOpen &&
         typeof document !== "undefined" &&

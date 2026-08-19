@@ -62,9 +62,9 @@ export function CategoriesRegistrationTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-display text-lg">Categorias</h3>
-        <NeonButton size="sm" onClick={openCreate}>
+        <NeonButton size="sm" onClick={openCreate} className="whitespace-nowrap">
           <Plus size={14} /> Nova Categoria
         </NeonButton>
       </div>
@@ -81,12 +81,12 @@ export function CategoriesRegistrationTab() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((c) => (
             <GlassCard key={c.id} hover padding="md" className="flex items-center justify-between">
-              <p className="text-sm font-medium text-text-primary">{c.name}</p>
-              <div className="flex items-center gap-3">
-                <button onClick={() => openEdit(c)} className="text-text-muted hover:text-text-primary" aria-label="Editar categoria">
+              <p className="min-w-0 truncate text-sm font-medium text-text-primary">{c.name}</p>
+              <div className="-mr-1.5 flex shrink-0 items-center">
+                <button onClick={() => openEdit(c)} className="p-1.5 text-text-muted hover:text-text-primary" aria-label="Editar categoria">
                   <Pencil size={14} />
                 </button>
-                <button onClick={() => handleDelete(c.id)} className="text-text-muted hover:text-red-400" aria-label="Excluir categoria">
+                <button onClick={() => handleDelete(c.id)} className="p-1.5 text-text-muted hover:text-red-400" aria-label="Excluir categoria">
                   <Trash2 size={14} />
                 </button>
               </div>

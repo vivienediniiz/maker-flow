@@ -148,11 +148,11 @@ export default function FilamentsPage() {
                     low && "border-amber-500/50 ring-1 ring-amber-500/30"
                   )}
                 >
-                  <div className="absolute right-3 top-3 flex items-center gap-2">
-                    <button onClick={() => openEdit(f)} className="text-text-muted hover:text-text-primary" aria-label="Editar filamento">
+                  <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
+                    <button onClick={() => openEdit(f)} className="p-2 text-text-muted hover:text-text-primary" aria-label="Editar filamento">
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => handleDelete(f.id)} className="text-text-muted hover:text-red-400" aria-label="Excluir filamento">
+                    <button onClick={() => handleDelete(f.id)} className="p-2 text-text-muted hover:text-red-400" aria-label="Excluir filamento">
                       <Trash2 size={14} />
                     </button>
                   </div>

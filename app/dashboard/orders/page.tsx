@@ -210,12 +210,12 @@ export default function OrdersPage() {
             </select>
           </div>
 
-          <div className="flex items-center gap-3">
-            <NeonButton variant="outline" onClick={handleSync} disabled={syncing}>
+          <div className="flex flex-wrap items-center gap-3">
+            <NeonButton variant="outline" onClick={handleSync} disabled={syncing} className="whitespace-nowrap">
               {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
               Sincronizar Pedidos
             </NeonButton>
-            <NeonButton onClick={() => setNewSaleModalOpen(true)}>
+            <NeonButton onClick={() => setNewSaleModalOpen(true)} className="whitespace-nowrap">
               <Plus size={16} /> Nova Venda Manual
             </NeonButton>
           </div>
@@ -313,14 +313,14 @@ export default function OrdersPage() {
                                 e.stopPropagation();
                                 setEditingQuote(q);
                               }}
-                              className="text-text-muted hover:text-neon-pink"
+                              className="p-2 text-text-muted hover:text-neon-pink"
                               aria-label="Editar venda"
                             >
                               <Pencil size={14} />
                             </button>
                             <button
                               onClick={(e) => handleDelete(q.id, e)}
-                              className="text-text-muted hover:text-red-400"
+                              className="p-2 text-text-muted hover:text-red-400"
                               aria-label="Excluir venda"
                             >
                               <Trash2 size={14} />
