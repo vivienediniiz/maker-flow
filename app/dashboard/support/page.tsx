@@ -5,7 +5,7 @@ import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
-import { MessageCircle, HelpCircle } from "lucide-react";
+import { MessageCircle, HelpCircle, Star } from "lucide-react";
 
 const SUPPORT_WHATSAPP_NUMBER = "5531971983044";
 
@@ -62,6 +62,23 @@ export default function SupportPage() {
               </Link>
             </>
           )}
+        </GlassCard>
+
+        <GlassCard padding="lg" className="mx-auto mt-6 max-w-lg space-y-3 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">
+            <Star size={22} />
+          </div>
+          <div>
+            <h2 className="font-display text-lg">Sugestões e Avaliação</h2>
+            <p className="mt-1 text-sm text-text-secondary">
+              Tem uma ideia, uma reclamação, ou quer avaliar o StudioMaker? Sua opinião nos ajuda a melhorar.
+            </p>
+          </div>
+          <Link href="/dashboard/feedback" className="block">
+            <NeonButton variant="outline" className="w-full justify-center">
+              <Star size={16} /> Enviar Feedback
+            </NeonButton>
+          </Link>
         </GlassCard>
       </main>
     </>
