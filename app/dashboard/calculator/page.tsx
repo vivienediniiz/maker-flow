@@ -620,7 +620,7 @@ export default function CalculatorPage() {
 
             <div className="space-y-2">
               <NeonButton className="w-full" onClick={() => setOrderModalOpen(true)} disabled={missingFilament}>
-                <Rocket size={16} /> Iniciar Projeto / Criar Pedido
+                <Rocket size={16} /> Criar Pedido
               </NeonButton>
               <NeonButton variant="outline" className="w-full" onClick={() => setQuoteModalOpen(true)} disabled={missingFilament}>
                 <FileDown size={16} /> Gerar PDF de Orçamento
