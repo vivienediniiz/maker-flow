@@ -10,7 +10,7 @@ import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { canCreateMore, limitFor } from "@/lib/entitlements";
-import { SlidersHorizontal, PackagePlus, Sparkles, Loader2, Trash2, Lock, Pencil } from "lucide-react";
+import { SlidersHorizontal, PackagePlus, Sparkles, Loader2, Trash2, Lock, Pencil, FileDown, X } from "lucide-react";
 import type { Product } from "@/lib/types";
 
 export default function ProductsPage() {
@@ -24,6 +24,9 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [generatingCatalog, setGeneratingCatalog] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const canCreate = canCreateMore(tier, "products", products.length);
 
   useEffect(() => {
@@ -59,9 +62,138 @@ export default function ProductsPage() {
     setProducts((prev) => prev.filter((p) => p.id !== productId));
     await supabase.from("products").delete().eq("id", productId);
   }
+
   const filtered = products
     .filter((p) => (categoryFilter ? p.category === categoryFilter : true))
     .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
+
+  function toggleSelected(productId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  }
+
+  function toggleSelectAllFiltered() {
+    setSelectedIds((prev) => {
+      if (allFilteredSelected) {
+        const next = new Set(prev);
+        filtered.forEach((p) => next.delete(p.id));
+        return next;
+      }
+      const next = new Set(prev);
+      filtered.forEach((p) => next.add(p.id));
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!confirm(`Excluir ${ids.length} produto${ids.length > 1 ? "s" : ""} selecionado${ids.length > 1 ? "s" : ""}? Essa ação não pode ser desfeita.`)) {
+      return;
+    }
+    setBulkDeleting(true);
+    const { error } = await supabase.from("products").delete().in("id", ids);
+    setBulkDeleting(false);
+    if (error) {
+      alert("Não foi possível excluir os produtos selecionados. Tente novamente.");
+      return;
+    }
+    setProducts((prev) => prev.filter((p) => !selectedIds.has(p.id)));
+    setSelectedIds(new Set());
+  }
+
+  async function handleGenerateCatalog() {
+    const selectedProducts = products.filter((p) => selectedIds.has(p.id));
+    if (selectedProducts.length === 0) return;
+
+    setGeneratingCatalog(true);
+    let container: HTMLDivElement | null = null;
+
+    try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("studio_name, full_name")
+        .eq("id", user!.id)
+        .single();
+      const studioName = profile?.studio_name || profile?.full_name || "Meu Estúdio";
+
+      container = document.createElement("div");
+      container.style.position = "fixed";
+      container.style.left = "-9999px";
+      container.style.top = "0";
+      container.style.width = "800px";
+      container.style.padding = "40px";
+      container.style.fontFamily = "'Segoe UI', Arial, sans-serif";
+      container.style.background = "#FFFFFF";
+      container.style.color = "#1A1625";
+
+      const itemsHtml = selectedProducts
+        .map(
+          (p) => `
+        <div style="display:flex; gap:16px; border:1px solid #EEE6F2; border-radius:12px; padding:16px; margin-bottom:16px;">
+          <div style="width:110px; height:110px; border-radius:8px; overflow:hidden; flex-shrink:0; background:linear-gradient(135deg,#E86333,#FF4EDF,#AA17DB); display:flex; align-items:center; justify-content:center;">
+            ${p.image_url ? `<img src="${p.image_url}" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;" />` : `<span style="font-size:32px;">🧩</span>`}
+          </div>
+          <div style="flex:1; min-width:0;">
+            <p style="margin:0; font-size:16px; font-weight:700;">${p.name}</p>
+            ${p.category ? `<p style="margin:2px 0 0; font-size:11px; color:#AA17DB; font-weight:600; text-transform:uppercase;">${p.category}</p>` : ""}
+            ${p.description ? `<p style="margin:8px 0 0; font-size:12px; color:#3A3548; line-height:1.4;">${p.description}</p>` : ""}
+            <p style="margin:10px 0 0; font-size:20px; font-weight:800; color:#FF4EDF;">${formatBRL(p.sale_price)}</p>
+          </div>
+        </div>
+      `
+        )
+        .join("");
+
+      container.innerHTML = `
+        <div style="text-align:center; border-bottom:3px solid #FF4EDF; padding-bottom:16px; margin-bottom:24px;">
+          <p style="margin:0; font-size:24px; font-weight:700;">${studioName}</p>
+          <p style="margin:4px 0 0; font-size:12px; letter-spacing:0.08em; color:#AA17DB; font-weight:600;">CATÁLOGO DE PRODUTOS</p>
+        </div>
+        ${itemsHtml}
+      `;
+
+      document.body.appendChild(container);
+
+      const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: "#FFFFFF" });
+      const imgData = canvas.toDataURL("image/png");
+
+      const doc = new jsPDF({ unit: "mm", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      if (imgHeight <= pageHeight) {
+        doc.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      } else {
+        let remainingHeight = imgHeight;
+        let position = 0;
+        while (remainingHeight > 0) {
+          doc.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+          remainingHeight -= pageHeight;
+          position -= pageHeight;
+          if (remainingHeight > 0) doc.addPage();
+        }
+      }
+
+      doc.save(`catalogo-produtos-${new Date().toISOString().slice(0, 10)}.pdf`);
+    } finally {
+      if (container) document.body.removeChild(container);
+      setGeneratingCatalog(false);
+    }
+  }
 
   return (
     <>
@@ -130,6 +262,33 @@ export default function ProductsPage() {
           </p>
         )}
 
+        {selectedIds.size > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neon-pink/30 bg-neon-pink/[0.06] px-4 py-3">
+            <p className="text-xs font-medium text-text-primary">
+              {selectedIds.size} produto{selectedIds.size > 1 ? "s" : ""} selecionado{selectedIds.size > 1 ? "s" : ""}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <NeonButton variant="outline" size="sm" onClick={handleGenerateCatalog} disabled={generatingCatalog}>
+                {generatingCatalog ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />} Gerar
+                Catálogo PDF
+              </NeonButton>
+              <NeonButton variant="outline" size="sm" onClick={handleBulkDelete} disabled={bulkDeleting}>
+                {bulkDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Excluir
+                Selecionados
+              </NeonButton>
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:bg-white/5 hover:text-text-primary"
+                aria-label="Limpar seleção"
+                title="Limpar seleção"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-16 text-text-muted">
             <Loader2 size={20} className="animate-spin" />
@@ -148,6 +307,15 @@ export default function ProductsPage() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
+                    <th className="w-10 px-4 py-4">
+                      <input
+                        type="checkbox"
+                        checked={allFilteredSelected}
+                        onChange={toggleSelectAllFiltered}
+                        className="accent-[#FF4EDF]"
+                        aria-label="Selecionar todos os produtos filtrados"
+                      />
+                    </th>
                     <th className="px-6 py-4 font-medium">Produto</th>
                     <th className="px-6 py-4 font-medium">Categoria</th>
                     <th className="px-6 py-4 font-medium">Custo</th>
@@ -165,8 +333,20 @@ export default function ProductsPage() {
                       <tr
                         key={p.id}
                         onClick={() => setSelectedProduct(p)}
-                        className="cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]"
+                        className={cn(
+                          "cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]",
+                          selectedIds.has(p.id) && "bg-neon-pink/[0.04]"
+                        )}
                       >
+                        <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(p.id)}
+                            onChange={() => toggleSelected(p.id)}
+                            className="accent-[#FF4EDF]"
+                            aria-label={`Selecionar ${p.name}`}
+                          />
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neon-gradient-soft">
