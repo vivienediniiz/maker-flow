@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
@@ -8,6 +8,7 @@ import { FILAMENT_MATERIAL_OPTIONS, FILAMENT_BRAND_SUGGESTIONS } from "@/lib/fil
 import type { Filament } from "@/lib/types";
 
 const MATERIAL_OPTION_SET: readonly string[] = FILAMENT_MATERIAL_OPTIONS;
+const BRAND_OPTION_SET: readonly string[] = FILAMENT_BRAND_SUGGESTIONS;
 
 interface FilamentModalProps {
   open: boolean;
@@ -19,9 +20,9 @@ interface FilamentModalProps {
 export function FilamentModal({ open, onClose, filament, onSaved }: FilamentModalProps) {
   const supabase = createClient();
   const isEditing = !!filament;
-  const brandListId = useId();
 
-  const [brand, setBrand] = useState("");
+  const [brandOption, setBrandOption] = useState<string>(FILAMENT_BRAND_SUGGESTIONS[0]);
+  const [customBrand, setCustomBrand] = useState("");
   const [materialOption, setMaterialOption] = useState<string>(FILAMENT_MATERIAL_OPTIONS[0]);
   const [customMaterial, setCustomMaterial] = useState("");
   const [colorHex, setColorHex] = useState("#FFFFFF");
@@ -34,7 +35,17 @@ export function FilamentModal({ open, onClose, filament, onSaved }: FilamentModa
 
   useEffect(() => {
     if (!open) return;
-    setBrand(filament?.brand ?? "");
+    const currentBrand = filament?.brand ?? "";
+    if (currentBrand && BRAND_OPTION_SET.includes(currentBrand)) {
+      setBrandOption(currentBrand);
+      setCustomBrand("");
+    } else if (currentBrand) {
+      setBrandOption("Outro");
+      setCustomBrand(currentBrand);
+    } else {
+      setBrandOption(FILAMENT_BRAND_SUGGESTIONS[0]);
+      setCustomBrand("");
+    }
     const currentMaterial = filament?.material ?? "";
     if (currentMaterial && MATERIAL_OPTION_SET.includes(currentMaterial)) {
       setMaterialOption(currentMaterial);
@@ -57,6 +68,12 @@ export function FilamentModal({ open, onClose, filament, onSaved }: FilamentModa
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const brand = brandOption === "Outro" ? customBrand.trim() : brandOption;
+    if (!brand) {
+      setError("Informe a marca.");
+      return;
+    }
 
     const material = materialOption === "Outro" ? customMaterial.trim() : materialOption;
     if (!material) {
@@ -142,19 +159,29 @@ export function FilamentModal({ open, onClose, filament, onSaved }: FilamentModa
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Marca</label>
-            <input
-              required
-              list={brandListId}
-              value={brand}
-              onChange={(e) => setBrand(e.target.value)}
+            <select
+              value={brandOption}
+              onChange={(e) => setBrandOption(e.target.value)}
               className="glass-input w-full"
-              placeholder="Ex: Voolt3D"
-            />
-            <datalist id={brandListId}>
+            >
               {FILAMENT_BRAND_SUGGESTIONS.map((b) => (
-                <option key={b} value={b} />
+                <option key={b} value={b} className="bg-bg-raised">
+                  {b}
+                </option>
               ))}
-            </datalist>
+              <option value="Outro" className="bg-bg-raised">
+                Outro
+              </option>
+            </select>
+            {brandOption === "Outro" && (
+              <input
+                required
+                value={customBrand}
+                onChange={(e) => setCustomBrand(e.target.value)}
+                className="glass-input mt-2 w-full"
+                placeholder="Digite a marca"
+              />
+            )}
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Material</label>
