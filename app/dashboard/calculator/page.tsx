@@ -12,7 +12,7 @@ import { GenerateQuoteModal } from "@/components/dashboard/GenerateQuoteModal";
 import { FilamentModal } from "@/components/dashboard/FilamentModal";
 import { FilamentPickerDropdown } from "@/components/dashboard/FilamentPickerDropdown";
 import { createClient } from "@/lib/supabase/client";
-import { formatBRL, cn } from "@/lib/utils";
+import { formatBRL } from "@/lib/utils";
 import { calculateCost } from "@/lib/costCalculator";
 import { Plus, Trash2, FileDown, Link2, Rocket } from "lucide-react";
 import type { Product, Supply, Filament } from "@/lib/types";
@@ -272,17 +272,6 @@ export default function CalculatorPage() {
   return (
     <>
       <Topbar title="Calculadora Inteligente" />
-
-      {/* Real-time cost preview header — sticky */}
-      <div className="sticky top-[65px] z-20 border-b border-border-glass bg-bg/80 px-6 py-4 backdrop-blur-glass md:px-8">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <PreviewStat label="Filamento" value={formatBRL(calc.filamentCost)} />
-          <PreviewStat label="Energia" value={formatBRL(calc.energyCost)} />
-          <PreviewStat label="Custo / Unidade" value={formatBRL(calc.costPerUnit)} />
-          <PreviewStat label="Preço / Unidade" value={formatBRL(calc.pricePerUnit)} />
-          <PreviewStat label="Total do Pedido" value={formatBRL(calc.orderPrice)} highlight />
-        </div>
-      </div>
 
       <main className="grid grid-cols-1 gap-6 px-6 py-8 md:px-8 xl:grid-cols-[1fr_360px]">
         {/* Left column: inputs */}
@@ -580,8 +569,8 @@ export default function CalculatorPage() {
 
         {/* Right column: summary + actions */}
         <div className="space-y-6">
-          <GlassCard padding="lg" className="sticky top-[140px] space-y-5">
-            <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">Resumo</h3>
+          <GlassCard padding="lg" className="sticky top-[80px] space-y-5">
+            <h3 className="neon-text text-sm font-medium uppercase tracking-wider">Resumo</h3>
 
             <Field label="Quantidade de Produtos Finais">
               <input
@@ -689,15 +678,6 @@ export default function CalculatorPage() {
         }}
       />
     </>
-  );
-}
-
-function PreviewStat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <div className={cn("glass-card px-3 py-2.5", highlight && "border-neon-pink/40 shadow-neon-glow")}>
-      <p className="text-[10px] uppercase tracking-wide text-text-muted">{label}</p>
-      <p className={cn("font-numeric text-sm font-semibold", highlight && "neon-text")}>{value}</p>
-    </div>
   );
 }
 
