@@ -7,6 +7,7 @@ import { GlassAccordion } from "@/components/ui/GlassAccordion";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { ExtraPurchaseModal } from "@/components/dashboard/ExtraPurchaseModal";
+import { FixedExpenseModal } from "@/components/dashboard/FixedExpenseModal";
 import { CouponsPeriodSummary } from "@/components/dashboard/CouponsPeriodSummary";
 import { CouponsCampaignsSection } from "@/components/dashboard/CouponsCampaignsSection";
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
@@ -15,8 +16,8 @@ import { FinancialEvolutionChart, type FinancialEvolutionPoint } from "@/compone
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { QUOTE_SOURCE_LABELS } from "@/lib/quotes";
-import { DollarSign, TrendingDown, TrendingUp, XCircle, Download, FileText, Loader2, Plus } from "lucide-react";
-import type { Quote, ExtraPurchase, QuoteSource } from "@/lib/types";
+import { DollarSign, TrendingDown, TrendingUp, XCircle, Download, FileText, Loader2, Plus, Pencil, Trash2, Repeat } from "lucide-react";
+import type { Quote, ExtraPurchase, FixedExpense, QuoteSource } from "@/lib/types";
 
 type PeriodKey = "today" | "7d" | "30d" | "month";
 
@@ -68,10 +69,13 @@ function FinancePageContent() {
   const supabase = createClient();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [expenses, setExpenses] = useState<ExtraPurchase[]>([]);
+  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodKey>("30d");
   const [source, setSource] = useState<"all" | QuoteSource>("all");
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [fixedExpenseModalOpen, setFixedExpenseModalOpen] = useState(false);
+  const [editingFixedExpense, setEditingFixedExpense] = useState<FixedExpense | null>(null);
   const [generatingReport, setGeneratingReport] = useState(false);
 
   useEffect(() => {
@@ -88,14 +92,22 @@ function FinancePageContent() {
       return;
     }
 
-    const [{ data: quoteData }, { data: expenseData }] = await Promise.all([
+    const [{ data: quoteData }, { data: expenseData }, { data: fixedExpenseData }] = await Promise.all([
       supabase.from("quotes").select("*").eq("user_id", user.id),
       supabase.from("extra_purchases").select("*").eq("user_id", user.id).order("purchased_at", { ascending: false }),
+      supabase.from("fixed_expenses").select("*").eq("user_id", user.id).order("name"),
     ]);
 
     setQuotes((quoteData as Quote[]) ?? []);
     setExpenses((expenseData as ExtraPurchase[]) ?? []);
+    setFixedExpenses((fixedExpenseData as FixedExpense[]) ?? []);
     setLoading(false);
+  }
+
+  async function handleDeleteFixedExpense(id: string) {
+    if (!confirm("Excluir esta despesa fixa? Essa ação não pode ser desfeita.")) return;
+    setFixedExpenses((prev) => prev.filter((e) => e.id !== id));
+    await supabase.from("fixed_expenses").delete().eq("id", id);
   }
 
   const start = useMemo(() => periodStart(period), [period]);
@@ -123,7 +135,11 @@ function FinancePageContent() {
   const receitaBruta = revenueQuotes.reduce((s, q) => s + q.final_price, 0);
   const custosVendas = revenueQuotes.reduce((s, q) => s + q.platform_fee + q.cost_amount, 0);
   const custosDespesas = periodExpenses.reduce((s, e) => s + e.amount, 0);
-  const custosTotais = custosVendas + custosDespesas;
+  // Despesa fixa é recorrente mensal — só entra no cálculo quando o filtro é
+  // "Este mês" (conta uma vez, o valor cheio); nos outros períodos (Hoje/7
+  // dias/30 dias) não representa fielmente uma fração do mês, então não conta.
+  const custosFixos = period === "month" ? fixedExpenses.filter((e) => e.active).reduce((s, e) => s + e.amount, 0) : 0;
+  const custosTotais = custosVendas + custosDespesas + custosFixos;
   const lucroLiquidoReal = receitaBruta - custosTotais;
   const vendasCanceladas = cancelledQuotes.reduce((s, q) => s + q.final_price, 0);
 
@@ -166,6 +182,17 @@ function FinancePageContent() {
         e.category ?? "",
         String(-e.amount),
       ]),
+      ...(period === "month"
+        ? fixedExpenses
+            .filter((e) => e.active)
+            .map((e) => [
+              "Despesa Fixa",
+              new Date().toLocaleDateString("pt-BR"),
+              e.name,
+              e.category ?? "",
+              String(-e.amount),
+            ])
+        : []),
     ];
     const csv = rows.map((r) => r.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -198,6 +225,9 @@ function FinancePageContent() {
         ["Vendas Canceladas", formatBRL(vendasCanceladas)],
         ["Total de vendas no período", String(revenueQuotes.length)],
         ["Total de despesas no período", String(periodExpenses.length)],
+        ...(period === "month"
+          ? ([["Despesas fixas do mês", formatBRL(custosFixos)]] as [string, string][])
+          : []),
       ];
 
       let y = 48;
@@ -250,6 +280,15 @@ function FinancePageContent() {
           <div className="flex flex-wrap items-center gap-3">
             <NeonButton variant="outline" onClick={() => setExpenseModalOpen(true)}>
               <Plus size={16} /> Nova Despesa
+            </NeonButton>
+            <NeonButton
+              variant="outline"
+              onClick={() => {
+                setEditingFixedExpense(null);
+                setFixedExpenseModalOpen(true);
+              }}
+            >
+              <Repeat size={16} /> Nova Despesa Fixa
             </NeonButton>
             <NeonButton variant="outline" onClick={handleExportCsv} disabled={loading}>
               <Download size={16} /> Exportar CSV
@@ -309,6 +348,62 @@ function FinancePageContent() {
               )}
             </section>
 
+            <section>
+              <h3 className="mb-1 text-sm font-medium uppercase tracking-wider text-text-muted">
+                Despesas Fixas ({fixedExpenses.length})
+              </h3>
+              <p className="mb-4 text-[11px] text-text-muted">
+                Recorrentes mensais (aluguel, energia, internet...) — entram no cálculo de custos só quando o
+                período selecionado é &quot;Este mês&quot;, contando uma vez o valor cheio.
+              </p>
+              {fixedExpenses.length === 0 ? (
+                <GlassCard padding="lg" className="text-center text-sm text-text-muted">
+                  Nenhuma despesa fixa cadastrada ainda.
+                </GlassCard>
+              ) : (
+                <div className="glass-card divide-y divide-border-glass overflow-hidden">
+                  {fixedExpenses.map((e) => (
+                    <div key={e.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-sm text-text-primary">{e.name}</p>
+                          {!e.active && (
+                            <span className="shrink-0 rounded-pill border border-border-glass px-2 py-0.5 text-[10px] text-text-muted">
+                              Inativa
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-text-muted">
+                          {e.category ?? "Sem categoria"}
+                          {e.due_day ? ` · vence dia ${e.due_day}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="font-numeric text-sm font-medium text-red-400">-{formatBRL(e.amount)}</span>
+                        <button
+                          onClick={() => {
+                            setEditingFixedExpense(e);
+                            setFixedExpenseModalOpen(true);
+                          }}
+                          className="text-text-muted hover:text-neon-pink"
+                          aria-label="Editar despesa fixa"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteFixedExpense(e.id)}
+                          className="text-text-muted hover:text-red-400"
+                          aria-label="Excluir despesa fixa"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
             <CouponsPeriodSummary />
 
             <CouponsCampaignsSection source={source} />
@@ -320,6 +415,20 @@ function FinancePageContent() {
         open={expenseModalOpen}
         onClose={() => setExpenseModalOpen(false)}
         onSaved={() => loadAll()}
+      />
+      <FixedExpenseModal
+        open={fixedExpenseModalOpen}
+        expense={editingFixedExpense}
+        onClose={() => {
+          setFixedExpenseModalOpen(false);
+          setEditingFixedExpense(null);
+        }}
+        onSaved={(saved) => {
+          setFixedExpenses((prev) => {
+            const exists = prev.some((e) => e.id === saved.id);
+            return exists ? prev.map((e) => (e.id === saved.id ? saved : e)) : [...prev, saved];
+          });
+        }}
       />
     </>
   );

@@ -267,6 +267,19 @@ export interface ExtraPurchase {
   created_at: string;
 }
 
+/** Despesa recorrente (aluguel, energia, internet...) — entra no custo operacional do Financeiro uma vez por mês corrente, independente do dia de vencimento. */
+export interface FixedExpense {
+  id: string;
+  user_id: string;
+  name: string;
+  amount: number;
+  category: string | null;
+  /** Dia do mês (1-31) só como referência/lembrete — não afeta o cálculo. */
+  due_day: number | null;
+  active: boolean;
+  created_at: string;
+}
+
 export type PrinterAssetStatus = "active" | "maintenance" | "inactive" | "sold";
 
 export interface PrinterAsset {
