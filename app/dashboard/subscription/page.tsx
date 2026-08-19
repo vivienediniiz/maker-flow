@@ -54,7 +54,11 @@ export default function SubscriptionPage() {
         setLoadingPlan(null);
         return;
       }
-      window.location.href = data.init_point;
+      const checkoutWindow = window.open(data.init_point, "_blank", "noopener,noreferrer");
+      if (!checkoutWindow) {
+        setError("O navegador bloqueou a aba de pagamento — permita pop-ups pra este site e tente de novo.");
+      }
+      setLoadingPlan(null);
     } catch {
       setError("Erro de rede ao contatar o Mercado Pago.");
       setLoadingPlan(null);
