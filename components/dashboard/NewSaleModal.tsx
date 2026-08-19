@@ -424,7 +424,7 @@ export function NewSaleModal({
 
   return (
     <Modal open={open} onClose={handleClose} title={isEditing ? "Editar Venda" : "Nova Venda Manual"}>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto scrollbar-glass pr-1">
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Produto</label>
           <div className="glass-card mb-2 flex gap-1 p-1">
