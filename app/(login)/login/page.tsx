@@ -38,14 +38,10 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-bg">
-      {/* Fundo: céu estrelado com brilho roxo/violeta nos cantos */}
+      {/* Fundo: degradê diagonal roxo escuro → magenta → laranja, laranja concentrado no canto inferior direito */}
       <div
-        className="pointer-events-none absolute -left-[10%] -top-[20%] h-[70vw] w-[70vw] opacity-80 blur-[110px]"
-        style={{ background: "radial-gradient(circle, #AA17DB 0%, rgba(170,23,219,0) 70%)" }}
-      />
-      <div
-        className="pointer-events-none absolute -right-[15%] top-[10%] h-[55vw] w-[55vw] opacity-40 blur-[120px]"
-        style={{ background: "radial-gradient(circle, #7C3AED 0%, rgba(124,58,237,0) 70%)" }}
+        className="pointer-events-none absolute inset-0"
+        style={{ background: "linear-gradient(135deg, #280248 0%, #8F1E97 55%, #8F1E97 78%, #E86333 100%)" }}
       />
       <Starfield />
 
