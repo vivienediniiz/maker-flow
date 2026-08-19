@@ -320,6 +320,10 @@ export function NewSaleModal({
           ? computeCouponDiscount(selectedCoupon, productValue)
           : 0;
   const computedTotal = productValue + shippingAmount - discountAmount;
+  // Custo do item vendido — só existe base de cálculo quando há produto
+  // vinculado (o fluxo "Valor final" manual, sem produto, não tem custo conhecido).
+  const costAmount = showUnitPricing && selectedProduct ? selectedProduct.cost_price * (Number(quantity) || 0) : 0;
+  const estimatedProfit = productValue - costAmount;
 
   function handleDiscountChange(raw: string) {
     const value = Number(raw);
@@ -390,6 +394,7 @@ export function NewSaleModal({
       quantity: showUnitPricing ? Number(quantity) : null,
       unit_price: showUnitPricing ? Number(unitPrice) : null,
       price_tier_label: appliedTierLabel,
+      cost_amount: costAmount,
       discount_amount: discountAmount || null,
       discount_type: discountType,
       discount_percent: discountType === "percentage" ? Number(discountPercent) || null : null,
@@ -548,6 +553,20 @@ export function NewSaleModal({
               <span className="text-xs text-text-muted">Valor do Produto</span>
               <span className="font-numeric text-base font-medium text-text-primary">{formatBRL(productValue)}</span>
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="glass-card flex flex-col gap-0.5 px-4 py-3 opacity-80">
+                <span className="text-[11px] text-text-muted">Custo de Produção (R$)</span>
+                <span className="font-numeric text-sm font-medium text-text-primary">{formatBRL(costAmount)}</span>
+              </div>
+              <div className="glass-card flex flex-col gap-0.5 px-4 py-3 opacity-80">
+                <span className="text-[11px] text-text-muted">Lucro Estimado (R$)</span>
+                <span className="font-numeric text-sm font-medium text-text-primary">{formatBRL(estimatedProfit)}</span>
+              </div>
+            </div>
+            <p className="-mt-2 text-[11px] text-text-muted">
+              Lucro estimado considera só o produto — o valor final pode variar com frete/desconto aplicados acima.
+            </p>
           </>
         ) : (
           <div>
