@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { FileText, Truck, Loader2, Lock, Image as ImageIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FileText, Truck, Loader2, Lock, Image as ImageIcon, MessageCircle } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteStatusStepper } from "@/components/dashboard/QuoteStatusStepper";
 import { SaleReceiptModal } from "@/components/dashboard/SaleReceiptModal";
-import { WhatsAppLink } from "@/components/ui/WhatsAppLink";
+import { WhatsAppLink, buildWhatsAppLink } from "@/components/ui/WhatsAppLink";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
@@ -23,17 +23,44 @@ export function QuoteDetailModal({
   quote,
   onClose,
   onStatusChange,
+  onTrackingCodeChange,
 }: {
   quote: QuoteWithClient | null;
   onClose: () => void;
   onStatusChange: (quoteId: string, status: QuoteStatus) => void;
+  onTrackingCodeChange: (quoteId: string, code: string) => Promise<void>;
 }) {
   const supabase = createClient();
   const { paid } = useSubscription();
   const [generatingLabel, setGeneratingLabel] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const [trackingCode, setTrackingCode] = useState("");
+  const [savingTracking, setSavingTracking] = useState(false);
+
+  // O modal fica montado entre trocas de venda selecionada — sincroniza o
+  // campo local sempre que a venda (ou o código já salvo nela) mudar.
+  useEffect(() => {
+    setTrackingCode(quote?.shipping_tracking_code ?? "");
+  }, [quote?.id, quote?.shipping_tracking_code]);
 
   if (!quote) return null;
+
+  async function handleSaveTrackingCode() {
+    setSavingTracking(true);
+    await onTrackingCodeChange(quote!.id, trackingCode.trim());
+    setSavingTracking(false);
+  }
+
+  function handleSendTrackingWhatsApp() {
+    const phone = quote!.clients?.phone;
+    if (!phone) return;
+    const clientName = quote!.clients?.name ?? quote!.buyer_name ?? "";
+    const orderRef = `#${formatOrderNumber(quote!.order_number)}`;
+    const text = trackingCode.trim()
+      ? `Olá${clientName ? `, ${clientName}` : ""}! Seu pedido ${orderRef} já foi enviado 📦 Código de rastreio: ${trackingCode.trim()}`
+      : `Olá${clientName ? `, ${clientName}` : ""}! Seu pedido ${orderRef} já foi enviado 📦`;
+    window.open(`${buildWhatsAppLink(phone)}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  }
 
   const hasOwnCalcDetails = quote.weight_g > 0 || quote.print_time_min > 0;
   const linkedProductCalc = quote.products?.calc_inputs ?? null;
@@ -284,6 +311,36 @@ export function QuoteDetailModal({
             onChange={(status) => onStatusChange(quote.id, status)}
           />
         </div>
+
+        {quote.status === "shipped" && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Rastreio do Pedido</p>
+            <div className="flex gap-2">
+              <input
+                value={trackingCode}
+                onChange={(e) => setTrackingCode(e.target.value)}
+                placeholder="Código ou link de rastreio"
+                className="glass-input flex-1"
+              />
+              <NeonButton
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSaveTrackingCode}
+                disabled={savingTracking || trackingCode.trim() === (quote.shipping_tracking_code ?? "")}
+              >
+                {savingTracking ? <Loader2 size={14} className="animate-spin" /> : "Salvar"}
+              </NeonButton>
+            </div>
+            {quote.clients?.phone ? (
+              <NeonButton type="button" className="w-full" onClick={handleSendTrackingWhatsApp}>
+                <MessageCircle size={14} /> Enviar Rastreio no WhatsApp
+              </NeonButton>
+            ) : (
+              <p className="text-[11px] text-text-muted">Cliente sem WhatsApp cadastrado.</p>
+            )}
+          </div>
+        )}
 
         {quote.status !== "cancelled" && quote.status !== "expired" && (
           <button

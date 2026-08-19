@@ -127,6 +127,16 @@ export default function OrdersPage() {
     }
   }
 
+  async function handleTrackingCodeChange(quoteId: string, code: string) {
+    const value = code || null;
+    setQuotes((prev) => prev.map((q) => (q.id === quoteId ? { ...q, shipping_tracking_code: value } : q)));
+    setSelectedQuote((prev) => (prev && prev.id === quoteId ? { ...prev, shipping_tracking_code: value } : prev));
+    const { error } = await supabase.from("quotes").update({ shipping_tracking_code: value }).eq("id", quoteId);
+    if (error) {
+      alert("Não foi possível salvar o código de rastreio. Tente novamente.");
+    }
+  }
+
   async function handleDelete(quoteId: string, e: React.MouseEvent) {
     e.stopPropagation();
     if (!confirm("Excluir esta venda? Essa ação não pode ser desfeita.")) return;
@@ -331,6 +341,7 @@ export default function OrdersPage() {
         quote={selectedQuote}
         onClose={() => setSelectedQuote(null)}
         onStatusChange={handleStatusChange}
+        onTrackingCodeChange={handleTrackingCodeChange}
       />
       <NewSaleModal
         open={newSaleModalOpen || !!editingQuote}
