@@ -63,6 +63,25 @@ export interface Filament {
   price_per_kg: number;
   remaining_weight_g: number;
   weight_total_g: number;
+  low_stock_threshold_g: number | null;
+}
+
+export type FilamentMovementType = "purchase" | "sale_consumption" | "manual_adjustment";
+
+export interface FilamentMovement {
+  id: string;
+  filament_id: string;
+  user_id: string;
+  movement_type: FilamentMovementType;
+  quantity_g: number;
+  related_quote_id: string | null;
+  note: string | null;
+  created_at: string;
+}
+
+export interface FilamentMovementWithFilament extends FilamentMovement {
+  filaments: { brand: string; material: string; color_hex: string } | null;
+  quotes: { order_number: number } | null;
 }
 export type QuoteChannel = "whatsapp" | "instagram" | "tiktok" | "presencial" | "marketplaces";
 

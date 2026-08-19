@@ -7,13 +7,12 @@ import { Bell, AlertTriangle, Clock3, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { trialDaysRemaining } from "@/lib/trial";
 import { QUOTE_SOURCE_LABELS, QUOTE_SOURCE_ICONS, formatOrderNumber } from "@/lib/quotes";
+import { isFilamentLow } from "@/lib/filaments";
 import type { QuoteSource } from "@/lib/types";
 
 const SEEN_KEY = "sm_notif_last_seen";
 const LOOKBACK_DAYS = 7;
 const TRIAL_WARNING_DAYS = 3;
-const LOW_STOCK_WEIGHT_G = 150;
-const LOW_STOCK_PERCENT = 15;
 
 interface Alert {
   id: string;
@@ -67,7 +66,7 @@ export function NotificationsBell() {
         .single(),
       supabase
         .from("filaments")
-        .select("id, brand, material, remaining_weight_g, weight_total_g")
+        .select("id, brand, material, remaining_weight_g, weight_total_g, low_stock_threshold_g")
         .eq("user_id", user.id),
       supabase
         .from("quotes")
@@ -97,11 +96,7 @@ export function NotificationsBell() {
       }
     }
 
-    const lowFilaments = (filaments ?? []).filter((f) => {
-      const total = f.weight_total_g > 0 ? f.weight_total_g : 1000;
-      const fillPercent = (f.remaining_weight_g / total) * 100;
-      return f.remaining_weight_g < LOW_STOCK_WEIGHT_G || fillPercent < LOW_STOCK_PERCENT;
-    });
+    const lowFilaments = (filaments ?? []).filter(isFilamentLow);
     if (lowFilaments.length > 0) {
       const first = lowFilaments[0];
       list.push({
@@ -112,7 +107,7 @@ export function NotificationsBell() {
             ? `${first.material} — ${first.brand} está com estoque baixo (${first.remaining_weight_g}g restantes).`
             : `${lowFilaments.length} filamentos com estoque baixo.`,
         isNew: true,
-        href: "/dashboard/registrations",
+        href: "/dashboard/filaments",
       });
       unseen = true;
     }

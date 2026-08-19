@@ -82,6 +82,8 @@ create table if not exists public.filaments (
   color_hex text not null default '#FFFFFF',
   price_per_kg numeric not null default 0,
   remaining_weight_g numeric not null default 1000,
+  weight_total_g numeric not null default 1000,
+  low_stock_threshold_g numeric,
   created_at timestamptz not null default now()
 );
 
@@ -111,6 +113,32 @@ alter table public.quotes enable row level security;
 
 create policy "quotes_crud_own" on public.quotes
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ---------------------------------------------------------
+-- 4b. filament_movements — historico de entrada/saida de estoque
+-- Cada linha de filaments representa uma combinacao unica de
+-- marca+material+cor — ao comprar mais do mesmo filamento, soma-se em
+-- remaining_weight_g e weight_total_g da linha existente (nunca cria uma
+-- linha nova pra mesma combinacao), e registra-se o movimento aqui.
+-- ---------------------------------------------------------
+create table if not exists public.filament_movements (
+  id uuid primary key default gen_random_uuid(),
+  filament_id uuid not null references public.filaments(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  movement_type text not null check (movement_type in ('purchase', 'sale_consumption', 'manual_adjustment')),
+  quantity_g numeric not null,
+  related_quote_id uuid references public.quotes(id) on delete set null,
+  note text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.filament_movements enable row level security;
+
+create policy "filament_movements_crud_own" on public.filament_movements
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create index if not exists filament_movements_filament_id_idx on public.filament_movements(filament_id);
+create index if not exists filament_movements_user_id_created_at_idx on public.filament_movements(user_id, created_at desc);
 
 -- ---------------------------------------------------------
 -- 5. orders

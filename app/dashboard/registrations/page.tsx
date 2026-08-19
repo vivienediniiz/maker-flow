@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { PrintersRegistrationTab } from "@/components/dashboard/PrintersRegistrationTab";
-import { FilamentsRegistrationTab } from "@/components/dashboard/FilamentsRegistrationTab";
 import { SuppliesRegistrationTab } from "@/components/dashboard/SuppliesRegistrationTab";
 import { ExtraPurchasesRegistrationTab } from "@/components/dashboard/ExtraPurchasesRegistrationTab";
 import { BranchesRegistrationTab } from "@/components/dashboard/BranchesRegistrationTab";
@@ -13,7 +12,7 @@ import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { cn } from "@/lib/utils";
 
-const TABS = ["Impressoras", "Filamentos", "Insumos", "Compras Extras", "Cupons", "Filiais", "Categorias"] as const;
+const TABS = ["Impressoras", "Insumos", "Compras Extras", "Cupons", "Filiais", "Categorias"] as const;
 
 export default function RegistrationsPage() {
   const { paid } = useSubscription();
@@ -39,7 +38,6 @@ export default function RegistrationsPage() {
         </div>
 
         {tab === "Impressoras" && <PrintersRegistrationTab />}
-        {tab === "Filamentos" && <FilamentsRegistrationTab />}
         {tab === "Insumos" &&
           (paid ? (
             <SuppliesRegistrationTab />

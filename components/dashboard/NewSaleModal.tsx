@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, Truck } from "lucide-react";
+import { Pencil, Truck, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
@@ -10,9 +10,14 @@ import { ShippingQuoteWidget, type ShippingQuoteSelection } from "@/components/d
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { buildPriceTierRanges } from "@/lib/priceTiers";
-import type { Client, Product, QuoteWithClient, QuotePaymentMethod, QuoteChannel, Coupon, QuoteDiscountType } from "@/lib/types";
+import type { Client, Product, QuoteWithClient, QuotePaymentMethod, QuoteChannel, Coupon, QuoteDiscountType, Filament } from "@/lib/types";
 import { QUOTE_CHANNEL_LABELS } from "@/lib/quotes";
 import { isCouponValid, computeCouponDiscount, getCouponStatusLabel } from "@/lib/coupons";
+
+interface UsedFilamentRow {
+  filamentId: string;
+  quantityG: string;
+}
 
 interface NewSaleModalProps {
   open: boolean;
@@ -81,6 +86,8 @@ export function NewSaleModal({
   const [discount, setDiscount] = useState("0");
   const [discountWarning, setDiscountWarning] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState("0");
+  const [filaments, setFilaments] = useState<Filament[]>([]);
+  const [usedFilaments, setUsedFilaments] = useState<UsedFilamentRow[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   // Reflete em tempo real qual cupom está com reserva de uso ativa (via
   // apply_coupon/release_coupon) — nunca fica fora de sincronia com o banco
@@ -96,6 +103,8 @@ export function NewSaleModal({
     loadClients();
     loadProducts();
     loadCoupons();
+    loadFilaments();
+    setUsedFilaments([]);
     setClientModalOpen(false);
     setProductModalOpen(false);
     setShippingQuoteOpen(false);
@@ -155,6 +164,27 @@ export function NewSaleModal({
     if (!user) return;
     const { data } = await supabase.from("coupons").select("*").eq("user_id", user.id).order("code");
     setCoupons((data as Coupon[]) ?? []);
+  }
+
+  async function loadFilaments() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from("filaments").select("*").eq("user_id", user.id).order("material");
+    setFilaments((data as Filament[]) ?? []);
+  }
+
+  function addUsedFilamentRow() {
+    setUsedFilaments((prev) => [...prev, { filamentId: "", quantityG: "" }]);
+  }
+
+  function updateUsedFilamentRow(index: number, patch: Partial<UsedFilamentRow>) {
+    setUsedFilaments((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  }
+
+  function removeUsedFilamentRow(index: number) {
+    setUsedFilaments((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function loadProducts() {
@@ -402,9 +432,16 @@ export function NewSaleModal({
       coupon_code: discountType === "coupon" ? selectedCoupon?.code ?? null : null,
     };
 
-    const { error: quoteError } = isEditing
-      ? await supabase.from("quotes").update(sharedPayload).eq("id", quote!.id)
-      : await supabase.from("quotes").insert({
+    let quoteError: { message: string } | null = null;
+    let createdQuoteId: string | null = null;
+
+    if (isEditing) {
+      const { error } = await supabase.from("quotes").update(sharedPayload).eq("id", quote!.id);
+      quoteError = error;
+    } else {
+      const { data, error } = await supabase
+        .from("quotes")
+        .insert({
           ...sharedPayload,
           user_id: user.id,
           weight_g: weightG,
@@ -414,13 +451,40 @@ export function NewSaleModal({
           margin_percent: marginPercent,
           status: "paid",
           source: "manual",
-        });
+        })
+        .select("id")
+        .single();
+      quoteError = error;
+      createdQuoteId = data?.id ?? null;
+    }
 
     setSaving(false);
 
     if (quoteError) {
       setError(quoteError.message);
       return;
+    }
+
+    // Baixa de estoque de filamento só se aplica na criação de uma venda nova
+    // (editar uma venda não repete o consumo já registrado antes).
+    if (!isEditing && createdQuoteId) {
+      const rows = usedFilaments.filter((r) => r.filamentId && Number(r.quantityG) > 0);
+      for (const row of rows) {
+        const f = filaments.find((x) => x.id === row.filamentId);
+        if (!f) continue;
+        const qty = Number(row.quantityG);
+        await supabase
+          .from("filaments")
+          .update({ remaining_weight_g: f.remaining_weight_g - qty })
+          .eq("id", f.id);
+        await supabase.from("filament_movements").insert({
+          filament_id: f.id,
+          user_id: user.id,
+          movement_type: "sale_consumption",
+          quantity_g: -qty,
+          related_quote_id: createdQuoteId,
+        });
+      }
     }
 
     onCreated?.();
@@ -580,6 +644,80 @@ export function NewSaleModal({
               className="glass-input w-full"
               placeholder="0,00"
             />
+          </div>
+        )}
+
+        {!isEditing && (
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="text-xs text-text-muted">Filamento(s) Utilizados</label>
+              <button
+                type="button"
+                onClick={addUsedFilamentRow}
+                className="flex items-center gap-1 text-[11px] text-neon-pink hover:underline"
+              >
+                <Plus size={11} /> Adicionar filamento
+              </button>
+            </div>
+
+            {usedFilaments.length === 0 ? (
+              <p className="text-[11px] text-text-muted">
+                {filaments.length === 0
+                  ? "Nenhum filamento cadastrado — cadastre em Filamentos pra vincular a uma venda."
+                  : "Nenhum filamento vinculado a esta venda (opcional)."}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {usedFilaments.map((row, i) => {
+                  const f = filaments.find((x) => x.id === row.filamentId);
+                  const qty = Number(row.quantityG) || 0;
+                  const overLimit = !!f && qty > f.remaining_weight_g;
+                  return (
+                    <div key={i} className="glass-card space-y-1.5 p-3">
+                      <div className="flex gap-2">
+                        <select
+                          value={row.filamentId}
+                          onChange={(e) => updateUsedFilamentRow(i, { filamentId: e.target.value })}
+                          className="glass-input flex-1"
+                        >
+                          <option value="" className="bg-bg-raised">
+                            Selecione...
+                          </option>
+                          {filaments.map((fl) => (
+                            <option key={fl.id} value={fl.id} className="bg-bg-raised">
+                              {fl.material} — {fl.brand} ({fl.remaining_weight_g}g disponíveis)
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={row.quantityG}
+                          onChange={(e) => updateUsedFilamentRow(i, { quantityG: e.target.value })}
+                          placeholder="Qtd (g)"
+                          className="glass-input w-24"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeUsedFilamentRow(i)}
+                          className="shrink-0 text-text-muted hover:text-red-400"
+                          aria-label="Remover filamento"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      {overLimit && (
+                        <p className="flex items-center gap-1 text-[11px] text-amber-400">
+                          <AlertTriangle size={11} /> Quantidade maior que o disponível ({f!.remaining_weight_g}g) — a
+                          venda não será bloqueada, mas o estoque ficará negativo.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
