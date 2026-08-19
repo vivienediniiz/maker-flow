@@ -78,7 +78,7 @@ export function Modal({
 
   return createPortal(
     <div className={cn("fixed inset-0 flex items-center justify-center px-4", zIndexClass)}>
-      <div className="absolute inset-0 bg-black/10" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" onClick={onClose} aria-hidden />
       <div
         className={cn("glass-card relative w-full p-6 shadow-neon-glow", maxWidthClass, dragging && "select-none")}
         style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
