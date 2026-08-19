@@ -14,7 +14,7 @@ import { FilamentPickerDropdown } from "@/components/dashboard/FilamentPickerDro
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { calculateCost } from "@/lib/costCalculator";
-import { Plus, Trash2, FileDown, Link2, Rocket, PackagePlus } from "lucide-react";
+import { Plus, Trash2, FileDown, Link2, Rocket } from "lucide-react";
 import type { Product, Supply, Filament } from "@/lib/types";
 
 interface PrintBed {
@@ -77,7 +77,6 @@ export default function CalculatorPage() {
   const [supplyLines, setSupplyLines] = useState<SupplyLine[]>([]);
 
   const [orderModalOpen, setOrderModalOpen] = useState(false);
-  const [productModalOpen, setProductModalOpen] = useState(false);
   const [newProductModalOpen, setNewProductModalOpen] = useState(false);
   const [quoteModalOpen, setQuoteModalOpen] = useState(false);
 
@@ -577,15 +576,6 @@ export default function CalculatorPage() {
             </Field>
           </GlassCard>
 
-          {/* Cadastrar Produto — logo abaixo dos campos preenchidos, destacado */}
-          <NeonButton size="lg" className="w-full" onClick={() => setProductModalOpen(true)} disabled={missingFilament}>
-            <PackagePlus size={18} /> Cadastrar Produto
-          </NeonButton>
-          {missingFilament && (
-            <p className="-mt-4 text-center text-[11px] text-amber-400">
-              Selecione um filamento cadastrado em cada mesa pra liberar o cálculo.
-            </p>
-          )}
         </div>
 
         {/* Right column: summary + actions */}
@@ -671,37 +661,6 @@ export default function CalculatorPage() {
         marginPercent={marginPercent}
         initialUsedFilaments={usedFilamentsForSale}
         initialUsedSupplies={usedSuppliesForSale}
-      />
-      <NewProductModal
-        open={productModalOpen}
-        onClose={() => setProductModalOpen(false)}
-        onCreated={(p) => setProducts((prev) => [...prev, p])}
-        initialName={projectName}
-        initialCostPrice={calc.costPerUnit}
-        initialSalePrice={calc.pricePerUnit}
-        calcInputs={{
-          // O que vai pro cadastro do produto é sempre a receita de 1 unidade —
-          // quantity fica travada em 1 aqui, independente da Quantidade de
-          // Produtos Finais que estiver setada pra este pedido específico.
-          beds: beds.map(({ name, weightG, timeH, timeM, watts, filamentId, piecesInBed }) => ({
-            name,
-            weightG,
-            timeH,
-            timeM,
-            watts,
-            filamentId,
-            piecesInBed,
-          })),
-          kwhRate,
-          laborHours,
-          hourlyRate,
-          extras,
-          paintedByHand,
-          paintCost,
-          marketplaceFee,
-          marginPercent,
-          quantity: 1,
-        }}
       />
       <NewProductModal
         open={newProductModalOpen}
