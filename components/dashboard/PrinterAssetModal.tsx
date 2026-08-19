@@ -5,8 +5,10 @@ import { Loader2, Paperclip, ExternalLink } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
-import { PRINTER_ASSET_STATUS_LABELS } from "@/lib/printerAssets";
+import { PRINTER_ASSET_STATUS_LABELS, PRINTER_MODEL_OPTIONS } from "@/lib/printerAssets";
 import type { PrinterAsset, PrinterAssetStatus, Branch } from "@/lib/types";
+
+const MODEL_OPTION_SET: readonly string[] = PRINTER_MODEL_OPTIONS;
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -24,7 +26,8 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
   const isEditing = !!asset;
 
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [model, setModel] = useState("");
+  const [modelOption, setModelOption] = useState<string>(PRINTER_MODEL_OPTIONS[0]);
+  const [customModel, setCustomModel] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
   const [branchId, setBranchId] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
@@ -41,7 +44,17 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
 
   useEffect(() => {
     if (!open) return;
-    setModel(asset?.model ?? "");
+    const currentModel = asset?.model ?? "";
+    if (currentModel && MODEL_OPTION_SET.includes(currentModel)) {
+      setModelOption(currentModel);
+      setCustomModel("");
+    } else if (currentModel) {
+      setModelOption("Outro");
+      setCustomModel(currentModel);
+    } else {
+      setModelOption(PRINTER_MODEL_OPTIONS[0]);
+      setCustomModel("");
+    }
     setSerialNumber(asset?.serial_number ?? "");
     setBranchId(asset?.branch_id ?? "");
     setPurchaseDate(asset?.purchase_date ?? "");
@@ -98,8 +111,15 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setError(null);
+
+    const model = modelOption === "Outro" ? customModel.trim() : modelOption;
+    if (!model) {
+      setError("Informe o modelo.");
+      return;
+    }
+
+    setSaving(true);
 
     const payload = {
       model,
@@ -163,13 +183,26 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
       <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto scrollbar-glass pr-1">
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Modelo</label>
-          <input
-            required
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
+          <select
+            value={modelOption}
+            onChange={(e) => setModelOption(e.target.value)}
             className="glass-input w-full"
-            placeholder="Ex: Bambu Lab X1C"
-          />
+          >
+            {PRINTER_MODEL_OPTIONS.map((m) => (
+              <option key={m} value={m} className="bg-bg-raised">
+                {m}
+              </option>
+            ))}
+          </select>
+          {modelOption === "Outro" && (
+            <input
+              required
+              value={customModel}
+              onChange={(e) => setCustomModel(e.target.value)}
+              className="glass-input mt-2 w-full"
+              placeholder="Digite o modelo"
+            />
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">

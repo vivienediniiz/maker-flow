@@ -1,5 +1,30 @@
 import type { PrinterAssetStatus } from "./types";
 
+// Modelos mais comuns no mercado — sugestoes pro select de modelo,
+// que sempre tem "Outro" pra digitacao manual de qualquer modelo fora da lista.
+export const PRINTER_MODEL_OPTIONS = [
+  "Bambu Lab A1 Mini",
+  "Bambu Lab A1",
+  "Bambu Lab P1P",
+  "Bambu Lab P1S",
+  "Bambu Lab X1",
+  "Bambu Lab X1 Carbon",
+  "Creality Ender 3 V3",
+  "Creality Ender 3 S1",
+  "Creality K1",
+  "Creality K1 Max",
+  "Creality CR-10",
+  "Elegoo Neptune 4",
+  "Elegoo Neptune 4 Pro",
+  "Anycubic Kobra 2",
+  "Anycubic Kobra 3",
+  "Prusa MK4",
+  "Prusa Mini+",
+  "Voolt3D V-Core",
+  "GTMax3D Core A2",
+  "Outro",
+] as const;
+
 export const PRINTER_ASSET_STATUS_LABELS: Record<PrinterAssetStatus, string> = {
   active: "Ativa",
   maintenance: "Em Manutenção",
