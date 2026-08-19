@@ -177,18 +177,18 @@ const FAQ = [
 export default function HomePage() {
   return (
     <div className="min-h-screen">
-      <header className="flex items-center justify-between px-6 py-6 md:px-12">
-        <AppLogo />
-        <nav className="flex items-center gap-6">
+      <header className="flex items-center justify-between px-4 py-6 sm:px-6 md:px-12">
+        <AppLogo iconClassName="h-8 w-8 sm:h-9 sm:w-9" textClassName="font-display text-base tracking-wide sm:text-lg" />
+        <nav className="flex items-center gap-3 sm:gap-6">
           <Link href="/pricing" className="hidden text-sm text-text-secondary hover:text-text-primary sm:block">
             Planos
           </Link>
-          <Link href="/login" className="text-sm text-text-secondary hover:text-text-primary">
+          <Link href="/login" className="whitespace-nowrap text-sm text-text-secondary hover:text-text-primary">
             Entrar
           </Link>
           <Link
             href="/signup"
-            className="rounded-pill border border-border-glassStrong px-4 py-2 text-sm font-medium hover:bg-white/5"
+            className="whitespace-nowrap rounded-pill border border-border-glassStrong px-3 py-1.5 text-xs font-medium hover:bg-white/5 sm:px-4 sm:py-2 sm:text-sm"
           >
             Criar conta
           </Link>
@@ -367,10 +367,10 @@ export default function HomePage() {
             <Link href="/terms" className="hover:text-text-secondary">
               Termos de Uso
             </Link>
-            <Link href="/dashboard/help" className="hover:text-text-secondary">
+            <Link href="/help" className="hover:text-text-secondary">
               Ajuda/FAQ
             </Link>
-            <Link href="/dashboard/feedback" className="hover:text-text-secondary">
+            <Link href="/feedback" className="hover:text-text-secondary">
               Sugestões e Reclamações
             </Link>
           </nav>

@@ -413,7 +413,9 @@ export type FeedbackCategory = "suggestion" | "complaint" | "rating";
 
 export interface FeedbackSubmission {
   id: string;
-  user_id: string;
+  user_id: string | null;
+  guest_name: string | null;
+  guest_email: string | null;
   category: FeedbackCategory;
   rating: number | null;
   message: string | null;

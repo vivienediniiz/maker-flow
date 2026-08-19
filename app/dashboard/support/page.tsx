@@ -52,7 +52,7 @@ export default function SupportPage() {
                   de ajuda com as dúvidas mais comuns.
                 </p>
               </div>
-              <Link href="/dashboard/help" className="block">
+              <Link href="/help" className="block">
                 <NeonButton className="w-full justify-center">
                   <HelpCircle size={16} /> Ver Central de Ajuda
                 </NeonButton>
@@ -74,7 +74,7 @@ export default function SupportPage() {
               Tem uma ideia, uma reclamação, ou quer avaliar o StudioMaker? Sua opinião nos ajuda a melhorar.
             </p>
           </div>
-          <Link href="/dashboard/feedback" className="block">
+          <Link href="/feedback" className="block">
             <NeonButton variant="outline" className="w-full justify-center">
               <Star size={16} /> Enviar Feedback
             </NeonButton>
