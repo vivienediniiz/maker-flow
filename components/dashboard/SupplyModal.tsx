@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
+import { SUPPLY_CATEGORY_SUGGESTIONS } from "@/lib/supplies";
 import type { Supply, SupplyUnit } from "@/lib/types";
+
+const CATEGORY_OPTION_SET: readonly string[] = SUPPLY_CATEGORY_SUGGESTIONS;
 
 const UNITS: { value: SupplyUnit; label: string }[] = [
   { value: "un", label: "unidade" },
@@ -26,7 +29,8 @@ export function SupplyModal({ open, onClose, supply, onSaved }: SupplyModalProps
   const isEditing = !!supply;
 
   const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
+  const [categoryOption, setCategoryOption] = useState("");
+  const [customCategory, setCustomCategory] = useState("");
   const [unit, setUnit] = useState<SupplyUnit>("un");
   const [costPerUnit, setCostPerUnit] = useState("");
   const [stockQuantity, setStockQuantity] = useState("");
@@ -37,7 +41,17 @@ export function SupplyModal({ open, onClose, supply, onSaved }: SupplyModalProps
   useEffect(() => {
     if (!open) return;
     setName(supply?.name ?? "");
-    setCategory(supply?.category ?? "");
+    const currentCategory = supply?.category ?? "";
+    if (currentCategory && CATEGORY_OPTION_SET.includes(currentCategory)) {
+      setCategoryOption(currentCategory);
+      setCustomCategory("");
+    } else if (currentCategory) {
+      setCategoryOption("Outro");
+      setCustomCategory(currentCategory);
+    } else {
+      setCategoryOption("");
+      setCustomCategory("");
+    }
     setUnit(supply?.unit ?? "un");
     setCostPerUnit(supply ? String(supply.cost_per_unit) : "");
     setStockQuantity(supply ? String(supply.stock_quantity) : "");
@@ -49,6 +63,8 @@ export function SupplyModal({ open, onClose, supply, onSaved }: SupplyModalProps
     e.preventDefault();
     setSaving(true);
     setError(null);
+
+    const category = categoryOption === "Outro" ? customCategory.trim() : categoryOption;
 
     const payload = {
       name,
@@ -118,12 +134,32 @@ export function SupplyModal({ open, onClose, supply, onSaved }: SupplyModalProps
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Categoria</label>
-            <input
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+            <select
+              value={categoryOption}
+              onChange={(e) => setCategoryOption(e.target.value)}
               className="glass-input w-full"
-              placeholder="Ex: Acabamento"
-            />
+            >
+              <option value="" className="bg-bg-raised">
+                Selecione...
+              </option>
+              {SUPPLY_CATEGORY_SUGGESTIONS.map((c) => (
+                <option key={c} value={c} className="bg-bg-raised">
+                  {c}
+                </option>
+              ))}
+              <option value="Outro" className="bg-bg-raised">
+                Outro
+              </option>
+            </select>
+            {categoryOption === "Outro" && (
+              <input
+                required
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value)}
+                className="glass-input mt-2 w-full"
+                placeholder="Digite a categoria"
+              />
+            )}
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Unidade de medida</label>

@@ -11,13 +11,18 @@ import { FilamentPickerDropdown } from "@/components/dashboard/FilamentPickerDro
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { buildPriceTierRanges } from "@/lib/priceTiers";
-import type { Client, Product, QuoteWithClient, QuotePaymentMethod, QuoteChannel, Coupon, QuoteDiscountType, Filament } from "@/lib/types";
+import type { Client, Product, QuoteWithClient, QuotePaymentMethod, QuoteChannel, Coupon, QuoteDiscountType, Filament, Supply } from "@/lib/types";
 import { QUOTE_CHANNEL_LABELS } from "@/lib/quotes";
 import { isCouponValid, computeCouponDiscount, getCouponStatusLabel } from "@/lib/coupons";
 
 interface UsedFilamentRow {
   filamentId: string;
   quantityG: string;
+}
+
+interface UsedSupplyRow {
+  supplyId: string;
+  quantity: string;
 }
 
 interface NewSaleModalProps {
@@ -91,6 +96,8 @@ export function NewSaleModal({
   const [productionDeadline, setProductionDeadline] = useState("");
   const [filaments, setFilaments] = useState<Filament[]>([]);
   const [usedFilaments, setUsedFilaments] = useState<UsedFilamentRow[]>([]);
+  const [supplies, setSupplies] = useState<Supply[]>([]);
+  const [usedSupplies, setUsedSupplies] = useState<UsedSupplyRow[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   // Reflete em tempo real qual cupom está com reserva de uso ativa (via
   // apply_coupon/release_coupon) — nunca fica fora de sincronia com o banco
@@ -107,7 +114,9 @@ export function NewSaleModal({
     loadProducts();
     loadCoupons();
     loadFilaments();
+    loadSupplies();
     setUsedFilaments([]);
+    setUsedSupplies([]);
     setClientModalOpen(false);
     setProductModalOpen(false);
     setShippingQuoteOpen(false);
@@ -190,6 +199,27 @@ export function NewSaleModal({
 
   function removeUsedFilamentRow(index: number) {
     setUsedFilaments((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function loadSupplies() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from("supplies").select("*").eq("user_id", user.id).order("name");
+    setSupplies((data as Supply[]) ?? []);
+  }
+
+  function addUsedSupplyRow() {
+    setUsedSupplies((prev) => [...prev, { supplyId: "", quantity: "" }]);
+  }
+
+  function updateUsedSupplyRow(index: number, patch: Partial<UsedSupplyRow>) {
+    setUsedSupplies((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  }
+
+  function removeUsedSupplyRow(index: number) {
+    setUsedSupplies((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function loadProducts() {
@@ -493,6 +523,25 @@ export function NewSaleModal({
           related_quote_id: createdQuoteId,
         });
       }
+
+      const supplyRows = usedSupplies.filter((r) => r.supplyId && Number(r.quantity) > 0);
+      for (const row of supplyRows) {
+        const s = supplies.find((x) => x.id === row.supplyId);
+        if (!s) continue;
+        const qty = Number(row.quantity);
+        await supabase
+          .from("supplies")
+          .update({ stock_quantity: s.stock_quantity - qty })
+          .eq("id", s.id);
+        await supabase.from("supply_movements").insert({
+          supply_id: s.id,
+          user_id: user.id,
+          movement_type: "sale_consumption",
+          quantity: -qty,
+          unit_cost_at_time: s.cost_per_unit,
+          related_quote_id: createdQuoteId,
+        });
+      }
     }
 
     onCreated?.(createdQuote ?? undefined);
@@ -711,6 +760,80 @@ export function NewSaleModal({
                       {overLimit && (
                         <p className="flex items-center gap-1 text-[11px] text-amber-400">
                           <AlertTriangle size={11} /> Quantidade maior que o disponível ({f!.remaining_weight_g}g) — a
+                          venda não será bloqueada, mas o estoque ficará negativo.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!isEditing && (
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="text-xs text-text-muted">Insumo(s) Utilizados</label>
+              <button
+                type="button"
+                onClick={addUsedSupplyRow}
+                className="flex items-center gap-1 text-[11px] text-neon-pink hover:underline"
+              >
+                <Plus size={11} /> Adicionar insumo
+              </button>
+            </div>
+
+            {usedSupplies.length === 0 ? (
+              <p className="text-[11px] text-text-muted">
+                {supplies.length === 0
+                  ? "Nenhum insumo cadastrado — cadastre em Cadastros > Insumos pra vincular a uma venda."
+                  : "Nenhum insumo vinculado a esta venda (opcional)."}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {usedSupplies.map((row, i) => {
+                  const s = supplies.find((x) => x.id === row.supplyId);
+                  const qty = Number(row.quantity) || 0;
+                  const overLimit = !!s && qty > s.stock_quantity;
+                  return (
+                    <div key={i} className="glass-card space-y-1.5 p-3">
+                      <div className="flex gap-2">
+                        <select
+                          value={row.supplyId}
+                          onChange={(e) => updateUsedSupplyRow(i, { supplyId: e.target.value })}
+                          className="glass-input flex-1"
+                        >
+                          <option value="" className="bg-bg-raised">
+                            {supplies.length === 0 ? "Nenhum insumo cadastrado" : "Selecione..."}
+                          </option>
+                          {supplies.map((sup) => (
+                            <option key={sup.id} value={sup.id} className="bg-bg-raised">
+                              {sup.name} ({sup.stock_quantity}{sup.unit} disponíveis)
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={row.quantity}
+                          onChange={(e) => updateUsedSupplyRow(i, { quantity: e.target.value })}
+                          placeholder={`Qtd${s ? ` (${s.unit})` : ""}`}
+                          className="glass-input w-24"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeUsedSupplyRow(i)}
+                          className="shrink-0 text-text-muted hover:text-red-400"
+                          aria-label="Remover insumo"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      {overLimit && (
+                        <p className="flex items-center gap-1 text-[11px] text-amber-400">
+                          <AlertTriangle size={11} /> Quantidade maior que o disponível ({s!.stock_quantity}{s!.unit}) — a
                           venda não será bloqueada, mas o estoque ficará negativo.
                         </p>
                       )}

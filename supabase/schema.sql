@@ -202,6 +202,56 @@ create policy "settings_crud_own" on public.settings
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- ---------------------------------------------------------
+-- 7b. supplies — insumos de acabamento/producao (cola, fita, embalagem,
+-- resina de acabamento, lixa, tinta etc). Aplicada originalmente direto na
+-- live DB via MCP (fora deste arquivo) — definicao abaixo documentada
+-- retroativamente pra parar de divergir do banco real.
+-- ---------------------------------------------------------
+create table if not exists public.supplies (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  category text,
+  unit text not null check (unit in ('un','g','ml','kg','l')),
+  cost_per_unit numeric not null default 0,
+  stock_quantity numeric not null default 0,
+  low_stock_threshold numeric,
+  created_at timestamptz not null default now()
+);
+
+alter table public.supplies enable row level security;
+
+create policy "supplies_crud_own" on public.supplies
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ---------------------------------------------------------
+-- 7c. supply_movements — historico de entrada/saida de estoque de insumo,
+-- mesmo padrao de filament_movements. unit_cost_at_time guarda o custo por
+-- unidade vigente no momento do movimento, pra manter o historico de preco
+-- mesmo depois que supplies.cost_per_unit for sobrescrito por uma compra
+-- mais recente ("Registrar Compra" sempre sobrescreve, nunca faz media).
+-- ---------------------------------------------------------
+create table if not exists public.supply_movements (
+  id uuid primary key default gen_random_uuid(),
+  supply_id uuid not null references public.supplies(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  movement_type text not null check (movement_type in ('purchase', 'sale_consumption', 'manual_adjustment')),
+  quantity numeric not null,
+  unit_cost_at_time numeric,
+  related_quote_id uuid references public.quotes(id) on delete set null,
+  note text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.supply_movements enable row level security;
+
+create policy "supply_movements_crud_own" on public.supply_movements
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create index if not exists supply_movements_supply_id_idx on public.supply_movements(supply_id);
+create index if not exists supply_movements_user_id_created_at_idx on public.supply_movements(user_id, created_at desc);
+
+-- ---------------------------------------------------------
 -- Auto-provision profile + settings row on signup
 -- ---------------------------------------------------------
 create or replace function public.handle_new_user()

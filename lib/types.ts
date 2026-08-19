@@ -219,6 +219,25 @@ export interface Supply {
   created_at: string;
 }
 
+export type SupplyMovementType = "purchase" | "sale_consumption" | "manual_adjustment";
+
+export interface SupplyMovement {
+  id: string;
+  supply_id: string;
+  user_id: string;
+  movement_type: SupplyMovementType;
+  quantity: number;
+  unit_cost_at_time: number | null;
+  related_quote_id: string | null;
+  note: string | null;
+  created_at: string;
+}
+
+export interface SupplyMovementWithSupply extends SupplyMovement {
+  supplies: { name: string; category: string | null; unit: SupplyUnit } | null;
+  quotes: { order_number: number } | null;
+}
+
 export interface ExtraPurchase {
   id: string;
   user_id: string;

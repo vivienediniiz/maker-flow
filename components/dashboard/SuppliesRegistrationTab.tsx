@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { SupplyModal } from "@/components/dashboard/SupplyModal";
+import { RegisterSupplyPurchaseModal } from "@/components/dashboard/RegisterSupplyPurchaseModal";
+import { SupplyMovementsHistory } from "@/components/dashboard/SupplyMovementsHistory";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import type { Supply } from "@/lib/types";
@@ -15,6 +17,9 @@ export function SuppliesRegistrationTab() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSupply, setEditingSupply] = useState<Supply | null>(null);
+  const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
+  const [purchaseTargetId, setPurchaseTargetId] = useState<string | null>(null);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
   useEffect(() => {
     loadSupplies();
@@ -61,13 +66,28 @@ export function SuppliesRegistrationTab() {
     });
   }
 
+  function openPurchase(supplyId?: string) {
+    setPurchaseTargetId(supplyId ?? null);
+    setPurchaseModalOpen(true);
+  }
+
+  function handlePurchased(updatedSupply: Supply) {
+    setSupplies((prev) => prev.map((s) => (s.id === updatedSupply.id ? updatedSupply : s)));
+    setHistoryRefreshKey((k) => k + 1);
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-display text-lg">Insumos</h3>
-        <NeonButton size="sm" onClick={openCreate}>
-          <Plus size={14} /> Novo Insumo
-        </NeonButton>
+        <div className="flex items-center gap-2">
+          <NeonButton variant="outline" size="sm" onClick={() => openPurchase()} disabled={supplies.length === 0}>
+            <ShoppingCart size={14} /> Registrar Compra
+          </NeonButton>
+          <NeonButton size="sm" onClick={openCreate}>
+            <Plus size={14} /> Novo Insumo
+          </NeonButton>
+        </div>
       </div>
 
       {loading ? (
@@ -88,7 +108,7 @@ export function SuppliesRegistrationTab() {
                   <th className="px-6 py-4 font-medium">Categoria</th>
                   <th className="px-6 py-4 font-medium">Custo/unidade</th>
                   <th className="px-6 py-4 font-medium">Estoque</th>
-                  <th className="w-20 px-4 py-4" />
+                  <th className="w-24 px-4 py-4" />
                 </tr>
               </thead>
               <tbody>
@@ -108,6 +128,9 @@ export function SuppliesRegistrationTab() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
+                          <button onClick={() => openPurchase(s.id)} className="text-text-muted hover:text-text-primary" aria-label="Registrar compra">
+                            <ShoppingCart size={14} />
+                          </button>
                           <button onClick={() => openEdit(s)} className="text-text-muted hover:text-text-primary" aria-label="Editar insumo">
                             <Pencil size={14} />
                           </button>
@@ -125,7 +148,16 @@ export function SuppliesRegistrationTab() {
         </GlassCard>
       )}
 
+      <SupplyMovementsHistory supplies={supplies} refreshKey={historyRefreshKey} />
+
       <SupplyModal open={modalOpen} onClose={() => setModalOpen(false)} supply={editingSupply} onSaved={handleSaved} />
+      <RegisterSupplyPurchaseModal
+        open={purchaseModalOpen}
+        onClose={() => setPurchaseModalOpen(false)}
+        supplies={supplies}
+        preselectedSupplyId={purchaseTargetId}
+        onPurchased={handlePurchased}
+      />
     </div>
   );
 }
