@@ -33,7 +33,7 @@ const PROVIDERS: { id: OAuthProvider; label: string; icon: ReactNode }[] = [
   { id: "google", label: "Continuar com Google", icon: <GoogleIcon /> },
 ];
 
-export function SocialAuthButtons() {
+export function SocialAuthButtons({ refCode }: { refCode?: string } = {}) {
   const supabase = createClient();
   const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,9 +42,15 @@ export function SocialAuthButtons() {
     setError(null);
     setLoadingProvider(provider);
 
+    // `ref` viaja junto no redirectTo pro callback conseguir resolver a
+    // indicação depois do round-trip pelo provedor OAuth (sessionStorage não
+    // é confiável aqui pq alguns provedores abrem em nova aba/popup).
+    const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
+    if (refCode) callbackUrl.searchParams.set("ref", refCode);
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: callbackUrl.toString() },
     });
 
     if (error) {

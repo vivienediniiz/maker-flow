@@ -1,15 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { PasswordInput } from "@/components/ui/PasswordInput";
+import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 
 export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupForm />
+    </Suspense>
+  );
+}
+
+function SignupForm() {
   const router = useRouter();
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const refCode = searchParams.get("ref") ?? undefined;
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,7 +35,7 @@ export default function SignupPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: { data: { full_name: fullName, ref_code: refCode ?? null } },
     });
     setLoading(false);
     if (error) {
@@ -56,6 +67,14 @@ export default function SignupPage() {
       <div>
         <h1 className="font-display text-2xl">Crie sua conta</h1>
         <p className="mt-1 text-sm text-text-secondary">Comece grátis, sem cartão de crédito.</p>
+      </div>
+
+      <SocialAuthButtons refCode={refCode} />
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border-glass" />
+        <span className="text-xs text-text-muted">ou com e-mail</span>
+        <div className="h-px flex-1 bg-border-glass" />
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

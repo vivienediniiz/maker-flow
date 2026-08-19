@@ -31,6 +31,22 @@ export interface Profile {
   website: string | null;
   bio: string | null;
   avatar_url: string | null;
+  /** Código único do usuário como afiliado — gerado sob demanda ao abrir o painel de Afiliados pela primeira vez. */
+  affiliate_code: string | null;
+  /** Quem indicou este usuário (id de outro profile), resolvido a partir de ?ref= no cadastro. */
+  referred_by: string | null;
+  /** Carimbo da primeira cobrança de assinatura confirmada — usado só pra não gerar comissão de afiliado de novo em renovações. */
+  first_payment_confirmed_at: string | null;
+}
+
+export interface AffiliateCommission {
+  id: string;
+  affiliate_user_id: string;
+  referred_user_id: string;
+  plan_id: string;
+  amount: number;
+  status: "pending" | "paid";
+  created_at: string;
 }
 
 export type PrinterStatus = "idle" | "printing" | "paused" | "error" | "offline";

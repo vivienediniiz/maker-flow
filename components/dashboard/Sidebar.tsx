@@ -23,6 +23,7 @@ import {
   LineChart,
   CreditCard,
   Headset,
+  Gift,
 } from "lucide-react";
 
 const NAV = [
@@ -39,6 +40,7 @@ const NAV = [
   { href: "/dashboard/registrations", label: "Cadastros", icon: FolderCog },
   { href: "/dashboard/integrations", label: "Integrações", icon: Plug },
   { href: "/dashboard/subscription", label: "Assinatura", icon: CreditCard },
+  { href: "/dashboard/affiliates", label: "Afiliados", icon: Gift },
   { href: "/dashboard/support", label: "Suporte", icon: Headset },
   { href: "/dashboard/settings", label: "Configurações", icon: Settings },
 ];

@@ -1,12 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { decodeExternalReference, getPlan } from "@/lib/plans";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { decodeExternalReference, getPlan, type PlanId } from "@/lib/plans";
+import { AFFILIATE_COMMISSION_RATE } from "@/lib/affiliates";
 
 function adminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
+}
+
+/**
+ * Comissão de afiliado só na PRIMEIRA cobrança confirmada de cada usuário —
+ * nunca em renovações. `first_payment_confirmed_at` é o carimbo que garante
+ * isso: só entra aqui uma vez por usuário, então falha aqui nunca deve
+ * derrubar o webhook (a assinatura em si já foi confirmada antes de chamar
+ * isso), só loga e segue.
+ */
+async function maybeRecordAffiliateCommission(supabase: SupabaseClient, userId: string, planId: PlanId) {
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("first_payment_confirmed_at, referred_by")
+      .eq("id", userId)
+      .single();
+
+    if (!profile || profile.first_payment_confirmed_at) return;
+
+    await supabase.from("profiles").update({ first_payment_confirmed_at: new Date().toISOString() }).eq("id", userId);
+
+    if (!profile.referred_by) return;
+
+    const amount = getPlan(planId).price * AFFILIATE_COMMISSION_RATE;
+    const { error } = await supabase.from("affiliate_commissions").insert({
+      affiliate_user_id: profile.referred_by,
+      referred_user_id: userId,
+      plan_id: planId,
+      amount,
+      status: "pending",
+    });
+    if (error) console.error("[mercadopago webhook] falha ao registrar comissão de afiliado", error);
+  } catch (err) {
+    console.error("[mercadopago webhook] erro ao processar comissão de afiliado", err);
+  }
 }
 
 const MP_STATUS_TO_SUBSCRIPTION_STATUS: Record<string, "active" | "paused" | "cancelled" | "inactive"> = {
@@ -78,6 +114,10 @@ export async function POST(req: NextRequest) {
         console.error("[mercadopago webhook] falha ao atualizar profile (preapproval)", error);
         return NextResponse.json({ error: "Falha ao sincronizar assinatura" }, { status: 500 });
       }
+
+      if (isEffectivelyActive) {
+        await maybeRecordAffiliateCommission(supabase, userId, planId);
+      }
     }
 
     // --- Fluxo 2: pagamento avulso via Pix (renovação manual) ---
@@ -122,6 +162,8 @@ export async function POST(req: NextRequest) {
           console.error("[mercadopago webhook] falha ao atualizar profile (pix)", error);
           return NextResponse.json({ error: "Falha ao sincronizar pagamento Pix" }, { status: 500 });
         }
+
+        await maybeRecordAffiliateCommission(supabase, userId, planId);
       }
     }
 
