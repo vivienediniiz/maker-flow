@@ -10,8 +10,9 @@ import { ShippingQuoteWidget, type ShippingQuoteSelection } from "@/components/d
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { buildPriceTierRanges } from "@/lib/priceTiers";
-import type { Client, Product, QuoteWithClient, QuotePaymentMethod, QuoteChannel } from "@/lib/types";
+import type { Client, Product, QuoteWithClient, QuotePaymentMethod, QuoteChannel, Coupon, QuoteDiscountType } from "@/lib/types";
 import { QUOTE_CHANNEL_LABELS } from "@/lib/quotes";
+import { isCouponValid, computeCouponDiscount, getCouponStatusLabel } from "@/lib/coupons";
 
 interface NewSaleModalProps {
   open: boolean;
@@ -76,8 +77,17 @@ export function NewSaleModal({
   const [shippingValue, setShippingValue] = useState<number | null>(null);
   const [shippingSummary, setShippingSummary] = useState<string | null>(null);
   const [shippingDestinationCep, setShippingDestinationCep] = useState<string | null>(null);
+  const [discountType, setDiscountType] = useState<QuoteDiscountType>("fixed");
   const [discount, setDiscount] = useState("0");
   const [discountWarning, setDiscountWarning] = useState<string | null>(null);
+  const [discountPercent, setDiscountPercent] = useState("0");
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  // Reflete em tempo real qual cupom está com reserva de uso ativa (via
+  // apply_coupon/release_coupon) — nunca fica fora de sincronia com o banco
+  // porque toda troca passa por switchCouponReservation antes de mudar aqui.
+  const [selectedCouponId, setSelectedCouponId] = useState("");
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -85,10 +95,12 @@ export function NewSaleModal({
     if (!open) return;
     loadClients();
     loadProducts();
+    loadCoupons();
     setClientModalOpen(false);
     setProductModalOpen(false);
     setShippingQuoteOpen(false);
     setError(null);
+    setCouponError(null);
 
     if (quote) {
       setSelectedClientId(quote.client_id ?? "");
@@ -108,8 +120,11 @@ export function NewSaleModal({
       setShippingValue(quote.shipping_cost ?? null);
       setShippingSummary(null);
       setShippingDestinationCep(quote.destination_cep ?? null);
+      setDiscountType(quote.discount_type ?? "fixed");
       setDiscount(quote.discount_amount != null ? String(quote.discount_amount.toFixed(2)) : "0");
       setDiscountWarning(null);
+      setDiscountPercent(quote.discount_percent != null ? String(quote.discount_percent) : "0");
+      setSelectedCouponId(quote.coupon_id ?? "");
     } else {
       setSelectedClientId("");
       setSelectedProductId("");
@@ -125,10 +140,22 @@ export function NewSaleModal({
       setShippingValue(null);
       setShippingSummary(null);
       setShippingDestinationCep(null);
+      setDiscountType("fixed");
       setDiscount("0");
       setDiscountWarning(null);
+      setDiscountPercent("0");
+      setSelectedCouponId("");
     }
   }, [open, quote, initialProjectName, initialFinalPrice]);
+
+  async function loadCoupons() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from("coupons").select("*").eq("user_id", user.id).order("code");
+    setCoupons((data as Coupon[]) ?? []);
+  }
 
   async function loadProducts() {
     const {
@@ -207,6 +234,67 @@ export function NewSaleModal({
     setShippingDestinationCep(sel.destinationCep);
   }
 
+  /**
+   * Troca a reserva de uso ativa (via RPCs apply_coupon/release_coupon) do
+   * cupom hoje selecionado pra `nextCouponId`. Libera o antigo antes de
+   * aplicar o novo, então `selectedCouponId` nunca fica fora de sincronia
+   * com a reserva de verdade no banco — inclusive o cupom já salvo numa
+   * venda em edição, que conta como "reservado" desde a abertura do modal.
+   */
+  async function switchCouponReservation(nextCouponId: string | null, orderValue: number) {
+    const current = selectedCouponId || null;
+    if (nextCouponId === current) return;
+    setCouponError(null);
+    setCouponBusy(true);
+
+    if (current) {
+      await supabase.rpc("release_coupon", { p_coupon_id: current });
+    }
+
+    if (nextCouponId) {
+      const { data, error: rpcError } = await supabase.rpc("apply_coupon", {
+        p_coupon_id: nextCouponId,
+        p_order_value: orderValue,
+      });
+      if (rpcError) {
+        setCouponError("Cupom inválido, expirado, esgotado ou abaixo do pedido mínimo.");
+        setSelectedCouponId("");
+        loadCoupons();
+        setCouponBusy(false);
+        return;
+      }
+      setCoupons((prev) => prev.map((c) => (c.id === nextCouponId ? (data as Coupon) : c)));
+    }
+
+    setSelectedCouponId(nextCouponId ?? "");
+    setCouponBusy(false);
+  }
+
+  function handleDiscountTypeChange(nextType: QuoteDiscountType) {
+    if (discountType === "coupon" && nextType !== "coupon") {
+      switchCouponReservation(null, productValue);
+    }
+    setDiscountType(nextType);
+    setDiscount("0");
+    setDiscountWarning(null);
+    setDiscountPercent("0");
+  }
+
+  /**
+   * Fecha o modal desfazendo qualquer reserva de cupom feita nesta sessão
+   * que ainda não foi salva — restaura pro cupom que já estava salvo na
+   * venda (ou nenhum, em modo criação), pra não deixar reserva "presa".
+   */
+  async function handleClose() {
+    const initialCouponId = quote?.coupon_id ?? null;
+    const current = selectedCouponId || null;
+    if (current !== initialCouponId) {
+      if (current) await supabase.rpc("release_coupon", { p_coupon_id: current });
+      if (initialCouponId) await supabase.rpc("apply_coupon", { p_coupon_id: initialCouponId, p_order_value: quote?.final_price ?? 0 });
+    }
+    onClose();
+  }
+
   const selectedProduct = products.find((p) => p.id === selectedProductId) ?? null;
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
   const showUnitPricing = !!selectedProduct;
@@ -218,7 +306,19 @@ export function NewSaleModal({
     : Number(finalPrice) || 0;
   const shippingAmount = shippingValue ?? 0;
   const maxDiscount = productValue + shippingAmount;
-  const discountAmount = Math.min(Number(discount) || 0, maxDiscount);
+  const selectedCoupon = coupons.find((c) => c.id === selectedCouponId) ?? null;
+  // No dropdown só entram cupons válidos agora, mas o que já está
+  // selecionado continua visível mesmo se tiver ficado inválido nesse meio
+  // tempo (ex: esgotou depois que a venda foi criada).
+  const availableCoupons = coupons.filter((c) => isCouponValid(c, productValue) || c.id === selectedCouponId);
+  const discountAmount =
+    discountType === "fixed"
+      ? Math.min(Number(discount) || 0, maxDiscount)
+      : discountType === "percentage"
+        ? (productValue * Math.min(Math.max(Number(discountPercent) || 0, 0), 100)) / 100
+        : selectedCoupon
+          ? computeCouponDiscount(selectedCoupon, productValue)
+          : 0;
   const computedTotal = productValue + shippingAmount - discountAmount;
 
   function handleDiscountChange(raw: string) {
@@ -291,6 +391,10 @@ export function NewSaleModal({
       unit_price: showUnitPricing ? Number(unitPrice) : null,
       price_tier_label: appliedTierLabel,
       discount_amount: discountAmount || null,
+      discount_type: discountType,
+      discount_percent: discountType === "percentage" ? Number(discountPercent) || null : null,
+      coupon_id: discountType === "coupon" ? selectedCoupon?.id ?? null : null,
+      coupon_code: discountType === "coupon" ? selectedCoupon?.code ?? null : null,
     };
 
     const { error: quoteError } = isEditing
@@ -319,7 +423,7 @@ export function NewSaleModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? "Editar Venda" : "Nova Venda Manual"}>
+    <Modal open={open} onClose={handleClose} title={isEditing ? "Editar Venda" : "Nova Venda Manual"}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Produto</label>
@@ -481,17 +585,78 @@ export function NewSaleModal({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs text-text-muted">Desconto (R$)</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={discount}
-            onChange={(e) => handleDiscountChange(e.target.value)}
-            className="glass-input w-full"
-            placeholder="0,00"
-          />
-          {discountWarning && <p className="mt-1 text-[11px] text-amber-400">{discountWarning}</p>}
+          <label className="mb-1.5 block text-xs text-text-muted">Desconto</label>
+          <div className="glass-card mb-2 flex gap-1 p-1">
+            {(
+              [
+                { value: "fixed", label: "Fixo" },
+                { value: "percentage", label: "Percentual" },
+                { value: "coupon", label: "Cupom" },
+              ] as { value: QuoteDiscountType; label: string }[]
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => handleDiscountTypeChange(opt.value)}
+                className={cn(
+                  "flex-1 rounded-pill py-2 text-xs font-medium transition-colors",
+                  discountType === opt.value ? "bg-neon-gradient text-white" : "text-text-secondary hover:text-text-primary"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {discountType === "fixed" && (
+            <>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={discount}
+                onChange={(e) => handleDiscountChange(e.target.value)}
+                className="glass-input w-full"
+                placeholder="0,00"
+              />
+              {discountWarning && <p className="mt-1 text-[11px] text-amber-400">{discountWarning}</p>}
+            </>
+          )}
+
+          {discountType === "percentage" && (
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              value={discountPercent}
+              onChange={(e) => setDiscountPercent(e.target.value)}
+              className="glass-input w-full"
+              placeholder="0,0%"
+            />
+          )}
+
+          {discountType === "coupon" && (
+            <>
+              <select
+                value={selectedCouponId}
+                disabled={couponBusy}
+                onChange={(e) => switchCouponReservation(e.target.value || null, productValue)}
+                className={cn("glass-input w-full", couponBusy && "cursor-not-allowed opacity-60")}
+              >
+                <option value="" className="bg-bg-raised">
+                  {availableCoupons.length === 0 ? "Nenhum cupom válido pra este pedido" : "Selecione..."}
+                </option>
+                {availableCoupons.map((c) => (
+                  <option key={c.id} value={c.id} className="bg-bg-raised">
+                    {c.code} · {c.discount_type === "percentage" ? `${c.discount_value}%` : formatBRL(c.discount_value)}
+                    {c.id === selectedCouponId && getCouponStatusLabel(c) !== "Ativo" ? ` (${getCouponStatusLabel(c)})` : ""}
+                  </option>
+                ))}
+              </select>
+              {couponError && <p className="mt-1 text-[11px] text-red-400">{couponError}</p>}
+            </>
+          )}
         </div>
 
         <div>
@@ -565,7 +730,7 @@ export function NewSaleModal({
         {error && <p className="text-xs text-red-400">{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">
-          <NeonButton type="button" variant="ghost" onClick={onClose}>
+          <NeonButton type="button" variant="ghost" onClick={handleClose}>
             Cancelar
           </NeonButton>
           <NeonButton type="submit" disabled={saving}>

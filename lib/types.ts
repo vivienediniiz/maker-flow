@@ -106,7 +106,13 @@ export interface Quote {
   unit_price: number | null;
   price_tier_label: string | null;
   discount_amount: number | null;
+  coupon_id: string | null;
+  coupon_code: string | null;
+  discount_type: QuoteDiscountType | null;
+  discount_percent: number | null;
 }
+
+export type QuoteDiscountType = "fixed" | "percentage" | "coupon";
 
 export interface QuoteWithClient extends Quote {
   clients: { name: string; phone: string | null; email: string | null; address: string | null } | null;
@@ -283,6 +289,23 @@ export const QUOTE_CHANNEL_LABELS: Record<string, string> = {
   shopee: "Shopee",
   mercado_livre: "Mercado Livre",
 };
+
+export type CouponDiscountType = "percentage" | "fixed";
+
+export interface Coupon {
+  id: string;
+  user_id: string;
+  code: string;
+  campaign_name: string | null;
+  discount_type: CouponDiscountType;
+  discount_value: number;
+  min_order_value: number | null;
+  usage_limit: number | null;
+  times_used: number;
+  valid_until: string | null; // ISO date
+  active: boolean;
+  created_at: string;
+}
 
 export type IntegrationPlatform = "mercado_pago" | "mercado_livre" | "shopee" | "tiktok_shop" | "melhor_envio";
 export type IntegrationStatus = "connected" | "disconnected" | "error";

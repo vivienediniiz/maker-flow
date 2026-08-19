@@ -8,11 +8,12 @@ import { SuppliesRegistrationTab } from "@/components/dashboard/SuppliesRegistra
 import { ExtraPurchasesRegistrationTab } from "@/components/dashboard/ExtraPurchasesRegistrationTab";
 import { BranchesRegistrationTab } from "@/components/dashboard/BranchesRegistrationTab";
 import { CategoriesRegistrationTab } from "@/components/dashboard/CategoriesRegistrationTab";
+import { CouponsRegistrationTab } from "@/components/dashboard/CouponsRegistrationTab";
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { cn } from "@/lib/utils";
 
-const TABS = ["Impressoras", "Filamentos", "Insumos", "Compras Extras", "Filiais", "Categorias"] as const;
+const TABS = ["Impressoras", "Filamentos", "Insumos", "Compras Extras", "Cupons", "Filiais", "Categorias"] as const;
 
 export default function RegistrationsPage() {
   const { paid } = useSubscription();
@@ -55,6 +56,15 @@ export default function RegistrationsPage() {
             <UpgradeGate
               title="Compras Extras é recurso pago"
               description="Registre despesas avulsas (manutenção, ferramentas, etc.) — disponível nos planos Mensal e Trimestral."
+            />
+          ))}
+        {tab === "Cupons" &&
+          (paid ? (
+            <CouponsRegistrationTab />
+          ) : (
+            <UpgradeGate
+              title="Cupons é recurso pago"
+              description="Crie cupons de desconto e aplique nas vendas manuais — disponível nos planos Mensal e Trimestral."
             />
           ))}
         {tab === "Filiais" && <BranchesRegistrationTab />}
