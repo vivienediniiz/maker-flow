@@ -9,6 +9,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { AppLogo } from "@/components/ui/AppLogo";
 
 const FEATURES = [
   {
@@ -47,11 +48,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       <header className="flex items-center justify-between px-6 py-6 md:px-12">
-        <div className="flex items-center gap-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.png" alt="" className="h-9 w-9" />
-          <span className="font-display text-lg tracking-wide">StudioMaker</span>
-        </div>
+        <AppLogo />
         <nav className="flex items-center gap-6">
           <Link href="/pricing" className="hidden text-sm text-text-secondary hover:text-text-primary sm:block">
             Planos

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { planDisplayLabel } from "@/lib/plans";
+import { AppLogo } from "@/components/ui/AppLogo";
 import { useMobileSidebar } from "./MobileSidebarContext";
 import type { SubscriptionTier } from "@/lib/types";
 import {
@@ -64,11 +65,7 @@ export function Sidebar({ studioName, avatarUrl, tier }: SidebarProps) {
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-      <div className="flex items-center gap-2 px-6 py-6">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-icon.png" alt="" className="h-9 w-9" />
-        <span className="font-display text-lg tracking-wide">StudioMaker</span>
-      </div>
+      <AppLogo wrapperClassName="flex items-center gap-2 px-6 py-6" />
 
       <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-glass px-3">
         {NAV.map(({ href, label, icon: Icon }) => {

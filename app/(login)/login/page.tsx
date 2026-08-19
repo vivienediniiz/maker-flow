@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { AppLogo } from "@/components/ui/AppLogo";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
@@ -46,11 +47,10 @@ export default function LoginPage() {
       <Starfield />
 
       {/* Logo fixo no canto superior esquerdo */}
-      <div className="absolute left-6 top-6 z-20 flex items-center gap-2 sm:left-10 sm:top-8">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-icon.png" alt="" className="h-9 w-9" />
-        <span className="font-display text-lg tracking-wide text-text-primary">StudioMaker</span>
-      </div>
+      <AppLogo
+        wrapperClassName="absolute left-6 top-6 z-20 flex items-center gap-2 sm:left-10 sm:top-8"
+        textClassName="font-display text-lg tracking-wide text-text-primary"
+      />
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-2">
         {/* Lado esquerdo: headline com efeito de digitação */}

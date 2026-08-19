@@ -9,6 +9,7 @@ import { PlanCard } from "@/components/marketing/PlanCard";
 import { PlanComparisonTable } from "@/components/marketing/PlanComparisonTable";
 import { PixCheckoutModal } from "@/components/marketing/PixCheckoutModal";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { AppLogo } from "@/components/ui/AppLogo";
 import { createClient } from "@/lib/supabase/client";
 
 export default function PricingPage() {
@@ -80,11 +81,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen">
       <header className="flex items-center justify-between px-6 py-6 md:px-12">
-        <Link href={loggedIn ? "/dashboard" : "/home"} className="flex items-center gap-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.png" alt="" className="h-9 w-9" />
-          <span className="font-display text-lg tracking-wide">StudioMaker</span>
-        </Link>
+        <AppLogo />
         {loggedIn ? (
           <Link
             href="/dashboard"

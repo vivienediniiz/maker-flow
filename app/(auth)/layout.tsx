@@ -1,12 +1,10 @@
+import { AppLogo } from "@/components/ui/AppLogo";
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       <div className="flex flex-col justify-center px-8 py-12 sm:px-16">
-        <div className="mb-10 flex items-center gap-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.png" alt="" className="h-9 w-9" />
-          <span className="font-display text-lg tracking-wide">StudioMaker</span>
-        </div>
+        <AppLogo wrapperClassName="mb-10 flex items-center gap-2" />
         <div className="mx-auto w-full max-w-sm">{children}</div>
       </div>
       <div className="relative hidden overflow-hidden bg-bg-raised lg:block">
