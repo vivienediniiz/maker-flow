@@ -25,3 +25,33 @@ export const FILAMENT_MOVEMENT_TYPE_LABELS: Record<FilamentMovementType, string>
   sale_consumption: "Consumo em venda",
   manual_adjustment: "Ajuste manual",
 };
+
+export const FILAMENT_MATERIAL_OPTIONS = [
+  "PLA",
+  "PLA+",
+  "PETG",
+  "PETG-CF",
+  "ABS",
+  "ASA",
+  "TPU",
+  "Nylon",
+  "Resina",
+  "Outro",
+] as const;
+
+// Marcas mais comuns no mercado nacional de impressao 3D — sugestoes pro
+// combobox de marca, que continua editavel pra qualquer outra marca.
+export const FILAMENT_BRAND_SUGGESTIONS = [
+  "Voolt3D",
+  "3DFila",
+  "GTMax3D",
+  "Cliever",
+  "Print3D",
+  "Fillamentum",
+  "eSun",
+  "Sunlu",
+  "3D Lab",
+  "Way Filament",
+  "Race3D",
+  "Creality",
+] as const;

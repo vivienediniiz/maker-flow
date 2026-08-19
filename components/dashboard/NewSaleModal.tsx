@@ -7,6 +7,7 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { NewClientModal } from "@/components/dashboard/NewClientModal";
 import { ShippingQuoteWidget, type ShippingQuoteSelection } from "@/components/dashboard/ShippingQuoteWidget";
+import { FilamentPickerDropdown } from "@/components/dashboard/FilamentPickerDropdown";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { buildPriceTierRanges } from "@/lib/priceTiers";
@@ -675,20 +676,13 @@ export function NewSaleModal({
                   return (
                     <div key={i} className="glass-card space-y-1.5 p-3">
                       <div className="flex gap-2">
-                        <select
-                          value={row.filamentId}
-                          onChange={(e) => updateUsedFilamentRow(i, { filamentId: e.target.value })}
-                          className="glass-input flex-1"
-                        >
-                          <option value="" className="bg-bg-raised">
-                            Selecione...
-                          </option>
-                          {filaments.map((fl) => (
-                            <option key={fl.id} value={fl.id} className="bg-bg-raised">
-                              {fl.material} — {fl.brand} ({fl.remaining_weight_g}g disponíveis)
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex-1">
+                          <FilamentPickerDropdown
+                            filaments={filaments}
+                            value={row.filamentId}
+                            onChange={(id) => updateUsedFilamentRow(i, { filamentId: id })}
+                          />
+                        </div>
                         <input
                           type="number"
                           step="1"

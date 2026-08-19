@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
+import { FILAMENT_MATERIAL_OPTIONS, FILAMENT_BRAND_SUGGESTIONS } from "@/lib/filaments";
 import type { Filament } from "@/lib/types";
+
+const MATERIAL_OPTION_SET: readonly string[] = FILAMENT_MATERIAL_OPTIONS;
 
 interface FilamentModalProps {
   open: boolean;
@@ -16,9 +19,11 @@ interface FilamentModalProps {
 export function FilamentModal({ open, onClose, filament, onSaved }: FilamentModalProps) {
   const supabase = createClient();
   const isEditing = !!filament;
+  const brandListId = useId();
 
   const [brand, setBrand] = useState("");
-  const [material, setMaterial] = useState("");
+  const [materialOption, setMaterialOption] = useState<string>(FILAMENT_MATERIAL_OPTIONS[0]);
+  const [customMaterial, setCustomMaterial] = useState("");
   const [colorHex, setColorHex] = useState("#FFFFFF");
   const [pricePerKg, setPricePerKg] = useState("");
   const [weightTotalG, setWeightTotalG] = useState("1000");
@@ -30,7 +35,17 @@ export function FilamentModal({ open, onClose, filament, onSaved }: FilamentModa
   useEffect(() => {
     if (!open) return;
     setBrand(filament?.brand ?? "");
-    setMaterial(filament?.material ?? "");
+    const currentMaterial = filament?.material ?? "";
+    if (currentMaterial && MATERIAL_OPTION_SET.includes(currentMaterial)) {
+      setMaterialOption(currentMaterial);
+      setCustomMaterial("");
+    } else if (currentMaterial) {
+      setMaterialOption("Outro");
+      setCustomMaterial(currentMaterial);
+    } else {
+      setMaterialOption(FILAMENT_MATERIAL_OPTIONS[0]);
+      setCustomMaterial("");
+    }
     setColorHex(filament?.color_hex ?? "#FFFFFF");
     setPricePerKg(filament ? String(filament.price_per_kg) : "");
     setWeightTotalG(filament ? String(filament.weight_total_g) : "1000");
@@ -41,8 +56,15 @@ export function FilamentModal({ open, onClose, filament, onSaved }: FilamentModa
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setError(null);
+
+    const material = materialOption === "Outro" ? customMaterial.trim() : materialOption;
+    if (!material) {
+      setError("Informe o tipo de material.");
+      return;
+    }
+
+    setSaving(true);
 
     const payload = {
       brand,
@@ -122,21 +144,40 @@ export function FilamentModal({ open, onClose, filament, onSaved }: FilamentModa
             <label className="mb-1.5 block text-xs text-text-muted">Marca</label>
             <input
               required
+              list={brandListId}
               value={brand}
               onChange={(e) => setBrand(e.target.value)}
               className="glass-input w-full"
               placeholder="Ex: Voolt3D"
             />
+            <datalist id={brandListId}>
+              {FILAMENT_BRAND_SUGGESTIONS.map((b) => (
+                <option key={b} value={b} />
+              ))}
+            </datalist>
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Material</label>
-            <input
-              required
-              value={material}
-              onChange={(e) => setMaterial(e.target.value)}
+            <select
+              value={materialOption}
+              onChange={(e) => setMaterialOption(e.target.value)}
               className="glass-input w-full"
-              placeholder="Ex: PLA"
-            />
+            >
+              {FILAMENT_MATERIAL_OPTIONS.map((m) => (
+                <option key={m} value={m} className="bg-bg-raised">
+                  {m}
+                </option>
+              ))}
+            </select>
+            {materialOption === "Outro" && (
+              <input
+                required
+                value={customMaterial}
+                onChange={(e) => setCustomMaterial(e.target.value)}
+                className="glass-input mt-2 w-full"
+                placeholder="Digite o material"
+              />
+            )}
           </div>
         </div>
 
