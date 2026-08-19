@@ -52,6 +52,11 @@ export function NewProductModal({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [calculatorOpen, setCalculatorOpen] = useState(false);
+  // Mesas/filamento/margem recém-calculados aqui dentro via "Calcular Custo
+  // Unitário" — quando presentes, têm prioridade sobre o `calcInputs` vindo
+  // por prop (que reflete um cálculo anterior, feito antes de abrir este
+  // modal, ex: pela Calculadora Inteligente).
+  const [calculatedInputs, setCalculatedInputs] = useState<CalcInputs | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -72,6 +77,7 @@ export function NewProductModal({
       setPriceTiers([]);
       setImageUrl(null);
     }
+    setCalculatedInputs(null);
     setError(null);
   }, [open, product, initialName, initialDescription, initialCostPrice, initialSalePrice]);
 
@@ -132,10 +138,17 @@ export function NewProductModal({
     };
 
     const { data, error: dbError } = isEditing
-      ? await supabase.from("products").update(payload).eq("id", product!.id).select().single()
+      ? await supabase
+          .from("products")
+          // Só sobrescreve calc_inputs se algo foi recalculado nesta sessão —
+          // editar outros campos do produto não deve apagar o cálculo já salvo.
+          .update({ ...payload, ...(calculatedInputs ? { calc_inputs: calculatedInputs } : {}) })
+          .eq("id", product!.id)
+          .select()
+          .single()
       : await supabase
           .from("products")
-          .insert({ ...payload, user_id: user.id, stock_quantity: 0, calc_inputs: calcInputs ?? null })
+          .insert({ ...payload, user_id: user.id, stock_quantity: 0, calc_inputs: calculatedInputs ?? calcInputs ?? null })
           .select()
           .single();
 
@@ -250,7 +263,7 @@ export function NewProductModal({
           <PriceTierEditor tiers={priceTiers} onChange={setPriceTiers} />
         </div>
 
-        {calcInputs && (
+        {(calculatedInputs ?? calcInputs) && (
           <p className="text-[11px] text-neon-green">
             ✓ Os parâmetros da calculadora serão salvos junto — ao selecionar este produto na
             Calculadora depois, tudo volta preenchido.
@@ -272,9 +285,10 @@ export function NewProductModal({
       <CostCalculatorModal
         open={calculatorOpen}
         onClose={() => setCalculatorOpen(false)}
-        onApply={(cost, sale) => {
+        onApply={(cost, sale, ci) => {
           setCostPrice(cost.toFixed(2));
           setSalePrice(sale.toFixed(2));
+          setCalculatedInputs(ci);
         }}
       />
     </Modal>

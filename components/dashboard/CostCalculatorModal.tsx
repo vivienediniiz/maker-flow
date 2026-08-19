@@ -8,7 +8,7 @@ import { MarginSlider } from "@/components/ui/MarginSlider";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import { calculateCost, type CalcBed } from "@/lib/costCalculator";
-import type { Filament } from "@/lib/types";
+import type { CalcInputs, Filament } from "@/lib/types";
 
 interface Bed extends CalcBed {
   id: string;
@@ -22,7 +22,8 @@ function newBed(index: number): Bed {
 interface CostCalculatorModalProps {
   open: boolean;
   onClose: () => void;
-  onApply: (costPrice: number, salePrice: number) => void;
+  /** `calcInputs` reflete as mesas/filamento/margem usados aqui — pra Cadastrar Produto salvar junto e a Calculadora Inteligente conseguir recarregar tudo depois. */
+  onApply: (costPrice: number, salePrice: number, calcInputs: CalcInputs) => void;
 }
 
 export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorModalProps) {
@@ -93,7 +94,29 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
   );
 
   function handleApply() {
-    onApply(calc.baseCost, calc.finalPrice);
+    const calcInputs: CalcInputs = {
+      beds: beds.map(({ name, weightG, timeH, timeM, watts }) => ({
+        name,
+        weightG,
+        timeH,
+        timeM,
+        watts,
+        filamentId: selectedFilamentId || undefined,
+        mode: "single",
+        itemsCount: 2,
+      })),
+      filamentPricePerKg,
+      kwhRate,
+      laborHours: 0,
+      hourlyRate: 0,
+      extras: 0,
+      paintedByHand: false,
+      paintCost: 0,
+      marketplaceFee: 0,
+      marginPercent,
+      quantity: 1,
+    };
+    onApply(calc.baseCost, calc.finalPrice, calcInputs);
     onClose();
   }
 
