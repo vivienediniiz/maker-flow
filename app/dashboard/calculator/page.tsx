@@ -58,10 +58,6 @@ export default function CalculatorPage() {
   const supabase = createClient();
   const [selectedProductId, setSelectedProductId] = useState("");
   const [projectName, setProjectName] = useState("");
-  // Custo/Preço vindos direto do produto vinculado — só existem quando
-  // `selectedProductId` está preenchido (ver `isProductLinked` abaixo).
-  const [linkedCostPrice, setLinkedCostPrice] = useState("");
-  const [linkedSalePrice, setLinkedSalePrice] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [marketplaces, setMarketplaces] = useState<{ name: string; fee: number }[]>([]);
   const [selectedMarketplace, setSelectedMarketplace] = useState("");
@@ -156,46 +152,42 @@ export default function CalculatorPage() {
     if (mp) setMarketplaceFee(mp.fee);
   }
 
-  /**
-   * Vincula um produto já cadastrado (existente ou recém-criado): Custo
-   * Total/Preço de Venda Sugerido passam a vir direto de `cost_price`/
-   * `sale_price` do catálogo, sem precisar refazer o cálculo detalhado. O
-   * cálculo detalhado (mesas, filamento por mesa, modo Lote, insumos) é
-   * resetado — cost_price/sale_price do catálogo já representam uma unidade
-   * padrão, então o modo da mesa nunca deve ficar "herdado" de uma
-   * interação anterior de orçamento avulso.
-   */
-  function applyLinkedProduct(product: Product) {
-    setSelectedProductId(product.id);
-    setProjectName(product.name);
-    setLinkedCostPrice(product.cost_price.toFixed(2));
-    setLinkedSalePrice(product.sale_price.toFixed(2));
-    setBeds([newBed(1)]);
-    setSupplyLines([]);
-  }
-
   function handleSelectProduct(productId: string) {
-    if (!productId) {
-      setSelectedProductId("");
-      setProjectName("");
-      return;
-    }
+    setSelectedProductId(productId);
     const product = products.find((p) => p.id === productId);
     if (!product) return;
-    applyLinkedProduct(product);
+
+    setProjectName(product.name);
+
+    const ci = product.calc_inputs;
+    if (ci) {
+      setBeds(
+        ci.beds.map((b) => ({
+          ...b,
+          id: crypto.randomUUID(),
+          filamentId: b.filamentId ?? "",
+          mode: b.mode ?? "single",
+          itemsCount: b.itemsCount ?? 2,
+        }))
+      );
+      setKwhRate(ci.kwhRate);
+      setLaborHours(ci.laborHours);
+      setHourlyRate(ci.hourlyRate);
+      setExtras(ci.extras);
+      setPaintedByHand(ci.paintedByHand);
+      setPaintCost(ci.paintCost);
+      setMarketplaceFee(ci.marketplaceFee);
+      setMarginPercent(Math.min(Math.max(ci.marginPercent, 0), 99));
+      setQuantity(ci.quantity);
+    }
   }
 
-  /** Produto criado direto do toggle "Cadastrar Produto" (cadastro em branco). */
+  /** Produto criado direto do toggle "Cadastrar Produto" — só entra como referência/vínculo, não mexe no cálculo já feito na tela. */
   function handleNewProductCreated(product: Product) {
     setProducts((prev) => [...prev, product].sort((a, b) => a.name.localeCompare(b.name)));
-    applyLinkedProduct(product);
+    setSelectedProductId(product.id);
+    setProjectName(product.name);
     setNewProductModalOpen(false);
-  }
-
-  /** Produto criado a partir do orçamento avulso já calculado (botão no fim do formulário) — depois de salvo, vira uma referência de catálogo igual a qualquer outra. */
-  function handleAdHocProductCreated(product: Product) {
-    setProducts((prev) => [...prev, product].sort((a, b) => a.name.localeCompare(b.name)));
-    applyLinkedProduct(product);
   }
 
   function addBed() {
@@ -252,12 +244,7 @@ export default function CalculatorPage() {
     [calcBeds, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, suppliesCost, marketplaceFee, marginPercent, quantity]
   );
 
-  // Com produto vinculado, o cálculo detalhado nem aparece — não faz sentido
-  // bloquear ações por falta de filamento numa mesa que nem está em uso.
-  const isProductLinked = !!selectedProductId;
-  const missingFilament = !isProductLinked && beds.some((b) => !b.filamentId);
-  const displayCost = isProductLinked ? Number(linkedCostPrice) || 0 : calc.baseCost;
-  const displayPrice = isProductLinked ? Number(linkedSalePrice) || 0 : calc.finalPrice;
+  const missingFilament = beds.some((b) => !b.filamentId);
 
   // Snapshot estável dos insumos selecionados aqui — só muda quando o usuário
   // de fato edita a lista, pra não resetar a seção "Insumo(s) Utilizados" da
@@ -286,20 +273,13 @@ export default function CalculatorPage() {
 
       {/* Real-time cost preview header — sticky */}
       <div className="sticky top-[65px] z-20 border-b border-border-glass bg-bg/80 px-6 py-4 backdrop-blur-glass md:px-8">
-        {isProductLinked ? (
-          <div className="grid max-w-md grid-cols-2 gap-3">
-            <PreviewStat label="Custo Total" value={formatBRL(displayCost)} />
-            <PreviewStat label="Preço Sugerido" value={formatBRL(displayPrice)} highlight />
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            <PreviewStat label="Energia" value={formatBRL(calc.energyCost)} />
-            <PreviewStat label="Filamento" value={formatBRL(calc.filamentCost)} />
-            <PreviewStat label="Extras" value={formatBRL(extras + calc.paint)} />
-            <PreviewStat label="Custo Total" value={formatBRL(calc.baseCost)} />
-            <PreviewStat label="Preço / Peça" value={formatBRL(calc.pricePerPiece)} highlight />
-          </div>
-        )}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <PreviewStat label="Energia" value={formatBRL(calc.energyCost)} />
+          <PreviewStat label="Filamento" value={formatBRL(calc.filamentCost)} />
+          <PreviewStat label="Extras" value={formatBRL(extras + calc.paint)} />
+          <PreviewStat label="Custo Total" value={formatBRL(calc.baseCost)} />
+          <PreviewStat label="Preço / Peça" value={formatBRL(calc.pricePerPiece)} highlight />
+        </div>
       </div>
 
       <main className="grid grid-cols-1 gap-6 px-6 py-8 md:px-8 xl:grid-cols-[1fr_360px]">
@@ -345,40 +325,6 @@ export default function CalculatorPage() {
             )}
           </GlassCard>
 
-          {isProductLinked ? (
-            <GlassCard padding="lg" className="space-y-4">
-              <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
-                Custo e Preço do Produto
-              </h3>
-              <p className="text-[11px] text-text-muted">
-                Valores vêm do cadastro de <span className="text-text-secondary">{projectName}</span> — dá pra
-                ajustar aqui só pra este orçamento; pra atualizar o produto de vez, use Produtos.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Custo Total (R$)">
-                  <input
-                    type="number"
-                    step="0.01"
-                    min={0}
-                    value={linkedCostPrice}
-                    onChange={(e) => setLinkedCostPrice(e.target.value)}
-                    className="glass-input w-full"
-                  />
-                </Field>
-                <Field label="Preço de Venda Sugerido (R$)">
-                  <input
-                    type="number"
-                    step="0.01"
-                    min={0}
-                    value={linkedSalePrice}
-                    onChange={(e) => setLinkedSalePrice(e.target.value)}
-                    className="glass-input w-full"
-                  />
-                </Field>
-              </div>
-            </GlassCard>
-          ) : (
-            <>
           {/* Print beds */}
           <GlassCard padding="lg" className="space-y-5">
             <div className="flex items-center justify-between">
@@ -658,8 +604,6 @@ export default function CalculatorPage() {
               Selecione um filamento cadastrado em cada mesa pra liberar o cálculo.
             </p>
           )}
-            </>
-          )}
         </div>
 
         {/* Right column: summary + actions */}
@@ -667,28 +611,22 @@ export default function CalculatorPage() {
           <GlassCard padding="lg" className="sticky top-[140px] space-y-5">
             <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">Resumo</h3>
             <div className="space-y-2 text-sm">
-              {isProductLinked ? (
-                <SummaryRow label="Custo total" value={formatBRL(displayCost)} />
-              ) : (
-                <>
-                  <SummaryRow label="Peso total" value={`${calc.totalWeightG.toFixed(0)} g`} />
-                  <SummaryRow label="Tempo total" value={`${calc.totalHours.toFixed(1)} h`} />
-                  <SummaryRow label="Filamento" value={formatBRL(calc.filamentCost)} />
-                  <SummaryRow label="Energia" value={formatBRL(calc.energyCost)} />
-                  <SummaryRow label="Mão de obra" value={formatBRL(calc.laborCost)} />
-                  {paintedByHand && <SummaryRow label="Pintura" value={formatBRL(calc.paint)} />}
-                  <SummaryRow label="Extras" value={formatBRL(extras)} />
-                  {suppliesCost > 0 && <SummaryRow label="Insumos" value={formatBRL(calc.suppliesCost)} />}
-                  <div className="my-2 h-px bg-border-glass" />
-                  <SummaryRow label="Custo total" value={formatBRL(calc.baseCost)} />
-                </>
-              )}
+              <SummaryRow label="Peso total" value={`${calc.totalWeightG.toFixed(0)} g`} />
+              <SummaryRow label="Tempo total" value={`${calc.totalHours.toFixed(1)} h`} />
+              <SummaryRow label="Filamento" value={formatBRL(calc.filamentCost)} />
+              <SummaryRow label="Energia" value={formatBRL(calc.energyCost)} />
+              <SummaryRow label="Mão de obra" value={formatBRL(calc.laborCost)} />
+              {paintedByHand && <SummaryRow label="Pintura" value={formatBRL(calc.paint)} />}
+              <SummaryRow label="Extras" value={formatBRL(extras)} />
+              {suppliesCost > 0 && <SummaryRow label="Insumos" value={formatBRL(calc.suppliesCost)} />}
+              <div className="my-2 h-px bg-border-glass" />
+              <SummaryRow label="Custo total" value={formatBRL(calc.baseCost)} />
             </div>
 
             <div className="glass-card space-y-1 p-4 text-center">
               <p className="text-xs text-text-muted">Preço final sugerido</p>
-              <p className="neon-text font-numeric text-3xl font-semibold">{formatBRL(displayPrice)}</p>
-              {!isProductLinked && quantity > 1 && (
+              <p className="neon-text font-numeric text-3xl font-semibold">{formatBRL(calc.finalPrice)}</p>
+              {quantity > 1 && (
                 <p className="font-numeric text-xs text-text-muted">{formatBRL(calc.pricePerPiece)} / peça</p>
               )}
             </div>
@@ -717,19 +655,19 @@ export default function CalculatorPage() {
         open={orderModalOpen}
         onClose={() => setOrderModalOpen(false)}
         initialProjectName={projectName}
-        initialFinalPrice={displayPrice}
-        weightG={isProductLinked ? 0 : calc.totalWeightG}
-        printTimeMin={isProductLinked ? 0 : calc.totalHours * 60}
-        energyCost={isProductLinked ? 0 : calc.energyCost}
-        filamentCost={isProductLinked ? 0 : calc.filamentCost}
-        marginPercent={isProductLinked ? 0 : marginPercent}
+        initialFinalPrice={calc.finalPrice}
+        weightG={calc.totalWeightG}
+        printTimeMin={calc.totalHours * 60}
+        energyCost={calc.energyCost}
+        filamentCost={calc.filamentCost}
+        marginPercent={marginPercent}
         initialUsedFilaments={usedFilamentsForSale}
         initialUsedSupplies={usedSuppliesForSale}
       />
       <NewProductModal
         open={productModalOpen}
         onClose={() => setProductModalOpen(false)}
-        onCreated={handleAdHocProductCreated}
+        onCreated={(p) => setProducts((prev) => [...prev, p])}
         initialName={projectName}
         initialCostPrice={calc.baseCost}
         initialSalePrice={calc.pricePerPiece}
@@ -770,14 +708,14 @@ export default function CalculatorPage() {
         onClose={() => setQuoteModalOpen(false)}
         summary={{
           projectName,
-          quantity: isProductLinked ? 1 : quantity,
-          finalPrice: displayPrice,
-          pricePerPiece: isProductLinked ? displayPrice : calc.pricePerPiece,
-          weightG: isProductLinked ? 0 : calc.totalWeightG,
-          printTimeMin: isProductLinked ? 0 : calc.totalHours * 60,
-          energyCost: isProductLinked ? 0 : calc.energyCost,
-          filamentCost: isProductLinked ? 0 : calc.filamentCost,
-          marginPercent: isProductLinked ? 0 : marginPercent,
+          quantity,
+          finalPrice: calc.finalPrice,
+          pricePerPiece: calc.pricePerPiece,
+          weightG: calc.totalWeightG,
+          printTimeMin: calc.totalHours * 60,
+          energyCost: calc.energyCost,
+          filamentCost: calc.filamentCost,
+          marginPercent,
           productId: selectedProductId || undefined,
         }}
       />
