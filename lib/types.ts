@@ -64,7 +64,7 @@ export interface Filament {
   remaining_weight_g: number;
   weight_total_g: number;
 }
-export type QuoteChannel = "tiktok" | "whatsapp" | "presencial" | "shopee" | "mercado_livre";
+export type QuoteChannel = "whatsapp" | "instagram" | "tiktok" | "presencial" | "marketplaces";
 
 // Origem do REGISTRO (quem criou/atualizou essa venda) — diferente de `channel`
 // (canal de venda escolhido manualmente, usado em cálculo de taxa/margem).
@@ -281,14 +281,6 @@ export interface Settings {
   origin_cep: string | null;
   origin_address: string | null;
 }
-
-export const QUOTE_CHANNEL_LABELS: Record<string, string> = {
-  tiktok: "TikTok Shop",
-  whatsapp: "WhatsApp",
-  presencial: "Presencial",
-  shopee: "Shopee",
-  mercado_livre: "Mercado Livre",
-};
 
 export type CouponDiscountType = "percentage" | "fixed";
 

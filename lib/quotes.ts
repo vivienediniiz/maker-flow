@@ -38,11 +38,11 @@ export function formatOrderNumber(n: number) {
 }
 
 export const QUOTE_CHANNEL_LABELS: Record<string, string> = {
-  tiktok: "TikTok Shop",
   whatsapp: "WhatsApp",
+  instagram: "Instagram",
+  tiktok: "TikTok",
   presencial: "Presencial",
-  shopee: "Shopee",
-  mercado_livre: "Mercado Livre",
+  marketplaces: "Marketplaces",
 };
 
 export const QUOTE_SOURCE_LABELS: Record<QuoteSource, string> = {
