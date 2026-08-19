@@ -1,10 +1,20 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "StudioMaker — Gestão para Makers e Estúdios 3D",
   description:
     "Precificação inteligente, gestão de pedidos e automação para a comunidade Maker e estúdios de Impressão 3D.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "StudioMaker",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#AA17DB",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
