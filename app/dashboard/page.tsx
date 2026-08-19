@@ -5,7 +5,6 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { PrinterCard } from "@/components/dashboard/PrinterCard";
 import { SalesPeriodSummary } from "@/components/dashboard/SalesPeriodSummary";
 import { TopProductsCard } from "@/components/dashboard/TopProductsCard";
-import { CouponsPeriodSummary } from "@/components/dashboard/CouponsPeriodSummary";
 import { DashboardClock } from "@/components/dashboard/DashboardClock";
 import { GreetingTypewriter } from "@/components/dashboard/GreetingTypewriter";
 import { GlassAccordion } from "@/components/ui/GlassAccordion";
@@ -283,8 +282,6 @@ export default async function DashboardPage() {
           <SalesPeriodSummary />
           <TopProductsCard />
         </section>
-
-        <CouponsPeriodSummary />
 
         {/* KPI Cards */}
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

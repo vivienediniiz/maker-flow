@@ -26,6 +26,12 @@ interface QuoteResult {
   deliveryDays: number;
 }
 
+interface UnavailableResult {
+  company: string;
+  service: string;
+  reason: string;
+}
+
 interface ShippingQuoteWidgetProps {
   open: boolean;
   onClose: () => void;
@@ -48,6 +54,7 @@ export function ShippingQuoteWidget({
   const [widthCm, setWidthCm] = useState("");
   const [lengthCm, setLengthCm] = useState("");
   const [quotes, setQuotes] = useState<QuoteResult[] | null>(null);
+  const [unavailable, setUnavailable] = useState<UnavailableResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +66,7 @@ export function ShippingQuoteWidget({
     setWidthCm("");
     setLengthCm("");
     setQuotes(null);
+    setUnavailable([]);
     setError(null);
   }, [open, initialDestinationCep]);
 
@@ -66,6 +74,7 @@ export function ShippingQuoteWidget({
     e.preventDefault();
     setError(null);
     setQuotes(null);
+    setUnavailable([]);
 
     if (!destinationCep || !weightG || !heightCm || !widthCm || !lengthCm) {
       setError("Preencha CEP de destino, peso e dimensões.");
@@ -84,6 +93,7 @@ export function ShippingQuoteWidget({
         setError(data.error ?? "Falha ao cotar frete.");
         return;
       }
+      setUnavailable(data.unavailable ?? []);
       if (!data.quotes || data.quotes.length === 0) {
         setError("Nenhuma transportadora disponível pra esse CEP/dimensões.");
         return;
@@ -204,6 +214,21 @@ export function ShippingQuoteWidget({
                 </div>
                 <span className="neon-text font-numeric text-base font-semibold">{formatBRL(q.price)}</span>
               </GlassCard>
+            ))}
+          </div>
+        )}
+
+        {unavailable.length > 0 && (
+          <div className="space-y-1 rounded-xl border border-border-glass bg-white/[0.02] px-3 py-2">
+            <p className="text-[11px] uppercase tracking-wider text-text-muted">Não cotaram</p>
+            {unavailable.map((u, idx) => (
+              <p key={idx} className="text-xs text-text-muted">
+                <span className="text-text-secondary">
+                  {u.company}
+                  {u.service ? ` · ${u.service}` : ""}:
+                </span>{" "}
+                {u.reason}
+              </p>
             ))}
           </div>
         )}

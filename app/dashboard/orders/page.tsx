@@ -116,9 +116,15 @@ export default function OrdersPage() {
   }
 
   async function handleStatusChange(quoteId: string, status: QuoteStatus) {
+    const previousStatus = quotes.find((q) => q.id === quoteId)?.status;
     setQuotes((prev) => prev.map((q) => (q.id === quoteId ? { ...q, status } : q)));
     setSelectedQuote((prev) => (prev && prev.id === quoteId ? { ...prev, status } : prev));
-    await supabase.from("quotes").update({ status }).eq("id", quoteId);
+    const { error } = await supabase.from("quotes").update({ status }).eq("id", quoteId);
+    if (error) {
+      setQuotes((prev) => prev.map((q) => (q.id === quoteId && previousStatus ? { ...q, status: previousStatus } : q)));
+      setSelectedQuote((prev) => (prev && prev.id === quoteId && previousStatus ? { ...prev, status: previousStatus } : prev));
+      alert("Não foi possível atualizar o status dessa venda. Tente novamente.");
+    }
   }
 
   async function handleDelete(quoteId: string, e: React.MouseEvent) {

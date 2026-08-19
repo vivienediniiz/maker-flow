@@ -177,17 +177,32 @@ export interface ShippingQuote {
   deliveryDays: number;
 }
 
+/** Transportadora que a API retornou mas não devolveu preço (ex: sem contrato habilitado pra essa conta). */
+export interface ShippingUnavailable {
+  company: string;
+  service: string;
+  reason: string;
+}
+
+export interface ShippingCalculateResult {
+  quotes: ShippingQuote[];
+  unavailable: ShippingUnavailable[];
+}
+
 /**
  * POST /me/shipment/calculate — testado ao vivo contra a conta sandbox já
  * conectada (companies com id 2, "Jadlog", responderam price/delivery_time
- * reais). Ignora entradas com campo `error` (transportadora sem contrato
- * disponível pra essa conta) em vez de quebrar a cotação inteira.
+ * reais). Sandbox do Melhor Envio só libera cotação real pra algumas
+ * transportadoras de teste — Correios normalmente só responde em produção,
+ * com contrato habilitado na conta. Entradas com campo `error` (sem
+ * contrato/sem preço pra essa conta) não entram em `quotes`, mas voltam em
+ * `unavailable` pra dar visibilidade do motivo em vez de sumir silenciosamente.
  */
 export async function calculateShipping(
   admin: SupabaseClient,
   integration: { id: string; credential_secret_id: string | null },
   params: ShippingCalculateParams
-): Promise<ShippingQuote[]> {
+): Promise<ShippingCalculateResult> {
   const res = await melhorEnvioFetchForIntegration(admin, integration, "/me/shipment/calculate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -208,16 +223,31 @@ export async function calculateShipping(
   }
 
   const data = await res.json();
-  if (!Array.isArray(data)) return [];
+  if (!Array.isArray(data)) return { quotes: [], unavailable: [] };
 
-  return data
-    .filter((item) => !item.error && item.price)
-    .map((item) => ({
+  const quotes: ShippingQuote[] = [];
+  const unavailable: ShippingUnavailable[] = [];
+
+  for (const item of data) {
+    const company = item.company?.name ?? "Transportadora";
+    const service = item.name ?? "";
+    if (item.error || !item.price) {
+      unavailable.push({
+        company,
+        service,
+        reason: typeof item.error === "string" ? item.error : "Indisponível pra essa conta/CEP.",
+      });
+      continue;
+    }
+    quotes.push({
       id: item.id,
-      company: item.company?.name ?? "Transportadora",
+      company,
       companyLogo: item.company?.picture ?? null,
-      service: item.name,
+      service,
       price: Number(item.price),
       deliveryDays: item.delivery_time ?? item.custom_delivery_time ?? 0,
-    }));
+    });
+  }
+
+  return { quotes, unavailable };
 }

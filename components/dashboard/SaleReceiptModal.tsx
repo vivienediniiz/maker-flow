@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, Share2, Loader2 } from "lucide-react";
+import { Download, Share2, Loader2, MessageCircle } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import { formatOrderNumber, QUOTE_PAYMENT_METHOD_LABELS } from "@/lib/quotes";
+import { buildWhatsAppLink } from "@/components/ui/WhatsAppLink";
 import type { QuoteWithClient } from "@/lib/types";
 
 interface ReceiptProfile {
@@ -29,7 +30,10 @@ export function SaleReceiptModal({ quote, open, onClose, zIndexClass }: SaleRece
   const [blob, setBlob] = useState<Blob | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [whatsAppStatus, setWhatsAppStatus] = useState<"idle" | "opened" | "blocked">("idle");
   const generatedForQuoteId = useRef<string | null>(null);
+
+  const clientPhone = quote?.clients?.phone || null;
 
   useEffect(() => {
     if (!open || !quote) return;
@@ -48,6 +52,7 @@ export function SaleReceiptModal({ quote, open, onClose, zIndexClass }: SaleRece
     });
     setBlob(null);
     setError(null);
+    setWhatsAppStatus("idle");
     generatedForQuoteId.current = null;
   }, [open]);
 
@@ -89,6 +94,11 @@ export function SaleReceiptModal({ quote, open, onClose, zIndexClass }: SaleRece
       setBlob(generatedBlob);
       setImageUrl(URL.createObjectURL(generatedBlob));
       generatedForQuoteId.current = quote.id;
+
+      if (clientPhone) {
+        downloadBlob(generatedBlob, quote);
+        sendToWhatsApp(clientPhone, quote);
+      }
     } catch (err) {
       console.error("Falha ao gerar comprovante:", err);
       setError("Não foi possível gerar o comprovante. Tente novamente.");
@@ -98,16 +108,42 @@ export function SaleReceiptModal({ quote, open, onClose, zIndexClass }: SaleRece
     }
   }
 
-  function handleDownload() {
-    if (!blob || !quote) return;
-    const url = URL.createObjectURL(blob);
+  function downloadBlob(fileBlob: Blob, forQuote: QuoteWithClient) {
+    const url = URL.createObjectURL(fileBlob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `comprovante-venda-${formatOrderNumber(quote.order_number)}.png`;
+    a.download = `comprovante-venda-${formatOrderNumber(forQuote.order_number)}.png`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  function handleDownload() {
+    if (!blob || !quote) return;
+    downloadBlob(blob, quote);
+  }
+
+  /**
+   * WhatsApp não tem API pública pra anexar arquivo via link — só o texto vem
+   * pré-preenchido (`wa.me`). Por isso a imagem é baixada automaticamente
+   * junto: o estúdio só precisa anexar o arquivo que já caiu nos downloads.
+   */
+  function sendToWhatsApp(phone: string, forQuote: QuoteWithClient) {
+    const clientName = forQuote.clients?.name ?? forQuote.buyer_name ?? "";
+    const text = encodeURIComponent(
+      `Olá${clientName ? `, ${clientName}` : ""}! Segue o comprovante da sua compra #${formatOrderNumber(
+        forQuote.order_number
+      )} 🎉`
+    );
+    const win = window.open(`${buildWhatsAppLink(phone)}?text=${text}`, "_blank");
+    setWhatsAppStatus(win ? "opened" : "blocked");
+  }
+
+  function handleSendWhatsApp() {
+    if (!clientPhone || !quote) return;
+    if (blob) downloadBlob(blob, quote);
+    sendToWhatsApp(clientPhone, quote);
   }
 
   async function handleShare() {
@@ -148,6 +184,22 @@ export function SaleReceiptModal({ quote, open, onClose, zIndexClass }: SaleRece
           <NeonButton variant="outline" size="sm" onClick={generateReceipt}>
             Tentar novamente
           </NeonButton>
+        )}
+
+        {clientPhone && whatsAppStatus === "opened" && (
+          <p className="text-center text-xs text-neon-green">
+            Comprovante baixado e WhatsApp do cliente aberto — é só anexar a imagem na conversa.
+          </p>
+        )}
+        {clientPhone && whatsAppStatus === "blocked" && (
+          <NeonButton variant="outline" size="sm" onClick={handleSendWhatsApp}>
+            <MessageCircle size={14} /> Enviar no WhatsApp do cliente
+          </NeonButton>
+        )}
+        {!clientPhone && !generating && blob && (
+          <p className="text-center text-xs text-text-muted">
+            Cliente sem WhatsApp cadastrado — baixe ou compartilhe o comprovante manualmente.
+          </p>
         )}
 
         <div className="grid w-full grid-cols-2 gap-3">

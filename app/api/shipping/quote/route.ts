@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const quotes = await calculateShipping(admin, integration, {
+    const { quotes, unavailable } = await calculateShipping(admin, integration, {
       originCep,
       destinationCep,
       weightG: Number(weightG),
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       widthCm: Number(widthCm),
       lengthCm: Number(lengthCm),
     });
-    return NextResponse.json({ quotes });
+    return NextResponse.json({ quotes, unavailable });
   } catch (err) {
     await admin.from("integrations").update({ status: "error" }).eq("id", integration.id);
     return NextResponse.json({ error: (err as Error).message }, { status: 502 });
