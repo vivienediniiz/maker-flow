@@ -207,6 +207,16 @@ export default function CalculatorPage() {
     setBeds((b) => b.map((bed) => (bed.id === id ? { ...bed, ...patch } : bed)));
   }
 
+  /**
+   * Trocar o modo da mesa limpa Peso/Tempo — o significado desses campos
+   * muda entre os dois modos (unidade única vs. total da mesa cheia), então
+   * o valor antigo não deve continuar aparecendo como se fosse válido no
+   * modo novo.
+   */
+  function updateBedMode(id: string, mode: PrintBed["mode"]) {
+    updateBed(id, { mode, weightG: 0, timeH: 0, timeM: 0 });
+  }
+
   const suppliesCost = useMemo(() => {
     return supplyLines.reduce((sum, line) => {
       const supply = supplies.find((s) => s.id === line.supplyId);
@@ -365,7 +375,7 @@ export default function CalculatorPage() {
                 <div className="glass-card flex gap-1 p-1">
                   <button
                     type="button"
-                    onClick={() => updateBed(bed.id, { mode: "single" })}
+                    onClick={() => bed.mode !== "single" && updateBedMode(bed.id, "single")}
                     className={cn(
                       "flex-1 rounded-pill py-1.5 text-[11px] font-medium transition-colors",
                       bed.mode === "single" ? "bg-neon-gradient text-white" : "text-text-secondary"
@@ -375,7 +385,7 @@ export default function CalculatorPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => updateBed(bed.id, { mode: "batch" })}
+                    onClick={() => bed.mode !== "batch" && updateBedMode(bed.id, "batch")}
                     className={cn(
                       "flex-1 rounded-pill py-1.5 text-[11px] font-medium transition-colors",
                       bed.mode === "batch" ? "bg-neon-gradient text-white" : "text-text-secondary"
