@@ -136,6 +136,12 @@ const config: Config = {
           "0%": { transform: "translateX(-32px)", opacity: "0" },
           "100%": { transform: "translateX(0)", opacity: "1" },
         },
+        "splash-logo": {
+          "0%": { opacity: "0", transform: "scale(0.75)" },
+          "15%": { opacity: "1", transform: "scale(1.06)" },
+          "25%, 85%": { transform: "scale(1)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
       },
       animation: {
         "pulse-glow": "pulse-glow 2.4s ease-in-out infinite",
@@ -146,6 +152,7 @@ const config: Config = {
         "caret-blink": "caret-blink 1s step-start infinite",
         "float-y": "float-y 6s ease-in-out infinite",
         "panel-in": "panel-in 0.7s cubic-bezier(0.16,1,0.3,1) forwards",
+        "splash-logo": "splash-logo 5s ease-out forwards",
       },
     },
   },
