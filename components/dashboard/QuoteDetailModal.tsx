@@ -189,7 +189,9 @@ export function QuoteDetailModal({
               label="Tempo de impressão"
               value={`${linkedProductCalc.beds.reduce((s, b) => s + b.timeH + b.timeM / 60, 0).toFixed(1)} h`}
             />
-            <Row label="Filamento (R$/kg)" value={formatBRL(linkedProductCalc.filamentPricePerKg)} />
+            {linkedProductCalc.filamentPricePerKg != null && (
+              <Row label="Filamento (R$/kg)" value={formatBRL(linkedProductCalc.filamentPricePerKg)} />
+            )}
             <Row label="Margem aplicada" value={`${linkedProductCalc.marginPercent}%`} />
           </div>
         ) : (

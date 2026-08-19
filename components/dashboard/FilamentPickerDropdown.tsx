@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatBRL } from "@/lib/utils";
 import type { Filament } from "@/lib/types";
 
 interface FilamentPickerDropdownProps {
@@ -14,7 +14,7 @@ interface FilamentPickerDropdownProps {
 }
 
 function filamentOptionLabel(f: Filament) {
-  return `${f.material} — ${f.brand} (${f.remaining_weight_g}g disponíveis)`;
+  return `${f.material} — ${f.brand} (${formatBRL(f.price_per_kg)}/kg · ${f.remaining_weight_g}g disponíveis)`;
 }
 
 /**

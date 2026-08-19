@@ -9,11 +9,13 @@ import { MarginSlider } from "@/components/ui/MarginSlider";
 import { NewSaleModal } from "@/components/dashboard/NewSaleModal";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { GenerateQuoteModal } from "@/components/dashboard/GenerateQuoteModal";
+import { FilamentModal } from "@/components/dashboard/FilamentModal";
+import { FilamentPickerDropdown } from "@/components/dashboard/FilamentPickerDropdown";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { calculateCost } from "@/lib/costCalculator";
 import { Plus, Trash2, FileDown, Link2, Rocket, PackagePlus } from "lucide-react";
-import type { Product, Supply } from "@/lib/types";
+import type { Product, Supply, Filament } from "@/lib/types";
 
 interface PrintBed {
   id: string;
@@ -22,6 +24,7 @@ interface PrintBed {
   timeH: number;
   timeM: number;
   watts: number;
+  filamentId: string;
 }
 
 interface SupplyLine {
@@ -31,7 +34,7 @@ interface SupplyLine {
 }
 
 function newBed(index: number): PrintBed {
-  return { id: crypto.randomUUID(), name: `Mesa ${index}`, weightG: 0, timeH: 0, timeM: 0, watts: 200 };
+  return { id: crypto.randomUUID(), name: `Mesa ${index}`, weightG: 0, timeH: 0, timeM: 0, watts: 200, filamentId: "" };
 }
 
 function newSupplyLine(): SupplyLine {
@@ -47,7 +50,8 @@ export default function CalculatorPage() {
   const [marketplaces, setMarketplaces] = useState<{ name: string; fee: number }[]>([]);
   const [selectedMarketplace, setSelectedMarketplace] = useState("");
   const [beds, setBeds] = useState<PrintBed[]>([newBed(1)]);
-  const [filamentPricePerKg, setFilamentPricePerKg] = useState(120);
+  const [filaments, setFilaments] = useState<Filament[]>([]);
+  const [filamentModalBedId, setFilamentModalBedId] = useState<string | null>(null);
   const [kwhRate, setKwhRate] = useState(0.95);
   const [laborHours, setLaborHours] = useState(0.5);
   const [hourlyRate, setHourlyRate] = useState(25);
@@ -68,6 +72,7 @@ export default function CalculatorPage() {
     loadProducts();
     loadMarketplaces();
     loadSupplies();
+    loadFilaments();
   }, []);
 
   async function loadProducts() {
@@ -103,6 +108,21 @@ export default function CalculatorPage() {
     setSupplies((data as Supply[]) ?? []);
   }
 
+  async function loadFilaments() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from("filaments").select("*").eq("user_id", user.id).order("material");
+    setFilaments((data as Filament[]) ?? []);
+  }
+
+  function handleFilamentSaved(filament: Filament) {
+    setFilaments((prev) => [...prev, filament].sort((a, b) => a.material.localeCompare(b.material)));
+    if (filamentModalBedId) updateBed(filamentModalBedId, { filamentId: filament.id });
+    setFilamentModalBedId(null);
+  }
+
   function addSupplyLine() {
     setSupplyLines((s) => [...s, newSupplyLine()]);
   }
@@ -128,8 +148,7 @@ export default function CalculatorPage() {
 
     const ci = product.calc_inputs;
     if (ci) {
-      setBeds(ci.beds.map((b) => ({ ...b, id: crypto.randomUUID() })));
-      setFilamentPricePerKg(ci.filamentPricePerKg);
+      setBeds(ci.beds.map((b) => ({ ...b, id: crypto.randomUUID(), filamentId: b.filamentId ?? "" })));
       setKwhRate(ci.kwhRate);
       setLaborHours(ci.laborHours);
       setHourlyRate(ci.hourlyRate);
@@ -160,11 +179,25 @@ export default function CalculatorPage() {
     }, 0);
   }, [supplyLines, supplies]);
 
+  // Resolve o preço/kg de cada mesa pelo filamento cadastrado selecionado nela
+  // — sem filamento selecionado, a mesa não contribui custo de filamento
+  // (bloqueado via `missingFilament` antes de deixar seguir pro pedido/produto).
+  const calcBeds = useMemo(
+    () =>
+      beds.map((b) => ({
+        weightG: b.weightG,
+        timeH: b.timeH,
+        timeM: b.timeM,
+        watts: b.watts,
+        filamentPricePerKg: filaments.find((f) => f.id === b.filamentId)?.price_per_kg ?? 0,
+      })),
+    [beds, filaments]
+  );
+
   const calc = useMemo(
     () =>
       calculateCost({
-        beds,
-        filamentPricePerKg,
+        beds: calcBeds,
         kwhRate,
         laborHours,
         hourlyRate,
@@ -176,8 +209,10 @@ export default function CalculatorPage() {
         marginPercent,
         quantity,
       }),
-    [beds, filamentPricePerKg, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, suppliesCost, marketplaceFee, marginPercent, quantity]
+    [calcBeds, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, suppliesCost, marketplaceFee, marginPercent, quantity]
   );
+
+  const missingFilament = beds.some((b) => !b.filamentId);
 
   // Snapshot estável dos insumos selecionados aqui — só muda quando o usuário
   // de fato edita a lista, pra não resetar a seção "Insumo(s) Utilizados" da
@@ -188,6 +223,16 @@ export default function CalculatorPage() {
         .filter((l) => l.supplyId)
         .map((l) => ({ supplyId: l.supplyId, quantity: l.quantity ? String(l.quantity) : "" })),
     [supplyLines]
+  );
+
+  // Mesmo raciocínio: o filamento de cada mesa já usado aqui é o mesmo que
+  // deve ser descontado do estoque quando o pedido for confirmado.
+  const usedFilamentsForSale = useMemo(
+    () =>
+      beds
+        .filter((b) => b.filamentId)
+        .map((b) => ({ filamentId: b.filamentId, quantityG: b.weightG ? String(b.weightG) : "" })),
+    [beds]
   );
 
   return (
@@ -334,6 +379,30 @@ export default function CalculatorPage() {
                     />
                   </Field>
                 </div>
+
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Field label="Filamento">
+                      <FilamentPickerDropdown
+                        filaments={filaments}
+                        value={bed.filamentId}
+                        onChange={(id) => updateBed(bed.id, { filamentId: id })}
+                      />
+                    </Field>
+                  </div>
+                  <NeonButton
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mb-0.5 shrink-0"
+                    onClick={() => setFilamentModalBedId(bed.id)}
+                  >
+                    <Plus size={14} /> Cadastrar Filamento
+                  </NeonButton>
+                </div>
+                {!bed.filamentId && (
+                  <p className="text-[11px] text-amber-400">Selecione um filamento cadastrado pra calcular o custo desta mesa.</p>
+                )}
               </div>
             ))}
           </GlassCard>
@@ -344,9 +413,6 @@ export default function CalculatorPage() {
               Custos e Consumíveis
             </h3>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              <Field label="Filamento (R$/kg)">
-                <input type="number" value={filamentPricePerKg} onChange={(e) => setFilamentPricePerKg(Number(e.target.value))} className="glass-input w-full" />
-              </Field>
               <Field label="Tarifa energia (R$/kWh)">
                 <input type="number" step="0.01" value={kwhRate} onChange={(e) => setKwhRate(Number(e.target.value))} className="glass-input w-full" />
               </Field>
@@ -473,9 +539,14 @@ export default function CalculatorPage() {
           </GlassCard>
 
           {/* Cadastrar Produto — logo abaixo dos campos preenchidos, destacado */}
-          <NeonButton size="lg" className="w-full" onClick={() => setProductModalOpen(true)}>
+          <NeonButton size="lg" className="w-full" onClick={() => setProductModalOpen(true)} disabled={missingFilament}>
             <PackagePlus size={18} /> Cadastrar Produto
           </NeonButton>
+          {missingFilament && (
+            <p className="-mt-4 text-center text-[11px] text-amber-400">
+              Selecione um filamento cadastrado em cada mesa pra liberar o cálculo.
+            </p>
+          )}
         </div>
 
         {/* Right column: summary + actions */}
@@ -504,16 +575,21 @@ export default function CalculatorPage() {
             </div>
 
             <div className="space-y-2">
-              <NeonButton className="w-full" onClick={() => setOrderModalOpen(true)}>
+              <NeonButton className="w-full" onClick={() => setOrderModalOpen(true)} disabled={missingFilament}>
                 <Rocket size={16} /> Iniciar Projeto / Criar Pedido
               </NeonButton>
-              <NeonButton variant="outline" className="w-full" onClick={() => setQuoteModalOpen(true)}>
+              <NeonButton variant="outline" className="w-full" onClick={() => setQuoteModalOpen(true)} disabled={missingFilament}>
                 <FileDown size={16} /> Gerar PDF de Orçamento
               </NeonButton>
               <NeonButton variant="outline" className="w-full">
                 <Link2 size={16} /> Gerar Link de Cobrança
               </NeonButton>
             </div>
+            {missingFilament && (
+              <p className="text-center text-[11px] text-amber-400">
+                Selecione um filamento cadastrado em cada mesa pra liberar essas ações.
+              </p>
+            )}
           </GlassCard>
         </div>
       </main>
@@ -528,6 +604,7 @@ export default function CalculatorPage() {
         energyCost={calc.energyCost}
         filamentCost={calc.filamentCost}
         marginPercent={marginPercent}
+        initialUsedFilaments={usedFilamentsForSale}
         initialUsedSupplies={usedSuppliesForSale}
       />
       <NewProductModal
@@ -538,8 +615,7 @@ export default function CalculatorPage() {
         initialCostPrice={calc.baseCost}
         initialSalePrice={calc.pricePerPiece}
         calcInputs={{
-          beds: beds.map(({ name, weightG, timeH, timeM, watts }) => ({ name, weightG, timeH, timeM, watts })),
-          filamentPricePerKg,
+          beds: beds.map(({ name, weightG, timeH, timeM, watts, filamentId }) => ({ name, weightG, timeH, timeM, watts, filamentId })),
           kwhRate,
           laborHours,
           hourlyRate,
@@ -550,6 +626,11 @@ export default function CalculatorPage() {
           marginPercent,
           quantity,
         }}
+      />
+      <FilamentModal
+        open={filamentModalBedId !== null}
+        onClose={() => setFilamentModalBedId(null)}
+        onSaved={handleFilamentSaved}
       />
       <GenerateQuoteModal
         open={quoteModalOpen}

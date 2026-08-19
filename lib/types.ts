@@ -161,8 +161,9 @@ export interface PriceTier {
 }
 
 export interface CalcInputs {
-  beds: { name: string; weightG: number; timeH: number; timeM: number; watts: number }[];
-  filamentPricePerKg: number;
+  beds: { name: string; weightG: number; timeH: number; timeM: number; watts: number; filamentId?: string }[];
+  /** @deprecated Substituído pelo filamento próprio de cada mesa — mantido só pra ler registros salvos antes dessa mudança. */
+  filamentPricePerKg?: number;
   kwhRate: number;
   laborHours: number;
   hourlyRate: number;

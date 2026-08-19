@@ -3,11 +3,14 @@ export interface CalcBed {
   timeH: number;
   timeM: number;
   watts: number;
+  /** Preço/kg específico dessa mesa (filamento próprio) — sobrepõe o `filamentPricePerKg` do input quando presente. */
+  filamentPricePerKg?: number;
 }
 
 export interface CalcInput {
   beds: CalcBed[];
-  filamentPricePerKg: number;
+  /** Preço/kg padrão usado por mesas sem `filamentPricePerKg` próprio. */
+  filamentPricePerKg?: number;
   kwhRate: number;
   laborHours: number;
   hourlyRate: number;
@@ -42,7 +45,6 @@ export interface CalcResult {
 export function calculateCost(input: CalcInput): CalcResult {
   const {
     beds,
-    filamentPricePerKg,
     kwhRate,
     laborHours,
     hourlyRate,
@@ -54,6 +56,7 @@ export function calculateCost(input: CalcInput): CalcResult {
     quantity,
   } = input;
   const suppliesCost = input.suppliesCost ?? 0;
+  const defaultFilamentPricePerKg = input.filamentPricePerKg ?? 0;
 
   const totalWeightG = beds.reduce((sum, b) => sum + (b.weightG || 0), 0);
   const totalHours = beds.reduce((sum, b) => sum + (b.timeH || 0) + (b.timeM || 0) / 60, 0);
@@ -61,7 +64,12 @@ export function calculateCost(input: CalcInput): CalcResult {
     const hours = (b.timeH || 0) + (b.timeM || 0) / 60;
     return sum + (b.watts / 1000) * hours * kwhRate;
   }, 0);
-  const filamentCost = (totalWeightG / 1000) * filamentPricePerKg;
+  // Cada mesa pode ter seu proprio filamento (produtos multicoloridos) — soma
+  // o custo mesa a mesa em vez de aplicar um preço/kg único sobre o peso total.
+  const filamentCost = beds.reduce((sum, b) => {
+    const pricePerKg = b.filamentPricePerKg ?? defaultFilamentPricePerKg;
+    return sum + ((b.weightG || 0) / 1000) * pricePerKg;
+  }, 0);
   const laborCost = laborHours * hourlyRate;
   const paint = paintedByHand ? paintCost : 0;
 

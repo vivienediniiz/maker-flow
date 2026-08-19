@@ -37,6 +37,8 @@ interface NewSaleModalProps {
   energyCost?: number;
   filamentCost?: number;
   marginPercent?: number;
+  /** Quando vem da Calculadora com o filamento de cada mesa já selecionado lá, chegam pré-preenchidos (ainda editáveis). */
+  initialUsedFilaments?: UsedFilamentRow[];
   /** Quando vem da Calculadora com insumos já selecionados lá, chegam pré-preenchidos (ainda editáveis). */
   initialUsedSupplies?: UsedSupplyRow[];
   /** Quando presente, o modal edita essa venda em vez de criar uma nova. */
@@ -64,6 +66,7 @@ export function NewSaleModal({
   energyCost = 0,
   filamentCost = 0,
   marginPercent = 0,
+  initialUsedFilaments,
   initialUsedSupplies,
   quote = null,
   onCreated,
@@ -118,7 +121,11 @@ export function NewSaleModal({
     loadCoupons();
     loadFilaments();
     loadSupplies();
-    setUsedFilaments([{ filamentId: "", quantityG: "" }]);
+    setUsedFilaments(
+      !quote && initialUsedFilaments && initialUsedFilaments.length > 0
+        ? initialUsedFilaments
+        : [{ filamentId: "", quantityG: "" }]
+    );
     setUsedSupplies(
       !quote && initialUsedSupplies && initialUsedSupplies.length > 0
         ? initialUsedSupplies
@@ -176,7 +183,7 @@ export function NewSaleModal({
       setSelectedCouponId("");
       setProductionDeadline("");
     }
-  }, [open, quote, initialProjectName, initialFinalPrice, initialUsedSupplies]);
+  }, [open, quote, initialProjectName, initialFinalPrice, initialUsedFilaments, initialUsedSupplies]);
 
   async function loadCoupons() {
     const {
@@ -511,13 +518,20 @@ export function NewSaleModal({
     }
 
     // Baixa de estoque de filamento só se aplica na criação de uma venda nova
-    // (editar uma venda não repete o consumo já registrado antes).
+    // (editar uma venda não repete o consumo já registrado antes). Agrupa por
+    // id antes de aplicar — várias mesas da Calculadora podem usar o mesmo
+    // filamento/insumo, e aplicar update por linha sobrescreveria em vez de
+    // somar (cada `update` partiria do mesmo snapshot já obtido no load).
     if (!isEditing && createdQuoteId) {
-      const rows = usedFilaments.filter((r) => r.filamentId && Number(r.quantityG) > 0);
-      for (const row of rows) {
-        const f = filaments.find((x) => x.id === row.filamentId);
-        if (!f) continue;
+      const filamentDeductions = new Map<string, number>();
+      for (const row of usedFilaments) {
         const qty = Number(row.quantityG);
+        if (!row.filamentId || !(qty > 0)) continue;
+        filamentDeductions.set(row.filamentId, (filamentDeductions.get(row.filamentId) ?? 0) + qty);
+      }
+      for (const [filamentId, qty] of filamentDeductions) {
+        const f = filaments.find((x) => x.id === filamentId);
+        if (!f) continue;
         await supabase
           .from("filaments")
           .update({ remaining_weight_g: f.remaining_weight_g - qty })
@@ -531,11 +545,15 @@ export function NewSaleModal({
         });
       }
 
-      const supplyRows = usedSupplies.filter((r) => r.supplyId && Number(r.quantity) > 0);
-      for (const row of supplyRows) {
-        const s = supplies.find((x) => x.id === row.supplyId);
-        if (!s) continue;
+      const supplyDeductions = new Map<string, number>();
+      for (const row of usedSupplies) {
         const qty = Number(row.quantity);
+        if (!row.supplyId || !(qty > 0)) continue;
+        supplyDeductions.set(row.supplyId, (supplyDeductions.get(row.supplyId) ?? 0) + qty);
+      }
+      for (const [supplyId, qty] of supplyDeductions) {
+        const s = supplies.find((x) => x.id === supplyId);
+        if (!s) continue;
         await supabase
           .from("supplies")
           .update({ stock_quantity: s.stock_quantity - qty })
