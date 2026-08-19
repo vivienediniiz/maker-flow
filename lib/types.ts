@@ -397,3 +397,25 @@ export interface Integration {
   last_event_at: string | null;
   created_at: string;
 }
+
+/** Meta de vendas de um mês — no máximo uma por (usuário, mês). */
+export interface SalesGoal {
+  id: string;
+  user_id: string;
+  month: string; // ISO date, primeiro dia do mês (ex: "2026-08-01")
+  revenue_goal: number | null;
+  sales_count_goal: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type FeedbackCategory = "suggestion" | "complaint" | "rating";
+
+export interface FeedbackSubmission {
+  id: string;
+  user_id: string;
+  category: FeedbackCategory;
+  rating: number | null;
+  message: string | null;
+  created_at: string;
+}
