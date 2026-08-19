@@ -9,7 +9,8 @@ import { QuickSaleModal } from "@/components/dashboard/QuickSaleModal";
 import { EditStockQuantityModal } from "@/components/dashboard/EditStockQuantityModal";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
-import { PackagePlus, ShoppingBag, Loader2, Pencil } from "lucide-react";
+import { isProductLow } from "@/lib/products";
+import { PackagePlus, ShoppingBag, Loader2, Pencil, AlertTriangle } from "lucide-react";
 import type { Product } from "@/lib/types";
 
 export default function InventoryPage() {
@@ -43,6 +44,7 @@ export default function InventoryPage() {
   // Estoque é pra quem trabalha com pronta entrega — só mostra produtos com estoque > 0
   // (ou que já tiveram estoque lançado). Produtos feitos só sob encomenda não aparecem aqui.
   const inStock = products.filter((p) => p.stock_quantity > 0);
+  const lowStockItems = inStock.filter(isProductLow);
 
   return (
     <>
@@ -53,6 +55,15 @@ export default function InventoryPage() {
             <PackagePlus size={16} /> Adicionar Estoque
           </NeonButton>
         </div>
+
+        {lowStockItems.length > 0 && (
+          <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
+            <AlertTriangle size={16} className="shrink-0" />
+            {lowStockItems.length === 1
+              ? `1 produto está com estoque baixo: ${lowStockItems[0].name}.`
+              : `${lowStockItems.length} produtos estão com estoque baixo: ${lowStockItems.map((p) => p.name).join(", ")}.`}
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-16 text-text-muted">
@@ -100,7 +111,19 @@ export default function InventoryPage() {
                       <td className="px-6 py-4 font-numeric font-semibold text-neon-pink">
                         {formatBRL(p.sale_price)}
                       </td>
-                      <td className="px-6 py-4 text-text-secondary">{p.stock_quantity} disponíveis</td>
+                      <td className="px-6 py-4 text-text-secondary">
+                        <div className="flex items-center gap-2">
+                          <span>{p.stock_quantity} disponíveis</span>
+                          {isProductLow(p) && (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-pill border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-400"
+                              title={`Limite configurado: ${p.low_stock_threshold}`}
+                            >
+                              <AlertTriangle size={10} /> Baixo
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button

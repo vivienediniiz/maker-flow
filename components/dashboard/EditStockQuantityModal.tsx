@@ -17,12 +17,14 @@ export function EditStockQuantityModal({
 }) {
   const supabase = createClient();
   const [quantity, setQuantity] = useState("");
+  const [lowStockThreshold, setLowStockThreshold] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (product) {
       setQuantity(String(product.stock_quantity));
+      setLowStockThreshold(product.low_stock_threshold != null ? String(product.low_stock_threshold) : "");
       setError(null);
     }
   }, [product]);
@@ -39,10 +41,16 @@ export function EditStockQuantityModal({
       return;
     }
 
+    const threshold = lowStockThreshold.trim() === "" ? null : Number(lowStockThreshold);
+    if (threshold != null && (isNaN(threshold) || threshold < 0)) {
+      setError("Informe um limite de estoque mínimo válido (0 ou mais), ou deixe em branco.");
+      return;
+    }
+
     setSaving(true);
     const { data, error: updateError } = await supabase
       .from("products")
-      .update({ stock_quantity: qty })
+      .update({ stock_quantity: qty, low_stock_threshold: threshold })
       .eq("id", product!.id)
       .select()
       .single();
@@ -78,6 +86,23 @@ export function EditStockQuantityModal({
           />
           <p className="mt-1.5 text-[11px] text-text-muted">
             Define o número exato — diferente de &quot;Adicionar Estoque&quot;, que soma ao que já existe.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">
+            Limite de estoque baixo <span className="text-text-muted/60">— opcional</span>
+          </label>
+          <input
+            type="number"
+            min={0}
+            value={lowStockThreshold}
+            onChange={(e) => setLowStockThreshold(e.target.value)}
+            className="glass-input w-full"
+            placeholder="Deixe em branco pra não alertar"
+          />
+          <p className="mt-1.5 text-[11px] text-text-muted">
+            Quando o estoque cair pra esse número ou menos, o produto aparece com alerta na aba Estoque.
           </p>
         </div>
 

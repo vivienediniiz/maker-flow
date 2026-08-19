@@ -199,6 +199,8 @@ export interface Product {
   cost_price: number;
   sale_price: number;
   stock_quantity: number;
+  /** Alerta de estoque baixo só dispara quando configurado — sem valor universal padrão (varia demais de produto pra produto). */
+  low_stock_threshold: number | null;
   price_tiers: PriceTier[];
   calc_inputs: CalcInputs | null;
 }
