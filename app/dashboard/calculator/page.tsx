@@ -43,7 +43,6 @@ function newSupplyLine(): SupplyLine {
 
 export default function CalculatorPage() {
   const supabase = createClient();
-  const [productMode, setProductMode] = useState<"select" | "new">("new");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [projectName, setProjectName] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
@@ -66,6 +65,7 @@ export default function CalculatorPage() {
 
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [productModalOpen, setProductModalOpen] = useState(false);
+  const [newProductModalOpen, setNewProductModalOpen] = useState(false);
   const [quoteModalOpen, setQuoteModalOpen] = useState(false);
 
   useEffect(() => {
@@ -159,6 +159,14 @@ export default function CalculatorPage() {
       setMarginPercent(Math.min(Math.max(ci.marginPercent, 0), 99));
       setQuantity(ci.quantity);
     }
+  }
+
+  /** Produto criado direto do toggle "Cadastrar Produto" — só entra como referência/vínculo, não mexe no cálculo já feito na tela. */
+  function handleNewProductCreated(product: Product) {
+    setProducts((prev) => [...prev, product].sort((a, b) => a.name.localeCompare(b.name)));
+    setSelectedProductId(product.id);
+    setProjectName(product.name);
+    setNewProductModalOpen(false);
   }
 
   function addBed() {
@@ -259,55 +267,37 @@ export default function CalculatorPage() {
             <div className="glass-card flex gap-1 p-1">
               <button
                 type="button"
-                onClick={() => setProductMode("select")}
-                className={cn(
-                  "flex-1 rounded-pill py-2 text-xs font-medium transition-colors",
-                  productMode === "select" ? "bg-neon-gradient text-white" : "text-text-secondary"
-                )}
+                className="flex-1 rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white"
               >
                 Selecionar produto já cadastrado
               </button>
               <button
                 type="button"
-                onClick={() => setProductMode("new")}
-                className={cn(
-                  "flex-1 rounded-pill py-2 text-xs font-medium transition-colors",
-                  productMode === "new" ? "bg-neon-gradient text-white" : "text-text-secondary"
-                )}
+                onClick={() => setNewProductModalOpen(true)}
+                className="flex-1 rounded-pill py-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary"
               >
-                Digitar novo produto
+                Cadastrar Produto
               </button>
             </div>
 
-            {productMode === "select" ? (
-              <>
-                <select
-                  onChange={(e) => handleSelectProduct(e.target.value)}
-                  className="glass-input w-full text-base"
-                  defaultValue=""
-                >
-                  <option value="" className="bg-bg-raised">
-                    {products.length === 0 ? "Nenhum produto cadastrado ainda" : "Selecione..."}
-                  </option>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id} className="bg-bg-raised">
-                      {p.name} {!p.calc_inputs && "(sem dados de cálculo salvos)"}
-                    </option>
-                  ))}
-                </select>
-                {projectName && (
-                  <p className="text-[11px] text-text-muted">
-                    Produto selecionado: <span className="text-text-secondary">{projectName}</span>
-                  </p>
-                )}
-              </>
-            ) : (
-              <input
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                placeholder="Ex: Miniatura Dragão Articulado"
-                className="glass-input w-full text-base"
-              />
+            <select
+              value={selectedProductId}
+              onChange={(e) => handleSelectProduct(e.target.value)}
+              className="glass-input w-full text-base"
+            >
+              <option value="" className="bg-bg-raised">
+                {products.length === 0 ? "Nenhum produto cadastrado ainda" : "Selecione..."}
+              </option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id} className="bg-bg-raised">
+                  {p.name} {!p.calc_inputs && "(sem dados de cálculo salvos)"}
+                </option>
+              ))}
+            </select>
+            {projectName && (
+              <p className="text-[11px] text-text-muted">
+                Produto selecionado: <span className="text-text-secondary">{projectName}</span>
+              </p>
             )}
           </GlassCard>
 
@@ -627,6 +617,11 @@ export default function CalculatorPage() {
           quantity,
         }}
       />
+      <NewProductModal
+        open={newProductModalOpen}
+        onClose={() => setNewProductModalOpen(false)}
+        onCreated={handleNewProductCreated}
+      />
       <FilamentModal
         open={filamentModalBedId !== null}
         onClose={() => setFilamentModalBedId(null)}
@@ -645,7 +640,7 @@ export default function CalculatorPage() {
           energyCost: calc.energyCost,
           filamentCost: calc.filamentCost,
           marginPercent,
-          productId: productMode === "select" && selectedProductId ? selectedProductId : undefined,
+          productId: selectedProductId || undefined,
         }}
       />
     </>
