@@ -7,7 +7,9 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { FilamentModal } from "@/components/dashboard/FilamentModal";
 import { RegisterFilamentPurchaseModal } from "@/components/dashboard/RegisterFilamentPurchaseModal";
-import { FilamentSpoolIcon } from "@/components/dashboard/FilamentSpoolIcon";
+import { FilamentVerticalGauge } from "@/components/dashboard/FilamentVerticalGauge";
+import { FilamentLevelBar } from "@/components/dashboard/FilamentLevelBar";
+import { AdjustFilamentStockInline } from "@/components/dashboard/AdjustFilamentStockInline";
 import { FilamentMovementsHistory } from "@/components/dashboard/FilamentMovementsHistory";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
@@ -85,6 +87,11 @@ export default function FilamentsPage() {
     setHistoryRefreshKey((k) => k + 1);
   }
 
+  function handleAdjusted(filament: Filament) {
+    handleSaved(filament);
+    setHistoryRefreshKey((k) => k + 1);
+  }
+
   return (
     <>
       <Topbar title="Filamentos" />
@@ -141,7 +148,13 @@ export default function FilamentsPage() {
                   className={cn("space-y-3", low && "border-amber-500/50 ring-1 ring-amber-500/30")}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <FilamentSpoolIcon colorHex={f.color_hex} fillPercent={fillPercent} isLow={low} size={60} />
+                    <div className="flex items-center gap-3">
+                      <FilamentVerticalGauge colorHex={f.color_hex} fillPercent={fillPercent} size="sm" />
+                      <div>
+                        <p className="text-sm font-medium text-text-primary">{f.material}</p>
+                        <p className="text-xs text-text-muted">{f.brand}</p>
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2">
                       <button onClick={() => openEdit(f)} className="text-text-muted hover:text-text-primary" aria-label="Editar filamento">
                         <Pencil size={14} />
@@ -152,22 +165,19 @@ export default function FilamentsPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">{f.material}</p>
-                    <p className="text-xs text-text-muted">{f.brand}</p>
-                  </div>
-
                   {low && (
                     <span className="inline-flex items-center gap-1 rounded-pill border border-amber-500/30 bg-amber-500/15 px-2.5 py-1 text-[11px] font-medium text-amber-400">
                       <AlertTriangle size={11} /> Estoque baixo
                     </span>
                   )}
 
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-text-secondary">
-                      {f.remaining_weight_g}g / {f.weight_total_g}g
-                    </span>
-                    <span className="text-text-muted">{formatBRL(f.price_per_kg)}/kg</span>
+                  <FilamentLevelBar remainingG={f.remaining_weight_g} totalG={f.weight_total_g} colorHex={f.color_hex} isLow={low} />
+
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <AdjustFilamentStockInline filament={f} onAdjusted={handleAdjusted} />
+                    </div>
+                    <span className="shrink-0 text-xs text-text-muted">{formatBRL(f.price_per_kg)}/kg</span>
                   </div>
 
                   <button
