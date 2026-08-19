@@ -25,6 +25,9 @@ interface PrintBed {
   timeM: number;
   watts: number;
   filamentId: string;
+  /** "batch": Peso/Tempo representam o total da mesa cheia (colado direto do slicer) — dividido por `itemsCount` pro custo por peça. */
+  mode: "single" | "batch";
+  itemsCount: number;
 }
 
 interface SupplyLine {
@@ -34,7 +37,17 @@ interface SupplyLine {
 }
 
 function newBed(index: number): PrintBed {
-  return { id: crypto.randomUUID(), name: `Mesa ${index}`, weightG: 0, timeH: 0, timeM: 0, watts: 200, filamentId: "" };
+  return {
+    id: crypto.randomUUID(),
+    name: `Mesa ${index}`,
+    weightG: 0,
+    timeH: 0,
+    timeM: 0,
+    watts: 200,
+    filamentId: "",
+    mode: "single",
+    itemsCount: 2,
+  };
 }
 
 function newSupplyLine(): SupplyLine {
@@ -148,7 +161,15 @@ export default function CalculatorPage() {
 
     const ci = product.calc_inputs;
     if (ci) {
-      setBeds(ci.beds.map((b) => ({ ...b, id: crypto.randomUUID(), filamentId: b.filamentId ?? "" })));
+      setBeds(
+        ci.beds.map((b) => ({
+          ...b,
+          id: crypto.randomUUID(),
+          filamentId: b.filamentId ?? "",
+          mode: b.mode ?? "single",
+          itemsCount: b.itemsCount ?? 2,
+        }))
+      );
       setKwhRate(ci.kwhRate);
       setLaborHours(ci.laborHours);
       setHourlyRate(ci.hourlyRate);
@@ -179,6 +200,22 @@ export default function CalculatorPage() {
     setBeds((b) => b.map((bed) => (bed.id === id ? { ...bed, ...patch } : bed)));
   }
 
+  /**
+   * Muda modo/quantidade de itens de uma mesa. Quando é a Mesa 1 (ou a única
+   * mesa) e está em modo Lote, sugere o mesmo valor pra "Quantidade de
+   * peças" global — só nesse momento, sem travar o campo (o usuário pode
+   * ajustar depois sem essa sugestão voltar a sobrescrever).
+   */
+  function updateBedBatch(bedIndex: number, id: string, patch: Partial<Pick<PrintBed, "mode" | "itemsCount">>) {
+    updateBed(id, patch);
+    const isFirstBed = bedIndex === 0;
+    const nextMode = patch.mode ?? beds[bedIndex]?.mode;
+    const nextItemsCount = patch.itemsCount ?? beds[bedIndex]?.itemsCount;
+    if (isFirstBed && nextMode === "batch" && nextItemsCount) {
+      setQuantity(nextItemsCount);
+    }
+  }
+
   const suppliesCost = useMemo(() => {
     return supplyLines.reduce((sum, line) => {
       const supply = supplies.find((s) => s.id === line.supplyId);
@@ -190,15 +227,21 @@ export default function CalculatorPage() {
   // Resolve o preço/kg de cada mesa pelo filamento cadastrado selecionado nela
   // — sem filamento selecionado, a mesa não contribui custo de filamento
   // (bloqueado via `missingFilament` antes de deixar seguir pro pedido/produto).
+  // Em modo Lote, Peso/Tempo digitados são o total da mesa cheia (direto do
+  // slicer) — divide por `itemsCount` antes de entrar no custo por peça; o
+  // desconto de estoque de filamento continua usando o total bruto (`beds`).
   const calcBeds = useMemo(
     () =>
-      beds.map((b) => ({
-        weightG: b.weightG,
-        timeH: b.timeH,
-        timeM: b.timeM,
-        watts: b.watts,
-        filamentPricePerKg: filaments.find((f) => f.id === b.filamentId)?.price_per_kg ?? 0,
-      })),
+      beds.map((b) => {
+        const divisor = b.mode === "batch" && b.itemsCount > 1 ? b.itemsCount : 1;
+        return {
+          weightG: b.weightG / divisor,
+          timeH: b.timeH / divisor,
+          timeM: b.timeM / divisor,
+          watts: b.watts,
+          filamentPricePerKg: filaments.find((f) => f.id === b.filamentId)?.price_per_kg ?? 0,
+        };
+      }),
     [beds, filaments]
   );
 
@@ -330,8 +373,44 @@ export default function CalculatorPage() {
                     </button>
                   )}
                 </div>
+
+                <div className="glass-card flex gap-1 p-1">
+                  <button
+                    type="button"
+                    onClick={() => updateBedBatch(i, bed.id, { mode: "single" })}
+                    className={cn(
+                      "flex-1 rounded-pill py-1.5 text-[11px] font-medium transition-colors",
+                      bed.mode === "single" ? "bg-neon-gradient text-white" : "text-text-secondary"
+                    )}
+                  >
+                    Item Único
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateBedBatch(i, bed.id, { mode: "batch" })}
+                    className={cn(
+                      "flex-1 rounded-pill py-1.5 text-[11px] font-medium transition-colors",
+                      bed.mode === "batch" ? "bg-neon-gradient text-white" : "text-text-secondary"
+                    )}
+                  >
+                    Lote
+                  </button>
+                </div>
+
+                {bed.mode === "batch" && (
+                  <Field label="Quantidade de itens na mesa">
+                    <input
+                      type="number"
+                      min={2}
+                      value={bed.itemsCount || ""}
+                      onChange={(e) => updateBedBatch(i, bed.id, { itemsCount: Math.max(2, Number(e.target.value)) })}
+                      className="glass-input w-full"
+                    />
+                  </Field>
+                )}
+
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <Field label="Peso (g)">
+                  <Field label={bed.mode === "batch" ? "Peso total (g)" : "Peso (g)"}>
                     <input
                       type="number"
                       min={0}
@@ -340,7 +419,7 @@ export default function CalculatorPage() {
                       className="glass-input w-full"
                     />
                   </Field>
-                  <Field label="Tempo (h)">
+                  <Field label={bed.mode === "batch" ? "Tempo total (h)" : "Tempo (h)"}>
                     <input
                       type="number"
                       min={0}
@@ -349,7 +428,7 @@ export default function CalculatorPage() {
                       className="glass-input w-full"
                     />
                   </Field>
-                  <Field label="Tempo (min)">
+                  <Field label={bed.mode === "batch" ? "Tempo total (min)" : "Tempo (min)"}>
                     <input
                       type="number"
                       min={0}
@@ -369,6 +448,13 @@ export default function CalculatorPage() {
                     />
                   </Field>
                 </div>
+
+                {bed.mode === "batch" && bed.itemsCount > 0 && (
+                  <p className="text-[11px] text-neon-green">
+                    ≈ {Math.round(bed.weightG / bed.itemsCount)}g e{" "}
+                    {Math.round((bed.timeH * 60 + bed.timeM) / bed.itemsCount)}min por unidade
+                  </p>
+                )}
 
                 <div className="flex items-end gap-2">
                   <div className="flex-1">
@@ -605,7 +691,16 @@ export default function CalculatorPage() {
         initialCostPrice={calc.baseCost}
         initialSalePrice={calc.pricePerPiece}
         calcInputs={{
-          beds: beds.map(({ name, weightG, timeH, timeM, watts, filamentId }) => ({ name, weightG, timeH, timeM, watts, filamentId })),
+          beds: beds.map(({ name, weightG, timeH, timeM, watts, filamentId, mode, itemsCount }) => ({
+            name,
+            weightG,
+            timeH,
+            timeM,
+            watts,
+            filamentId,
+            mode,
+            itemsCount,
+          })),
           kwhRate,
           laborHours,
           hourlyRate,

@@ -161,7 +161,17 @@ export interface PriceTier {
 }
 
 export interface CalcInputs {
-  beds: { name: string; weightG: number; timeH: number; timeM: number; watts: number; filamentId?: string }[];
+  beds: {
+    name: string;
+    weightG: number;
+    timeH: number;
+    timeM: number;
+    watts: number;
+    filamentId?: string;
+    /** "batch": Peso/Tempo representam o total da mesa cheia (ex: colado direto do slicer) — dividido por `itemsCount` pro custo por peça. */
+    mode?: "single" | "batch";
+    itemsCount?: number;
+  }[];
   /** @deprecated Substituído pelo filamento próprio de cada mesa — mantido só pra ler registros salvos antes dessa mudança. */
   filamentPricePerKg?: number;
   kwhRate: number;
