@@ -8,25 +8,15 @@ import { MarginSlider } from "@/components/ui/MarginSlider";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import { calculateCost, type CalcBed } from "@/lib/costCalculator";
-import type { Supply, Filament } from "@/lib/types";
+import type { Filament } from "@/lib/types";
 
 interface Bed extends CalcBed {
   id: string;
   name: string;
 }
 
-interface SupplyLine {
-  id: string;
-  supplyId: string;
-  quantity: number;
-}
-
 function newBed(index: number): Bed {
   return { id: crypto.randomUUID(), name: `Mesa ${index}`, weightG: 0, timeH: 0, timeM: 0, watts: 200 };
-}
-
-function newSupplyLine(): SupplyLine {
-  return { id: crypto.randomUUID(), supplyId: "", quantity: 0 };
 }
 
 interface CostCalculatorModalProps {
@@ -41,16 +31,13 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
   const [filamentPricePerKg, setFilamentPricePerKg] = useState(120);
   const [selectedFilamentId, setSelectedFilamentId] = useState("");
   const [kwhRate, setKwhRate] = useState(0.95);
-  const [supplyLines, setSupplyLines] = useState<SupplyLine[]>([]);
   const [marginPercent, setMarginPercent] = useState(50);
   const [filaments, setFilaments] = useState<Filament[]>([]);
-  const [supplies, setSupplies] = useState<Supply[]>([]);
 
   useEffect(() => {
     if (!open) return;
     setBeds([newBed(1)]);
     setSelectedFilamentId("");
-    setSupplyLines([]);
     setMarginPercent(50);
     loadReferenceData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -62,15 +49,13 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [{ data: settings }, { data: filamentsData }, { data: suppliesData }] = await Promise.all([
+    const [{ data: settings }, { data: filamentsData }] = await Promise.all([
       supabase.from("settings").select("electricity_kwh_rate").eq("user_id", user.id).single(),
       supabase.from("filaments").select("*").eq("user_id", user.id).order("brand"),
-      supabase.from("supplies").select("*").eq("user_id", user.id).order("name"),
     ]);
 
     if (settings?.electricity_kwh_rate) setKwhRate(Number(settings.electricity_kwh_rate));
     setFilaments((filamentsData as Filament[]) ?? []);
-    setSupplies((suppliesData as Supply[]) ?? []);
   }
 
   function addBed() {
@@ -89,24 +74,6 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
     if (f) setFilamentPricePerKg(f.price_per_kg);
   }
 
-  function addSupplyLine() {
-    setSupplyLines((s) => [...s, newSupplyLine()]);
-  }
-  function removeSupplyLine(id: string) {
-    setSupplyLines((s) => s.filter((line) => line.id !== id));
-  }
-  function updateSupplyLine(id: string, patch: Partial<SupplyLine>) {
-    setSupplyLines((s) => s.map((line) => (line.id === id ? { ...line, ...patch } : line)));
-  }
-
-  const suppliesCost = useMemo(() => {
-    return supplyLines.reduce((sum, line) => {
-      const supply = supplies.find((s) => s.id === line.supplyId);
-      if (!supply) return sum;
-      return sum + supply.cost_per_unit * (line.quantity || 0);
-    }, 0);
-  }, [supplyLines, supplies]);
-
   const calc = useMemo(
     () =>
       calculateCost({
@@ -118,12 +85,11 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
         extras: 0,
         paintedByHand: false,
         paintCost: 0,
-        suppliesCost,
         marketplaceFee: 0,
         marginPercent,
         quantity: 1,
       }),
-    [beds, filamentPricePerKg, kwhRate, suppliesCost, marginPercent]
+    [beds, filamentPricePerKg, kwhRate, marginPercent]
   );
 
   function handleApply() {
@@ -252,63 +218,6 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
           </MiniField>
         )}
 
-        {/* Insumos */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-medium uppercase tracking-wider text-text-muted">Insumos Utilizados</h4>
-            <NeonButton type="button" variant="outline" size="sm" onClick={addSupplyLine} disabled={supplies.length === 0}>
-              <Plus size={14} /> Adicionar outro insumo
-            </NeonButton>
-          </div>
-          {supplies.length === 0 ? (
-            <p className="text-xs text-text-muted">Nenhum insumo cadastrado em Cadastros → Insumos.</p>
-          ) : supplyLines.length === 0 ? (
-            <p className="text-xs text-text-muted">Nenhum insumo adicionado ainda.</p>
-          ) : (
-            supplyLines.map((line) => {
-              const supply = supplies.find((s) => s.id === line.supplyId);
-              return (
-                <div key={line.id} className="flex items-end gap-2">
-                  <MiniField label="Insumo" className="flex-1">
-                    <select
-                      value={line.supplyId}
-                      onChange={(e) => updateSupplyLine(line.id, { supplyId: e.target.value })}
-                      className="glass-input w-full"
-                    >
-                      <option value="" className="bg-bg-raised">
-                        Selecione...
-                      </option>
-                      {supplies.map((s) => (
-                        <option key={s.id} value={s.id} className="bg-bg-raised">
-                          {s.name} ({formatBRL(s.cost_per_unit)}/{s.unit})
-                        </option>
-                      ))}
-                    </select>
-                  </MiniField>
-                  <MiniField label={`Qtd. (${supply?.unit ?? "un"})`} className="w-28">
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={line.quantity || ""}
-                      onChange={(e) => updateSupplyLine(line.id, { quantity: Number(e.target.value) })}
-                      className="glass-input w-full"
-                    />
-                  </MiniField>
-                  <button
-                    type="button"
-                    onClick={() => removeSupplyLine(line.id)}
-                    className="mb-2.5 text-text-muted hover:text-red-400"
-                    aria-label="Remover insumo"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              );
-            })
-          )}
-        </div>
-
         {/* Margem */}
         <MarginSlider value={marginPercent} onChange={setMarginPercent} label="Margem de Lucro Desejada" />
 
@@ -316,7 +225,6 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
         <div className="glass-card space-y-2 p-4 text-sm">
           <SummaryRow label="Custo de Filamento" value={formatBRL(calc.filamentCost)} />
           <SummaryRow label="Custo de Energia" value={formatBRL(calc.energyCost)} />
-          <SummaryRow label="Custo de Insumos" value={formatBRL(calc.suppliesCost)} />
           <div className="my-1 h-px bg-border-glass" />
           <SummaryRow label="Custo Total Unitário" value={formatBRL(calc.baseCost)} strong />
           <div className="my-1 h-px bg-border-glass" />

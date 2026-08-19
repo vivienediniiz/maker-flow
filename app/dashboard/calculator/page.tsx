@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { calculateCost } from "@/lib/costCalculator";
 import { Plus, Trash2, FileDown, Link2, Rocket, PackagePlus } from "lucide-react";
-import type { Product } from "@/lib/types";
+import type { Product, Supply } from "@/lib/types";
 
 interface PrintBed {
   id: string;
@@ -24,8 +24,18 @@ interface PrintBed {
   watts: number;
 }
 
+interface SupplyLine {
+  id: string;
+  supplyId: string;
+  quantity: number;
+}
+
 function newBed(index: number): PrintBed {
   return { id: crypto.randomUUID(), name: `Mesa ${index}`, weightG: 0, timeH: 0, timeM: 0, watts: 200 };
+}
+
+function newSupplyLine(): SupplyLine {
+  return { id: crypto.randomUUID(), supplyId: "", quantity: 0 };
 }
 
 export default function CalculatorPage() {
@@ -47,6 +57,8 @@ export default function CalculatorPage() {
   const [marketplaceFee, setMarketplaceFee] = useState(16);
   const [marginPercent, setMarginPercent] = useState(50);
   const [quantity, setQuantity] = useState(1);
+  const [supplies, setSupplies] = useState<Supply[]>([]);
+  const [supplyLines, setSupplyLines] = useState<SupplyLine[]>([]);
 
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -55,6 +67,7 @@ export default function CalculatorPage() {
   useEffect(() => {
     loadProducts();
     loadMarketplaces();
+    loadSupplies();
   }, []);
 
   async function loadProducts() {
@@ -79,6 +92,25 @@ export default function CalculatorPage() {
 
     const feesObj = data?.marketplace_fees_json ?? {};
     setMarketplaces(Object.entries(feesObj).map(([name, fee]) => ({ name, fee: Number(fee) })));
+  }
+
+  async function loadSupplies() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from("supplies").select("*").eq("user_id", user.id).order("name");
+    setSupplies((data as Supply[]) ?? []);
+  }
+
+  function addSupplyLine() {
+    setSupplyLines((s) => [...s, newSupplyLine()]);
+  }
+  function removeSupplyLine(id: string) {
+    setSupplyLines((s) => s.filter((line) => line.id !== id));
+  }
+  function updateSupplyLine(id: string, patch: Partial<SupplyLine>) {
+    setSupplyLines((s) => s.map((line) => (line.id === id ? { ...line, ...patch } : line)));
   }
 
   function handleSelectMarketplace(name: string) {
@@ -120,6 +152,14 @@ export default function CalculatorPage() {
     setBeds((b) => b.map((bed) => (bed.id === id ? { ...bed, ...patch } : bed)));
   }
 
+  const suppliesCost = useMemo(() => {
+    return supplyLines.reduce((sum, line) => {
+      const supply = supplies.find((s) => s.id === line.supplyId);
+      if (!supply) return sum;
+      return sum + supply.cost_per_unit * (line.quantity || 0);
+    }, 0);
+  }, [supplyLines, supplies]);
+
   const calc = useMemo(
     () =>
       calculateCost({
@@ -131,11 +171,23 @@ export default function CalculatorPage() {
         extras,
         paintedByHand,
         paintCost,
+        suppliesCost,
         marketplaceFee,
         marginPercent,
         quantity,
       }),
-    [beds, filamentPricePerKg, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, marketplaceFee, marginPercent, quantity]
+    [beds, filamentPricePerKg, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, suppliesCost, marketplaceFee, marginPercent, quantity]
+  );
+
+  // Snapshot estável dos insumos selecionados aqui — só muda quando o usuário
+  // de fato edita a lista, pra não resetar a seção "Insumo(s) Utilizados" da
+  // Venda Manual enquanto ela estiver aberta por cima desta tela.
+  const usedSuppliesForSale = useMemo(
+    () =>
+      supplyLines
+        .filter((l) => l.supplyId)
+        .map((l) => ({ supplyId: l.supplyId, quantity: l.quantity ? String(l.quantity) : "" })),
+    [supplyLines]
   );
 
   return (
@@ -322,6 +374,70 @@ export default function CalculatorPage() {
             </div>
           </GlassCard>
 
+          {/* Insumos */}
+          <GlassCard padding="lg" className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">Insumos Utilizados</h3>
+              <NeonButton variant="outline" size="sm" onClick={addSupplyLine} disabled={supplies.length === 0}>
+                <Plus size={14} /> Adicionar insumo
+              </NeonButton>
+            </div>
+            {supplies.length === 0 ? (
+              <p className="text-xs text-text-muted">Nenhum insumo cadastrado em Cadastros → Insumos.</p>
+            ) : supplyLines.length === 0 ? (
+              <p className="text-xs text-text-muted">Nenhum insumo adicionado ainda (opcional).</p>
+            ) : (
+              supplyLines.map((line) => {
+                const supply = supplies.find((s) => s.id === line.supplyId);
+                return (
+                  <div key={line.id} className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <Field label="Insumo">
+                        <select
+                          value={line.supplyId}
+                          onChange={(e) => updateSupplyLine(line.id, { supplyId: e.target.value })}
+                          className="glass-input w-full"
+                        >
+                          <option value="" className="bg-bg-raised">
+                            Selecione...
+                          </option>
+                          {supplies.map((s) => (
+                            <option key={s.id} value={s.id} className="bg-bg-raised">
+                              {s.name} ({formatBRL(s.cost_per_unit)}/{s.unit})
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                    </div>
+                    <div className="w-28">
+                      <Field label={`Qtd. (${supply?.unit ?? "un"})`}>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={line.quantity || ""}
+                          onChange={(e) => updateSupplyLine(line.id, { quantity: Number(e.target.value) })}
+                          className="glass-input w-full"
+                        />
+                      </Field>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeSupplyLine(line.id)}
+                      className="mb-2.5 shrink-0 text-text-muted hover:text-red-400"
+                      aria-label="Remover insumo"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+            <p className="text-[11px] text-text-muted">
+              Só entra no orçamento — o estoque só é baixado quando o pedido for de fato confirmado.
+            </p>
+          </GlassCard>
+
           {/* Pricing */}
           <GlassCard padding="lg" className="space-y-5">
             <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
@@ -374,6 +490,7 @@ export default function CalculatorPage() {
               <SummaryRow label="Mão de obra" value={formatBRL(calc.laborCost)} />
               {paintedByHand && <SummaryRow label="Pintura" value={formatBRL(calc.paint)} />}
               <SummaryRow label="Extras" value={formatBRL(extras)} />
+              {suppliesCost > 0 && <SummaryRow label="Insumos" value={formatBRL(calc.suppliesCost)} />}
               <div className="my-2 h-px bg-border-glass" />
               <SummaryRow label="Custo total" value={formatBRL(calc.baseCost)} />
             </div>
@@ -411,6 +528,7 @@ export default function CalculatorPage() {
         energyCost={calc.energyCost}
         filamentCost={calc.filamentCost}
         marginPercent={marginPercent}
+        initialUsedSupplies={usedSuppliesForSale}
       />
       <NewProductModal
         open={productModalOpen}

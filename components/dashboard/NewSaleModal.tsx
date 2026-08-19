@@ -37,6 +37,8 @@ interface NewSaleModalProps {
   energyCost?: number;
   filamentCost?: number;
   marginPercent?: number;
+  /** Quando vem da Calculadora com insumos já selecionados lá, chegam pré-preenchidos (ainda editáveis). */
+  initialUsedSupplies?: UsedSupplyRow[];
   /** Quando presente, o modal edita essa venda em vez de criar uma nova. */
   quote?: QuoteWithClient | null;
   /** Na criação, recebe a venda recém-criada (com joins) — usado pra abrir a tela de sucesso/comprovante. Na edição, é chamado sem argumento. */
@@ -62,6 +64,7 @@ export function NewSaleModal({
   energyCost = 0,
   filamentCost = 0,
   marginPercent = 0,
+  initialUsedSupplies,
   quote = null,
   onCreated,
 }: NewSaleModalProps) {
@@ -116,7 +119,11 @@ export function NewSaleModal({
     loadFilaments();
     loadSupplies();
     setUsedFilaments([{ filamentId: "", quantityG: "" }]);
-    setUsedSupplies([{ supplyId: "", quantity: "" }]);
+    setUsedSupplies(
+      !quote && initialUsedSupplies && initialUsedSupplies.length > 0
+        ? initialUsedSupplies
+        : [{ supplyId: "", quantity: "" }]
+    );
     setClientModalOpen(false);
     setProductModalOpen(false);
     setShippingQuoteOpen(false);
@@ -169,7 +176,7 @@ export function NewSaleModal({
       setSelectedCouponId("");
       setProductionDeadline("");
     }
-  }, [open, quote, initialProjectName, initialFinalPrice]);
+  }, [open, quote, initialProjectName, initialFinalPrice, initialUsedSupplies]);
 
   async function loadCoupons() {
     const {
