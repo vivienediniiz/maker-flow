@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const SPLASH_DURATION_MS = 5000;
+const SPLASH_DURATION_MS = 3000;
 
 // Tela de abertura do app: mostra a logo por alguns segundos e segue pro
 // login, sempre — igual a tela de lançamento de qualquer app nativo,

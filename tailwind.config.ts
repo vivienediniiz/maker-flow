@@ -152,7 +152,7 @@ const config: Config = {
         "caret-blink": "caret-blink 1s step-start infinite",
         "float-y": "float-y 6s ease-in-out infinite",
         "panel-in": "panel-in 0.7s cubic-bezier(0.16,1,0.3,1) forwards",
-        "splash-logo": "splash-logo 5s ease-out forwards",
+        "splash-logo": "splash-logo 3s ease-out forwards",
       },
     },
   },
