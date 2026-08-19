@@ -115,8 +115,8 @@ export function NewSaleModal({
     loadCoupons();
     loadFilaments();
     loadSupplies();
-    setUsedFilaments([]);
-    setUsedSupplies([]);
+    setUsedFilaments([{ filamentId: "", quantityG: "" }]);
+    setUsedSupplies([{ supplyId: "", quantity: "" }]);
     setClientModalOpen(false);
     setProductModalOpen(false);
     setShippingQuoteOpen(false);
