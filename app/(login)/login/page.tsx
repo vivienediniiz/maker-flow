@@ -48,8 +48,9 @@ export default function LoginPage() {
 
       {/* Logo fixo no canto superior esquerdo */}
       <AppLogo
-        wrapperClassName="absolute left-6 top-6 z-20 flex items-center gap-2 sm:left-10 sm:top-8"
-        textClassName="font-display text-lg tracking-wide text-text-primary"
+        wrapperClassName="absolute left-6 top-6 z-20 flex items-center gap-3 sm:left-10 sm:top-8"
+        iconClassName="h-14 w-14"
+        textClassName="font-display text-2xl tracking-wide text-text-primary"
       />
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-2">

@@ -22,7 +22,7 @@ interface Sparkle {
 
 // Área (em % do canto superior esquerdo) reservada pra logo — nenhuma
 // estrela/sparkle nasce ali, pra não ficar "em cima" dela.
-const LOGO_CLEARANCE = { top: 14, left: 32 };
+const LOGO_CLEARANCE = { top: 18, left: 38 };
 
 function randomPositionOutsideLogo() {
   let top: number;
