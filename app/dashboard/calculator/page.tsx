@@ -570,7 +570,7 @@ export default function CalculatorPage() {
         {/* Right column: summary + actions */}
         <div className="space-y-6">
           <GlassCard padding="lg" className="sticky top-[80px] space-y-5">
-            <h3 className="neon-text text-sm font-medium uppercase tracking-wider">Resumo</h3>
+            <h3 className="neon-text text-2xl font-bold uppercase tracking-wider">Resumo</h3>
 
             <Field label="Quantidade de Produtos Finais">
               <input
