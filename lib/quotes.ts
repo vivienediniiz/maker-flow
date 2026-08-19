@@ -1,5 +1,5 @@
 import { CreditCard, ShoppingCart, ShoppingBag, Video, Store, type LucideIcon } from "lucide-react";
-import type { QuoteStatus, QuoteSource } from "./types";
+import type { QuoteStatus, QuoteSource, QuotePaymentMethod } from "./types";
 
 export const QUOTE_EXPIRY_DAYS = 15;
 
@@ -36,6 +36,15 @@ export const QUOTE_STATUS_PILL_STYLES: Record<QuoteStatus, string> = {
 export function formatOrderNumber(n: number) {
   return `#${String(n).padStart(4, "0")}`;
 }
+
+export const QUOTE_PAYMENT_METHOD_LABELS: Record<QuotePaymentMethod, string> = {
+  pix: "Pix",
+  credit_card: "Cartão de Crédito",
+  debit_card: "Cartão de Débito",
+  cash: "Dinheiro",
+  transfer: "Transferência",
+  other: "Outro",
+};
 
 export const QUOTE_CHANNEL_LABELS: Record<string, string> = {
   whatsapp: "WhatsApp",

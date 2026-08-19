@@ -34,7 +34,8 @@ interface NewSaleModalProps {
   marginPercent?: number;
   /** Quando presente, o modal edita essa venda em vez de criar uma nova. */
   quote?: QuoteWithClient | null;
-  onCreated?: () => void;
+  /** Na criação, recebe a venda recém-criada (com joins) — usado pra abrir a tela de sucesso/comprovante. Na edição, é chamado sem argumento. */
+  onCreated?: (createdQuote?: QuoteWithClient) => void;
 }
 
 const PAYMENT_METHODS: { value: QuotePaymentMethod; label: string }[] = [
@@ -87,6 +88,7 @@ export function NewSaleModal({
   const [discount, setDiscount] = useState("0");
   const [discountWarning, setDiscountWarning] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState("0");
+  const [productionDeadline, setProductionDeadline] = useState("");
   const [filaments, setFilaments] = useState<Filament[]>([]);
   const [usedFilaments, setUsedFilaments] = useState<UsedFilamentRow[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -135,6 +137,7 @@ export function NewSaleModal({
       setDiscountWarning(null);
       setDiscountPercent(quote.discount_percent != null ? String(quote.discount_percent) : "0");
       setSelectedCouponId(quote.coupon_id ?? "");
+      setProductionDeadline(quote.production_deadline ?? "");
     } else {
       setSelectedClientId("");
       setSelectedProductId("");
@@ -155,6 +158,7 @@ export function NewSaleModal({
       setDiscountWarning(null);
       setDiscountPercent("0");
       setSelectedCouponId("");
+      setProductionDeadline("");
     }
   }, [open, quote, initialProjectName, initialFinalPrice]);
 
@@ -431,10 +435,12 @@ export function NewSaleModal({
       discount_percent: discountType === "percentage" ? Number(discountPercent) || null : null,
       coupon_id: discountType === "coupon" ? selectedCoupon?.id ?? null : null,
       coupon_code: discountType === "coupon" ? selectedCoupon?.code ?? null : null,
+      production_deadline: productionDeadline.trim() || null,
     };
 
     let quoteError: { message: string } | null = null;
     let createdQuoteId: string | null = null;
+    let createdQuote: QuoteWithClient | null = null;
 
     if (isEditing) {
       const { error } = await supabase.from("quotes").update(sharedPayload).eq("id", quote!.id);
@@ -453,10 +459,11 @@ export function NewSaleModal({
           status: "paid",
           source: "manual",
         })
-        .select("id")
+        .select("*, clients(name, phone, email, address), products(name, image_url, category, description, calc_inputs)")
         .single();
       quoteError = error;
-      createdQuoteId = data?.id ?? null;
+      createdQuote = data as QuoteWithClient | null;
+      createdQuoteId = createdQuote?.id ?? null;
     }
 
     setSaving(false);
@@ -488,7 +495,7 @@ export function NewSaleModal({
       }
     }
 
-    onCreated?.();
+    onCreated?.(createdQuote ?? undefined);
     onClose();
   }
 
@@ -838,6 +845,17 @@ export function NewSaleModal({
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">Prazo de Produção (opcional)</label>
+          <input
+            type="text"
+            value={productionDeadline}
+            onChange={(e) => setProductionDeadline(e.target.value)}
+            className="glass-input w-full"
+            placeholder="Ex: 3 dias úteis, até 20/08..."
+          />
         </div>
 
         {!isEditing && <p className="text-[11px] text-text-muted">Entra em Vendas já como Pago.</p>}

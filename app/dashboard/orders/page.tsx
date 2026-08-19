@@ -6,6 +6,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteDetailModal } from "@/components/dashboard/QuoteDetailModal";
 import { NewSaleModal } from "@/components/dashboard/NewSaleModal";
+import { SaleSuccessModal } from "@/components/dashboard/SaleSuccessModal";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatBRL } from "@/lib/utils";
 import {
@@ -62,6 +63,7 @@ export default function OrdersPage() {
   const [selectedQuote, setSelectedQuote] = useState<QuoteWithClient | null>(null);
   const [newSaleModalOpen, setNewSaleModalOpen] = useState(false);
   const [editingQuote, setEditingQuote] = useState<QuoteWithClient | null>(null);
+  const [successQuote, setSuccessQuote] = useState<QuoteWithClient | null>(null);
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
@@ -331,8 +333,12 @@ export default function OrdersPage() {
           setEditingQuote(null);
         }}
         quote={editingQuote}
-        onCreated={loadAll}
+        onCreated={(createdQuote) => {
+          loadAll();
+          if (createdQuote) setSuccessQuote(createdQuote);
+        }}
       />
+      <SaleSuccessModal quote={successQuote} onClose={() => setSuccessQuote(null)} />
     </>
   );
 }

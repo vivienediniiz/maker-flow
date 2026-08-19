@@ -1,25 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, Truck, Loader2, Lock } from "lucide-react";
+import { FileText, Truck, Loader2, Lock, Image as ImageIcon } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteStatusStepper } from "@/components/dashboard/QuoteStatusStepper";
+import { SaleReceiptModal } from "@/components/dashboard/SaleReceiptModal";
 import { WhatsAppLink } from "@/components/ui/WhatsAppLink";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
-import { formatOrderNumber, QUOTE_CHANNEL_LABELS, QUOTE_SOURCE_LABELS, QUOTE_SOURCE_BADGE_STYLES } from "@/lib/quotes";
-import type { QuoteWithClient, QuoteStatus, QuotePaymentMethod } from "@/lib/types";
-
-const PAYMENT_METHOD_LABELS: Record<QuotePaymentMethod, string> = {
-  pix: "Pix",
-  credit_card: "Cartão de Crédito",
-  debit_card: "Cartão de Débito",
-  cash: "Dinheiro",
-  transfer: "Transferência",
-  other: "Outro",
-};
+import {
+  formatOrderNumber,
+  QUOTE_CHANNEL_LABELS,
+  QUOTE_SOURCE_LABELS,
+  QUOTE_SOURCE_BADGE_STYLES,
+  QUOTE_PAYMENT_METHOD_LABELS,
+} from "@/lib/quotes";
+import type { QuoteWithClient, QuoteStatus } from "@/lib/types";
 
 export function QuoteDetailModal({
   quote,
@@ -33,6 +31,7 @@ export function QuoteDetailModal({
   const supabase = createClient();
   const { paid } = useSubscription();
   const [generatingLabel, setGeneratingLabel] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
 
   if (!quote) return null;
 
@@ -223,7 +222,7 @@ export function QuoteDetailModal({
 
         <div className="space-y-1 text-xs text-text-muted">
           {quote.payment_method && (
-            <p>Forma de pagamento: <span className="text-text-secondary">{PAYMENT_METHOD_LABELS[quote.payment_method]}</span></p>
+            <p>Forma de pagamento: <span className="text-text-secondary">{QUOTE_PAYMENT_METHOD_LABELS[quote.payment_method]}</span></p>
           )}
           {quote.channel && (
             <p>Canal de venda: <span className="text-text-secondary">{QUOTE_CHANNEL_LABELS[quote.channel]}</span></p>
@@ -252,7 +251,16 @@ export function QuoteDetailModal({
             )}
             Doc. de Envio
           </NeonButton>
-          <NeonButton variant="ghost" size="sm" disabled className="opacity-40" title="Em breve — precisa de um provedor fiscal">
+          <NeonButton variant="outline" size="sm" onClick={() => setReceiptOpen(true)}>
+            <ImageIcon size={14} /> Gerar Comprovante
+          </NeonButton>
+          <NeonButton
+            variant="ghost"
+            size="sm"
+            disabled
+            className="col-span-2 opacity-40"
+            title="Em breve — precisa de um provedor fiscal"
+          >
             <FileText size={14} /> Emitir NF
           </NeonButton>
         </div>
@@ -289,6 +297,8 @@ export function QuoteDetailModal({
           </button>
         )}
       </div>
+
+      <SaleReceiptModal quote={quote} open={receiptOpen} onClose={() => setReceiptOpen(false)} zIndexClass="z-[60]" />
     </Modal>
   );
 }

@@ -129,6 +129,7 @@ export interface Quote {
   coupon_code: string | null;
   discount_type: QuoteDiscountType | null;
   discount_percent: number | null;
+  production_deadline: string | null;
 }
 
 export type QuoteDiscountType = "fixed" | "percentage" | "coupon";
