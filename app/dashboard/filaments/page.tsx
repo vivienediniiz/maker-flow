@@ -7,15 +7,14 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { FilamentModal } from "@/components/dashboard/FilamentModal";
 import { RegisterFilamentPurchaseModal } from "@/components/dashboard/RegisterFilamentPurchaseModal";
-import { FilamentVerticalGauge } from "@/components/dashboard/FilamentVerticalGauge";
-import { FilamentLevelBar } from "@/components/dashboard/FilamentLevelBar";
+import { FilamentGraduatedGauge } from "@/components/dashboard/FilamentGraduatedGauge";
 import { AdjustFilamentStockInline } from "@/components/dashboard/AdjustFilamentStockInline";
 import { FilamentMovementsHistory } from "@/components/dashboard/FilamentMovementsHistory";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { canCreateMore, limitFor } from "@/lib/entitlements";
-import { filamentFillPercent, isFilamentLow } from "@/lib/filaments";
+import { isFilamentLow } from "@/lib/filaments";
 import type { Filament } from "@/lib/types";
 
 export default function FilamentsPage() {
@@ -138,31 +137,31 @@ export default function FilamentsPage() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filaments.map((f) => {
-              const fillPercent = filamentFillPercent(f);
               const low = isFilamentLow(f);
               return (
                 <GlassCard
                   key={f.id}
                   hover
                   padding="md"
-                  className={cn("space-y-3", low && "border-amber-500/50 ring-1 ring-amber-500/30")}
+                  className={cn(
+                    "relative flex flex-col items-center gap-3 pt-9 text-center",
+                    low && "border-amber-500/50 ring-1 ring-amber-500/30"
+                  )}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <FilamentVerticalGauge colorHex={f.color_hex} fillPercent={fillPercent} size="sm" />
-                      <div>
-                        <p className="text-sm font-medium text-text-primary">{f.material}</p>
-                        <p className="text-xs text-text-muted">{f.brand}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => openEdit(f)} className="text-text-muted hover:text-text-primary" aria-label="Editar filamento">
-                        <Pencil size={14} />
-                      </button>
-                      <button onClick={() => handleDelete(f.id)} className="text-text-muted hover:text-red-400" aria-label="Excluir filamento">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                  <div className="absolute right-3 top-3 flex items-center gap-2">
+                    <button onClick={() => openEdit(f)} className="text-text-muted hover:text-text-primary" aria-label="Editar filamento">
+                      <Pencil size={14} />
+                    </button>
+                    <button onClick={() => handleDelete(f.id)} className="text-text-muted hover:text-red-400" aria-label="Excluir filamento">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+
+                  <FilamentGraduatedGauge colorHex={f.color_hex} remainingG={f.remaining_weight_g} totalG={f.weight_total_g} />
+
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">{f.material}</p>
+                    <p className="text-xs text-text-muted">{f.brand}</p>
                   </div>
 
                   {low && (
@@ -171,10 +170,12 @@ export default function FilamentsPage() {
                     </span>
                   )}
 
-                  <FilamentLevelBar remainingG={f.remaining_weight_g} totalG={f.weight_total_g} colorHex={f.color_hex} isLow={low} />
+                  <p className="text-xs text-text-secondary">
+                    {f.remaining_weight_g}g / {f.weight_total_g}g
+                  </p>
 
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0 flex-1">
+                  <div className="flex w-full items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1 text-left">
                       <AdjustFilamentStockInline filament={f} onAdjusted={handleAdjusted} />
                     </div>
                     <span className="shrink-0 text-xs text-text-muted">{formatBRL(f.price_per_kg)}/kg</span>
