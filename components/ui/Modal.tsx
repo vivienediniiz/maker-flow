@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,15 @@ export function Modal({
   maxWidthClass?: string;
 }) {
   const instanceId = useRef(Symbol("modal")).current;
+  // Deslocamento (arraste) do painel a partir da posição centralizada padrão
+  // — reseta toda vez que o modal reabre.
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragOrigin = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
+
+  useEffect(() => {
+    if (open) setOffset({ x: 0, y: 0 });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -47,20 +56,44 @@ export function Modal({
     };
   }, [open, onClose, instanceId]);
 
+  function handleDragStart(e: React.PointerEvent<HTMLDivElement>) {
+    dragOrigin.current = { x: e.clientX, y: e.clientY, offsetX: offset.x, offsetY: offset.y };
+    setDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function handleDragMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragging) return;
+    setOffset({
+      x: dragOrigin.current.offsetX + (e.clientX - dragOrigin.current.x),
+      y: dragOrigin.current.offsetY + (e.clientY - dragOrigin.current.y),
+    });
+  }
+
+  function handleDragEnd() {
+    setDragging(false);
+  }
+
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
     <div className={cn("fixed inset-0 flex items-center justify-center px-4", zIndexClass)}>
+      <div className="absolute inset-0 bg-black/10" onClick={onClose} aria-hidden />
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden
-      />
-      <div className={cn("glass-card relative w-full p-6 shadow-neon-glow", maxWidthClass)}>
-        <div className="mb-5 flex items-center justify-between">
+        className={cn("glass-card relative w-full p-6 shadow-neon-glow", maxWidthClass, dragging && "select-none")}
+        style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
+      >
+        <div
+          className="mb-5 flex cursor-move touch-none items-center justify-between"
+          onPointerDown={handleDragStart}
+          onPointerMove={handleDragMove}
+          onPointerUp={handleDragEnd}
+          onPointerCancel={handleDragEnd}
+        >
           <h3 className="font-display text-lg">{title}</h3>
           <button
             onClick={onClose}
+            onPointerDown={(e) => e.stopPropagation()}
             className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted hover:bg-white/5 hover:text-text-primary"
             aria-label="Fechar"
           >
