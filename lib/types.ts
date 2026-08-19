@@ -163,13 +163,17 @@ export interface PriceTier {
 export interface CalcInputs {
   beds: {
     name: string;
+    /** Peso/tempo TOTAIS da mesa cheia (direto do fatiador) — a soma de todas as mesas já representa o custo de 1 unidade completa do produto. */
     weightG: number;
     timeH: number;
     timeM: number;
     watts: number;
     filamentId?: string;
-    /** "batch": Peso/Tempo representam o total da mesa cheia (ex: colado direto do slicer) — dividido por `itemsCount` pro custo por peça. */
+    /** Só informativo (ex: "≈ Xg por peça") — nunca entra em nenhum cálculo. Default 1. */
+    piecesInBed?: number;
+    /** @deprecated Modo Item Único/Lote removido — mantido só pra ler registros salvos antes dessa mudança (tratado como "single"). */
     mode?: "single" | "batch";
+    /** @deprecated Ver `mode`. */
     itemsCount?: number;
   }[];
   /** @deprecated Substituído pelo filamento próprio de cada mesa — mantido só pra ler registros salvos antes dessa mudança. */

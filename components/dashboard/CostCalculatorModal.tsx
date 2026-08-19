@@ -102,8 +102,6 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
         timeM,
         watts,
         filamentId: selectedFilamentId || undefined,
-        mode: "single",
-        itemsCount: 2,
       })),
       filamentPricePerKg,
       kwhRate,
@@ -116,7 +114,7 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
       marginPercent,
       quantity: 1,
     };
-    onApply(calc.baseCost, calc.finalPrice, calcInputs);
+    onApply(calc.costPerUnit, calc.pricePerUnit, calcInputs);
     onClose();
   }
 
@@ -249,11 +247,11 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
           <SummaryRow label="Custo de Filamento" value={formatBRL(calc.filamentCost)} />
           <SummaryRow label="Custo de Energia" value={formatBRL(calc.energyCost)} />
           <div className="my-1 h-px bg-border-glass" />
-          <SummaryRow label="Custo Total Unitário" value={formatBRL(calc.baseCost)} strong />
+          <SummaryRow label="Custo Total Unitário" value={formatBRL(calc.costPerUnit)} strong />
           <div className="my-1 h-px bg-border-glass" />
           <div className="flex items-center justify-between pt-1">
             <span className="text-text-secondary">Preço de Venda Sugerido</span>
-            <span className="neon-text font-numeric text-xl font-semibold">{formatBRL(calc.finalPrice)}</span>
+            <span className="neon-text font-numeric text-xl font-semibold">{formatBRL(calc.pricePerUnit)}</span>
           </div>
         </div>
 

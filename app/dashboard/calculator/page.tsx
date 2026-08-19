@@ -20,14 +20,14 @@ import type { Product, Supply, Filament } from "@/lib/types";
 interface PrintBed {
   id: string;
   name: string;
+  /** Peso/tempo TOTAIS da mesa cheia, direto do fatiador — a soma de todas as mesas é o custo de 1 unidade completa do produto. */
   weightG: number;
   timeH: number;
   timeM: number;
   watts: number;
   filamentId: string;
-  /** "batch": mesa com várias peças vendidas juntas como um lote único (ex: colado direto do slicer). Peso/Tempo sempre representam o TOTAL da mesa — `itemsCount` é só referência informativa, não entra em nenhum cálculo. */
-  mode: "single" | "batch";
-  itemsCount: number;
+  /** Só informativo (dica visual "≈ Xg por peça") — nunca entra em nenhum cálculo. */
+  piecesInBed: number;
 }
 
 interface SupplyLine {
@@ -45,8 +45,7 @@ function newBed(index: number): PrintBed {
     timeM: 0,
     watts: 200,
     filamentId: "",
-    mode: "single",
-    itemsCount: 2,
+    piecesInBed: 1,
   };
 }
 
@@ -72,6 +71,7 @@ export default function CalculatorPage() {
   const [paintCost, setPaintCost] = useState(35);
   const [marketplaceFee, setMarketplaceFee] = useState(16);
   const [marginPercent, setMarginPercent] = useState(50);
+  /** Quantidade de Produtos Finais do pedido — multiplica custo/preço por unidade, nunca os fixos (mão de obra/pintura/extras). */
   const [quantity, setQuantity] = useState(1);
   const [supplies, setSupplies] = useState<Supply[]>([]);
   const [supplyLines, setSupplyLines] = useState<SupplyLine[]>([]);
@@ -159,23 +159,22 @@ export default function CalculatorPage() {
 
     setProjectName(product.name);
 
+    // Não recarrega "Quantidade de Produtos Finais" — isso é uma decisão de
+    // pedido (quantas unidades quero agora), não uma propriedade da receita
+    // do produto, então o que já estiver na tela permanece.
     const ci = product.calc_inputs;
     if (ci) {
       setBeds(
-        ci.beds.map((b, i) =>
-          // Mesa salva em modo Lote não auto-preenche — o peso/tempo lá é o
-          // total daquela mesa cheia, não de uma unidade padrão do produto,
-          // então volta em branco pra não confundir com o cálculo por peça.
-          b.mode === "batch"
-            ? newBed(i + 1)
-            : {
-                ...b,
-                id: crypto.randomUUID(),
-                filamentId: b.filamentId ?? "",
-                mode: "single",
-                itemsCount: 2,
-              }
-        )
+        ci.beds.map((b) => ({
+          id: crypto.randomUUID(),
+          name: b.name,
+          weightG: b.weightG,
+          timeH: b.timeH,
+          timeM: b.timeM,
+          watts: b.watts,
+          filamentId: b.filamentId ?? "",
+          piecesInBed: b.piecesInBed ?? 1,
+        }))
       );
       setKwhRate(ci.kwhRate);
       setLaborHours(ci.laborHours);
@@ -185,7 +184,6 @@ export default function CalculatorPage() {
       setPaintCost(ci.paintCost);
       setMarketplaceFee(ci.marketplaceFee);
       setMarginPercent(Math.min(Math.max(ci.marginPercent, 0), 99));
-      setQuantity(ci.quantity);
     }
   }
 
@@ -207,16 +205,6 @@ export default function CalculatorPage() {
     setBeds((b) => b.map((bed) => (bed.id === id ? { ...bed, ...patch } : bed)));
   }
 
-  /**
-   * Trocar o modo da mesa limpa Peso/Tempo — o significado desses campos
-   * muda entre os dois modos (unidade única vs. total da mesa cheia), então
-   * o valor antigo não deve continuar aparecendo como se fosse válido no
-   * modo novo.
-   */
-  function updateBedMode(id: string, mode: PrintBed["mode"]) {
-    updateBed(id, { mode, weightG: 0, timeH: 0, timeM: 0 });
-  }
-
   const suppliesCost = useMemo(() => {
     return supplyLines.reduce((sum, line) => {
       const supply = supplies.find((s) => s.id === line.supplyId);
@@ -228,9 +216,6 @@ export default function CalculatorPage() {
   // Resolve o preço/kg de cada mesa pelo filamento cadastrado selecionado nela
   // — sem filamento selecionado, a mesa não contribui custo de filamento
   // (bloqueado via `missingFilament` antes de deixar seguir pro pedido/produto).
-  // Peso/Tempo sempre entram como o TOTAL da mesa (mesmo em modo Lote, onde
-  // o lote inteiro é vendido como um pedido único — sem dividir por
-  // itemsCount, que é só referência informativa).
   const calcBeds = useMemo(
     () =>
       beds.map((b) => ({
@@ -265,17 +250,18 @@ export default function CalculatorPage() {
 
   // Snapshot estável dos insumos selecionados aqui — só muda quando o usuário
   // de fato edita a lista, pra não resetar a seção "Insumo(s) Utilizados" da
-  // Venda Manual enquanto ela estiver aberta por cima desta tela.
-  const usedSuppliesForSale = useMemo(
-    () =>
-      supplyLines
-        .filter((l) => l.supplyId)
-        .map((l) => ({ supplyId: l.supplyId, quantity: l.quantity ? String(l.quantity) : "" })),
-    [supplyLines]
-  );
+  // Venda Manual enquanto ela estiver aberta por cima desta tela. Insumo é
+  // "por unidade" — multiplica pela Quantidade de Produtos Finais aqui, já
+  // que é isso que de fato sai do estoque ao confirmar o pedido inteiro.
+  const usedSuppliesForSale = useMemo(() => {
+    const qty = Math.max(quantity, 1);
+    return supplyLines
+      .filter((l) => l.supplyId)
+      .map((l) => ({ supplyId: l.supplyId, quantity: l.quantity ? String(l.quantity * qty) : "" }));
+  }, [supplyLines, quantity]);
 
-  // Mesmo raciocínio: o filamento de cada mesa já usado aqui é o mesmo que
-  // deve ser descontado do estoque quando o pedido for confirmado.
+  // O filamento de cada mesa já é o total real que sai do carretel — NÃO
+  // multiplica pela Quantidade de Produtos Finais (diferente dos insumos).
   const usedFilamentsForSale = useMemo(
     () =>
       beds
@@ -291,11 +277,11 @@ export default function CalculatorPage() {
       {/* Real-time cost preview header — sticky */}
       <div className="sticky top-[65px] z-20 border-b border-border-glass bg-bg/80 px-6 py-4 backdrop-blur-glass md:px-8">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <PreviewStat label="Energia" value={formatBRL(calc.energyCost)} />
           <PreviewStat label="Filamento" value={formatBRL(calc.filamentCost)} />
-          <PreviewStat label="Extras" value={formatBRL(extras + calc.paint)} />
-          <PreviewStat label="Custo Total" value={formatBRL(calc.baseCost)} />
-          <PreviewStat label="Preço / Peça" value={formatBRL(calc.pricePerPiece)} highlight />
+          <PreviewStat label="Energia" value={formatBRL(calc.energyCost)} />
+          <PreviewStat label="Custo / Unidade" value={formatBRL(calc.costPerUnit)} />
+          <PreviewStat label="Preço / Unidade" value={formatBRL(calc.pricePerUnit)} />
+          <PreviewStat label="Total do Pedido" value={formatBRL(calc.orderPrice)} highlight />
         </div>
       </div>
 
@@ -352,6 +338,10 @@ export default function CalculatorPage() {
                 <Plus size={14} /> Adicionar mesa
               </NeonButton>
             </div>
+            <p className="-mt-3 text-[11px] text-text-muted">
+              Peso e tempo são sempre da mesa cheia, direto do fatiador — a soma de todas as mesas é o custo de
+              produzir 1 unidade completa do produto.
+            </p>
 
             {beds.map((bed) => (
               <div key={bed.id} className="glass-card space-y-3 p-4">
@@ -372,43 +362,8 @@ export default function CalculatorPage() {
                   )}
                 </div>
 
-                <div className="glass-card flex gap-1 p-1">
-                  <button
-                    type="button"
-                    onClick={() => bed.mode !== "single" && updateBedMode(bed.id, "single")}
-                    className={cn(
-                      "flex-1 rounded-pill py-1.5 text-[11px] font-medium transition-colors",
-                      bed.mode === "single" ? "bg-neon-gradient text-white" : "text-text-secondary"
-                    )}
-                  >
-                    Item Único
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => bed.mode !== "batch" && updateBedMode(bed.id, "batch")}
-                    className={cn(
-                      "flex-1 rounded-pill py-1.5 text-[11px] font-medium transition-colors",
-                      bed.mode === "batch" ? "bg-neon-gradient text-white" : "text-text-secondary"
-                    )}
-                  >
-                    Lote
-                  </button>
-                </div>
-
-                {bed.mode === "batch" && (
-                  <Field label="Quantidade de itens na mesa (referência)">
-                    <input
-                      type="number"
-                      min={2}
-                      value={bed.itemsCount || ""}
-                      onChange={(e) => updateBed(bed.id, { itemsCount: Math.max(2, Number(e.target.value)) })}
-                      className="glass-input w-full"
-                    />
-                  </Field>
-                )}
-
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <Field label={bed.mode === "batch" ? "Peso total (g)" : "Peso (g)"}>
+                  <Field label="Peso (g)">
                     <input
                       type="number"
                       min={0}
@@ -417,7 +372,7 @@ export default function CalculatorPage() {
                       className="glass-input w-full"
                     />
                   </Field>
-                  <Field label={bed.mode === "batch" ? "Tempo total (h)" : "Tempo (h)"}>
+                  <Field label="Tempo (h)">
                     <input
                       type="number"
                       min={0}
@@ -426,7 +381,7 @@ export default function CalculatorPage() {
                       className="glass-input w-full"
                     />
                   </Field>
-                  <Field label={bed.mode === "batch" ? "Tempo total (min)" : "Tempo (min)"}>
+                  <Field label="Tempo (min)">
                     <input
                       type="number"
                       min={0}
@@ -447,10 +402,19 @@ export default function CalculatorPage() {
                   </Field>
                 </div>
 
-                {bed.mode === "batch" && bed.itemsCount > 0 && (
+                <Field label="Quantas peças estão nesta mesa? (opcional, só referência)">
+                  <input
+                    type="number"
+                    min={1}
+                    value={bed.piecesInBed || ""}
+                    onChange={(e) => updateBed(bed.id, { piecesInBed: Math.max(1, Number(e.target.value)) })}
+                    className="glass-input w-full sm:w-32"
+                  />
+                </Field>
+                {bed.piecesInBed > 1 && (
                   <p className="text-[11px] text-neon-green">
-                    ≈ {Math.round(bed.weightG / bed.itemsCount)}g e{" "}
-                    {Math.round((bed.timeH * 60 + bed.timeM) / bed.itemsCount)}min por unidade
+                    ≈ {Math.round(bed.weightG / bed.piecesInBed)}g e{" "}
+                    {Math.round((bed.timeH * 60 + bed.timeM) / bed.piecesInBed)}min por peça nesta mesa
                   </p>
                 )}
 
@@ -486,6 +450,9 @@ export default function CalculatorPage() {
             <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
               Custos e Consumíveis
             </h3>
+            <p className="-mt-3 text-[11px] text-text-muted">
+              Fixos por pedido — não multiplicam pela Quantidade de Produtos Finais.
+            </p>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <Field label="Tarifa energia (R$/kWh)">
                 <input type="number" step="0.01" value={kwhRate} onChange={(e) => setKwhRate(Number(e.target.value))} className="glass-input w-full" />
@@ -498,9 +465,6 @@ export default function CalculatorPage() {
               </Field>
               <Field label="Consumíveis extras (R$)">
                 <input type="number" value={extras} onChange={(e) => setExtras(Number(e.target.value))} className="glass-input w-full" />
-              </Field>
-              <Field label="Quantidade de peças">
-                <input type="number" min={1} value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="glass-input w-full" />
               </Field>
             </div>
 
@@ -550,7 +514,7 @@ export default function CalculatorPage() {
                       </Field>
                     </div>
                     <div className="w-28">
-                      <Field label={`Qtd. (${supply?.unit ?? "un"})`}>
+                      <Field label={`Qtd/unidade (${supply?.unit ?? "un"})`}>
                         <input
                           type="number"
                           min={0}
@@ -574,7 +538,8 @@ export default function CalculatorPage() {
               })
             )}
             <p className="text-[11px] text-text-muted">
-              Só entra no orçamento — o estoque só é baixado quando o pedido for de fato confirmado.
+              A quantidade informada é o consumo de UMA unidade — o total do pedido multiplica pela Quantidade de
+              Produtos Finais. Só entra no orçamento; o estoque só é baixado quando o pedido for de fato confirmado.
             </p>
           </GlassCard>
 
@@ -627,24 +592,50 @@ export default function CalculatorPage() {
         <div className="space-y-6">
           <GlassCard padding="lg" className="sticky top-[140px] space-y-5">
             <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">Resumo</h3>
+
+            <Field label="Quantidade de Produtos Finais">
+              <input
+                type="number"
+                min={1}
+                value={quantity}
+                onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                className="glass-input w-full"
+              />
+            </Field>
+
             <div className="space-y-2 text-sm">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-text-muted/70">Por Unidade</p>
               <SummaryRow label="Peso total" value={`${calc.totalWeightG.toFixed(0)} g`} />
               <SummaryRow label="Tempo total" value={`${calc.totalHours.toFixed(1)} h`} />
               <SummaryRow label="Filamento" value={formatBRL(calc.filamentCost)} />
               <SummaryRow label="Energia" value={formatBRL(calc.energyCost)} />
+              {suppliesCost > 0 && <SummaryRow label="Insumos" value={formatBRL(calc.suppliesCost)} />}
+              <div className="my-2 h-px bg-border-glass" />
+              <SummaryRow label="Custo por Unidade" value={formatBRL(calc.costPerUnit)} />
+              <SummaryRow label="Preço de Venda Sugerido" value={formatBRL(calc.pricePerUnit)} />
+            </div>
+
+            <div className="space-y-2 border-t border-border-glass pt-4 text-sm">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-text-muted/70">
+                Fixos do pedido (não multiplicam)
+              </p>
               <SummaryRow label="Mão de obra" value={formatBRL(calc.laborCost)} />
               {paintedByHand && <SummaryRow label="Pintura" value={formatBRL(calc.paint)} />}
               <SummaryRow label="Extras" value={formatBRL(extras)} />
-              {suppliesCost > 0 && <SummaryRow label="Insumos" value={formatBRL(calc.suppliesCost)} />}
-              <div className="my-2 h-px bg-border-glass" />
-              <SummaryRow label="Custo total" value={formatBRL(calc.baseCost)} />
+            </div>
+
+            <div className="space-y-2 border-t border-border-glass pt-4 text-sm">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-text-muted/70">
+                Total do Pedido {quantity > 1 && `(${quantity} unidades)`}
+              </p>
+              <SummaryRow label="Custo Total do Pedido" value={formatBRL(calc.orderCost)} />
             </div>
 
             <div className="glass-card space-y-1 p-4 text-center">
-              <p className="text-xs text-text-muted">Preço final sugerido</p>
-              <p className="neon-text font-numeric text-3xl font-semibold">{formatBRL(calc.finalPrice)}</p>
+              <p className="text-xs text-text-muted">Valor Total do Pedido</p>
+              <p className="neon-text font-numeric text-3xl font-semibold">{formatBRL(calc.orderPrice)}</p>
               {quantity > 1 && (
-                <p className="font-numeric text-xs text-text-muted">{formatBRL(calc.pricePerPiece)} / peça</p>
+                <p className="font-numeric text-xs text-text-muted">{formatBRL(calc.pricePerUnit)} / unidade</p>
               )}
             </div>
 
@@ -672,7 +663,7 @@ export default function CalculatorPage() {
         open={orderModalOpen}
         onClose={() => setOrderModalOpen(false)}
         initialProjectName={projectName}
-        initialFinalPrice={calc.finalPrice}
+        initialFinalPrice={calc.orderPrice}
         weightG={calc.totalWeightG}
         printTimeMin={calc.totalHours * 60}
         energyCost={calc.energyCost}
@@ -686,18 +677,20 @@ export default function CalculatorPage() {
         onClose={() => setProductModalOpen(false)}
         onCreated={(p) => setProducts((prev) => [...prev, p])}
         initialName={projectName}
-        initialCostPrice={calc.baseCost}
-        initialSalePrice={calc.pricePerPiece}
+        initialCostPrice={calc.costPerUnit}
+        initialSalePrice={calc.pricePerUnit}
         calcInputs={{
-          beds: beds.map(({ name, weightG, timeH, timeM, watts, filamentId, mode, itemsCount }) => ({
+          // O que vai pro cadastro do produto é sempre a receita de 1 unidade —
+          // quantity fica travada em 1 aqui, independente da Quantidade de
+          // Produtos Finais que estiver setada pra este pedido específico.
+          beds: beds.map(({ name, weightG, timeH, timeM, watts, filamentId, piecesInBed }) => ({
             name,
             weightG,
             timeH,
             timeM,
             watts,
             filamentId,
-            mode,
-            itemsCount,
+            piecesInBed,
           })),
           kwhRate,
           laborHours,
@@ -707,7 +700,7 @@ export default function CalculatorPage() {
           paintCost,
           marketplaceFee,
           marginPercent,
-          quantity,
+          quantity: 1,
         }}
       />
       <NewProductModal
@@ -726,8 +719,8 @@ export default function CalculatorPage() {
         summary={{
           projectName,
           quantity,
-          finalPrice: calc.finalPrice,
-          pricePerPiece: calc.pricePerPiece,
+          finalPrice: calc.orderPrice,
+          pricePerPiece: calc.pricePerUnit,
           weightG: calc.totalWeightG,
           printTimeMin: calc.totalHours * 60,
           energyCost: calc.energyCost,
