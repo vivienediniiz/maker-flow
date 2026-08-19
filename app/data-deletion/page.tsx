@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Zap } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Exclusão de Dados — StudioMaker",
@@ -12,9 +11,8 @@ export default function DataDeletionPage() {
     <div className="min-h-screen">
       <header className="flex items-center justify-between px-6 py-6 md:px-12">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-gradient shadow-neon-glow">
-            <Zap size={18} className="text-white" />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.png" alt="" className="h-9 w-9" />
           <span className="font-display text-lg tracking-wide">StudioMaker</span>
         </Link>
         <Link href="/login" className="text-sm text-text-secondary hover:text-text-primary">

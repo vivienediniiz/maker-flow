@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -52,9 +51,8 @@ export default function LoginPage() {
 
       {/* Logo fixo no canto superior esquerdo */}
       <div className="absolute left-6 top-6 z-20 flex items-center gap-2 sm:left-10 sm:top-8">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-gradient shadow-neon-glow">
-          <Zap size={18} className="text-white" />
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-icon.png" alt="" className="h-9 w-9" />
         <span className="font-display text-lg tracking-wide text-text-primary">StudioMaker</span>
       </div>
 

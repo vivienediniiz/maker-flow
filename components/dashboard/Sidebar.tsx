@@ -19,7 +19,6 @@ import {
   FolderCog,
   Users,
   Plug,
-  Zap,
   LineChart,
   CreditCard,
   Headset,
@@ -66,9 +65,8 @@ export function Sidebar({ studioName, avatarUrl, tier }: SidebarProps) {
         )}
       >
       <div className="flex items-center gap-2 px-6 py-6">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-gradient shadow-neon-glow">
-          <Zap size={18} className="text-white" />
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-icon.png" alt="" className="h-9 w-9" />
         <span className="font-display text-lg tracking-wide">StudioMaker</span>
       </div>
 

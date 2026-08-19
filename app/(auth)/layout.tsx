@@ -1,13 +1,10 @@
-import { Zap } from "lucide-react";
-
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       <div className="flex flex-col justify-center px-8 py-12 sm:px-16">
         <div className="mb-10 flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neon-gradient shadow-neon-glow">
-            <Zap size={18} className="text-white" />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.png" alt="" className="h-9 w-9" />
           <span className="font-display text-lg tracking-wide">StudioMaker</span>
         </div>
         <div className="mx-auto w-full max-w-sm">{children}</div>
