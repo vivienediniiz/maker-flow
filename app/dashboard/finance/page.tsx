@@ -7,6 +7,7 @@ import { GlassAccordion } from "@/components/ui/GlassAccordion";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { ExtraPurchaseModal } from "@/components/dashboard/ExtraPurchaseModal";
+import { CouponsCampaignsSection } from "@/components/dashboard/CouponsCampaignsSection";
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { FinancialEvolutionChart, type FinancialEvolutionPoint } from "@/components/charts/FinancialEvolutionChart";
@@ -306,6 +307,8 @@ function FinancePageContent() {
                 </div>
               )}
             </section>
+
+            <CouponsCampaignsSection source={source} />
           </>
         )}
       </main>
