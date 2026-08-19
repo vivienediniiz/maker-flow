@@ -162,13 +162,20 @@ export default function CalculatorPage() {
     const ci = product.calc_inputs;
     if (ci) {
       setBeds(
-        ci.beds.map((b) => ({
-          ...b,
-          id: crypto.randomUUID(),
-          filamentId: b.filamentId ?? "",
-          mode: b.mode ?? "single",
-          itemsCount: b.itemsCount ?? 2,
-        }))
+        ci.beds.map((b, i) =>
+          // Mesa salva em modo Lote não auto-preenche — o peso/tempo lá é o
+          // total daquela mesa cheia, não de uma unidade padrão do produto,
+          // então volta em branco pra não confundir com o cálculo por peça.
+          b.mode === "batch"
+            ? newBed(i + 1)
+            : {
+                ...b,
+                id: crypto.randomUUID(),
+                filamentId: b.filamentId ?? "",
+                mode: "single",
+                itemsCount: 2,
+              }
+        )
       );
       setKwhRate(ci.kwhRate);
       setLaborHours(ci.laborHours);
