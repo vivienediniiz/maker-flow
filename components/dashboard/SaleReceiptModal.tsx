@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, Share2, Loader2, MessageCircle } from "lucide-react";
+import { Download, Loader2, MessageCircle } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
@@ -94,11 +94,6 @@ export function SaleReceiptModal({ quote, open, onClose, zIndexClass }: SaleRece
       setBlob(generatedBlob);
       setImageUrl(URL.createObjectURL(generatedBlob));
       generatedForQuoteId.current = quote.id;
-
-      if (clientPhone) {
-        downloadBlob(generatedBlob, quote);
-        sendToWhatsApp(clientPhone, quote);
-      }
     } catch (err) {
       console.error("Falha ao gerar comprovante:", err);
       setError("Não foi possível gerar o comprovante. Tente novamente.");
@@ -126,8 +121,9 @@ export function SaleReceiptModal({ quote, open, onClose, zIndexClass }: SaleRece
 
   /**
    * WhatsApp não tem API pública pra anexar arquivo via link — só o texto vem
-   * pré-preenchido (`wa.me`). Por isso a imagem é baixada automaticamente
-   * junto: o estúdio só precisa anexar o arquivo que já caiu nos downloads.
+   * pré-preenchido (`wa.me`). Por isso "Compartilhar no WhatsApp" já baixa a
+   * imagem junto: o estúdio só precisa anexar o arquivo que já caiu nos
+   * downloads na conversa que abriu.
    */
   function sendToWhatsApp(phone: string, forQuote: QuoteWithClient) {
     const clientName = forQuote.clients?.name ?? forQuote.buyer_name ?? "";
@@ -140,28 +136,10 @@ export function SaleReceiptModal({ quote, open, onClose, zIndexClass }: SaleRece
     setWhatsAppStatus(win ? "opened" : "blocked");
   }
 
-  function handleSendWhatsApp() {
+  function handleShareWhatsApp() {
     if (!clientPhone || !quote) return;
     if (blob) downloadBlob(blob, quote);
     sendToWhatsApp(clientPhone, quote);
-  }
-
-  async function handleShare() {
-    if (!blob || !quote) return;
-    const file = new File([blob], `comprovante-venda-${formatOrderNumber(quote.order_number)}.png`, {
-      type: "image/png",
-    });
-
-    if (navigator.share && navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: "Comprovante de Venda" });
-      } catch {
-        // Usuário cancelou o share nativo — não é um erro a reportar.
-      }
-      return;
-    }
-
-    handleDownload();
   }
 
   if (!quote) return null;
@@ -186,28 +164,28 @@ export function SaleReceiptModal({ quote, open, onClose, zIndexClass }: SaleRece
           </NeonButton>
         )}
 
-        {clientPhone && whatsAppStatus === "opened" && (
+        {whatsAppStatus === "opened" && (
           <p className="text-center text-xs text-neon-green">
             Comprovante baixado e WhatsApp do cliente aberto — é só anexar a imagem na conversa.
           </p>
         )}
-        {clientPhone && whatsAppStatus === "blocked" && (
-          <NeonButton variant="outline" size="sm" onClick={handleSendWhatsApp}>
-            <MessageCircle size={14} /> Enviar no WhatsApp do cliente
-          </NeonButton>
+        {whatsAppStatus === "blocked" && (
+          <p className="text-center text-xs text-amber-400">
+            O navegador bloqueou a aba do WhatsApp — tente o botão de novo.
+          </p>
         )}
         {!clientPhone && !generating && blob && (
           <p className="text-center text-xs text-text-muted">
-            Cliente sem WhatsApp cadastrado — baixe ou compartilhe o comprovante manualmente.
+            Cliente sem WhatsApp cadastrado — só dá pra salvar o comprovante.
           </p>
         )}
 
         <div className="grid w-full grid-cols-2 gap-3">
           <NeonButton variant="outline" onClick={handleDownload} disabled={!blob || generating}>
-            <Download size={14} /> Baixar Imagem
+            <Download size={14} /> Salvar
           </NeonButton>
-          <NeonButton onClick={handleShare} disabled={!blob || generating}>
-            <Share2 size={14} /> Compartilhar
+          <NeonButton onClick={handleShareWhatsApp} disabled={!blob || !clientPhone || generating}>
+            <MessageCircle size={14} /> Compartilhar no WhatsApp
           </NeonButton>
         </div>
       </div>
