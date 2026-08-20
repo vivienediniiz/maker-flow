@@ -63,14 +63,14 @@ const FEATURES = [
     title: "Vendas Multicanal",
     description:
       "Mercado Livre, Mercado Pago, Shopee e TikTok Shop sincronizam sozinhos: pedido novo em qualquer uma dessas plataformas cai automaticamente em Vendas, sem importar nada. Fez venda pelo WhatsApp ou Instagram? Cadastra manual em segundos. Tudo no mesmo painel, com filtro por canal e status.",
-    image: { src: "/landing/vendas.jpg", alt: "Tela de Vendas com pedidos, status, origem e valores líquidos", width: 1915, height: 902 },
+    image: { src: "/landing/vendas.png", alt: "Tela de Vendas com pedidos, status, origem e valores líquidos", width: 1647, height: 646 },
   },
   {
     icon: Disc3,
     title: "Prateleira de Filamentos",
     description:
       "Estoque visual, por combinação real de marca, material e cor — cada carretel mostra o nível de sobra em tempo real. Alerta automático quando um rolo tá acabando, e histórico completo de toda compra e todo consumo.",
-    image: { src: "/landing/filamentos.jpg", alt: "Prateleira de filamentos com nível de estoque por carretel e histórico de movimentações", width: 1906, height: 893 },
+    image: { src: "/landing/filamentos.png", alt: "Prateleira de filamentos com nível de estoque por carretel e histórico de movimentações", width: 1634, height: 692 },
   },
   {
     icon: Printer,
@@ -84,21 +84,21 @@ const FEATURES = [
     title: "Financeiro Completo",
     description:
       "Receita bruta, custos totais e lucro líquido real — sem estimativa. Lance despesas fixas, insumos e compras extras, e veja o lucro de verdade mês a mês, com gráfico de evolução e exportação em CSV.",
-    image: { src: "/landing/financeiro.jpg", alt: "Painel financeiro com receita bruta, custos, lucro líquido e evolução de vendas", width: 1879, height: 904 },
+    image: { src: "/landing/financeiro.png", alt: "Painel financeiro com receita bruta, custos, lucro líquido e evolução de vendas", width: 1894, height: 904 },
   },
   {
     icon: Truck,
     title: "Frete Integrado",
     description:
       "Cote o frete direto no painel, sem abrir outro site. Com o Melhor Envio conectado, você emite a etiqueta e o rastreio já entra automaticamente na venda — inclusive pra avisar o cliente pelo WhatsApp assim que o pedido sair.",
-    image: { src: "/landing/frete.jpg", alt: "Tela de cálculo de frete com Melhor Envio conectado", width: 1647, height: 443 },
+    image: { src: "/landing/frete.png", alt: "Tela de cálculo de frete com Melhor Envio conectado", width: 1649, height: 417 },
   },
   {
     icon: BarChart3,
     title: "Insights & BI",
     description:
       "Produto mais lucrativo, cliente que mais compra, filamento mais usado, taxa de recompra — tudo calculado a partir das suas vendas reais, pra decidir o que produzir e pra quem vender com dado, não achismo.",
-    image: { src: "/landing/insights.jpg", alt: "Painel de Insights e BI com produto mais lucrativo, cliente top e prateleira de filamentos", width: 1887, height: 903 },
+    image: { src: "/landing/insights.png", alt: "Painel de Insights e BI com produto mais lucrativo, cliente top e prateleira de filamentos", width: 1863, height: 900 },
   },
 ];
 
