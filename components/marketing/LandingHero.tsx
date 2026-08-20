@@ -142,8 +142,8 @@ export function LandingHero() {
           <BrowserFrame
             src="/landing/dashboard.png"
             alt="Dashboard do StudioMaker com resumo de vendas, metas e evolução financeira"
-            width={1895}
-            height={905}
+            width={1797}
+            height={1372}
             sizes="(max-width: 896px) 100vw, 896px"
             priority
           />
