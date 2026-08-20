@@ -581,14 +581,14 @@ export function NewSaleModal({
           <div className="glass-card mb-2 flex gap-1 p-1">
             <button
               type="button"
-              className="flex-1 rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white"
+              className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white sm:min-h-0"
             >
               Produto já cadastrado
             </button>
             <button
               type="button"
               onClick={() => setProductModalOpen(true)}
-              className="flex-1 rounded-pill py-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary"
+              className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary sm:min-h-0"
             >
               Cadastrar Produto
             </button>
@@ -618,7 +618,7 @@ export function NewSaleModal({
                   type="button"
                   onClick={() => handlePriceModeChange("unit")}
                   className={cn(
-                    "flex-1 rounded-pill py-2 text-xs font-medium transition-colors",
+                    "flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium transition-colors sm:min-h-0",
                     priceMode === "unit" ? "bg-neon-gradient text-white" : "text-text-secondary hover:text-text-primary"
                   )}
                 >
@@ -628,7 +628,7 @@ export function NewSaleModal({
                   type="button"
                   onClick={() => handlePriceModeChange("tier")}
                   className={cn(
-                    "flex-1 rounded-pill py-2 text-xs font-medium transition-colors",
+                    "flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium transition-colors sm:min-h-0",
                     priceMode === "tier" ? "bg-neon-gradient text-white" : "text-text-secondary hover:text-text-primary"
                   )}
                 >
@@ -905,7 +905,7 @@ export function NewSaleModal({
                 type="button"
                 onClick={() => handleDiscountTypeChange(opt.value)}
                 className={cn(
-                  "flex-1 rounded-pill py-2 text-xs font-medium transition-colors",
+                  "flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium transition-colors sm:min-h-0",
                   discountType === opt.value ? "bg-neon-gradient text-white" : "text-text-secondary hover:text-text-primary"
                 )}
               >
@@ -1011,14 +1011,14 @@ export function NewSaleModal({
         <div className="glass-card flex gap-1 p-1">
           <button
             type="button"
-            className="flex-1 rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white"
+            className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white sm:min-h-0"
           >
             Cliente existente
           </button>
           <button
             type="button"
             onClick={() => setClientModalOpen(true)}
-            className="flex-1 rounded-pill py-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary"
+            className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary sm:min-h-0"
           >
             Novo cliente
           </button>

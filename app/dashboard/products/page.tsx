@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { CardRow } from "@/components/ui/CardRow";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { ProductDetailModal } from "@/components/dashboard/ProductDetailModal";
@@ -302,97 +303,169 @@ export default function ProductsPage() {
             </GlassCard>
           )
         ) : (
-          <GlassCard padding="none" className="overflow-hidden">
-            <div className="overflow-x-auto scrollbar-glass">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
-                    <th className="w-10 px-4 py-4">
-                      <input
-                        type="checkbox"
-                        checked={allFilteredSelected}
-                        onChange={toggleSelectAllFiltered}
-                        className="accent-[#FF4EDF]"
-                        aria-label="Selecionar todos os produtos filtrados"
-                      />
-                    </th>
-                    <th className="px-6 py-4 font-medium">Produto</th>
-                    <th className="px-6 py-4 font-medium">Categoria</th>
-                    <th className="px-6 py-4 font-medium">Custo</th>
-                    <th className="px-6 py-4 font-medium">Venda</th>
-                    <th className="px-6 py-4 font-medium">Margem</th>
-                    <th className="px-6 py-4 font-medium">Estoque</th>
-                    <th className="w-12 px-4 py-4" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((p) => {
-                    const profit = p.sale_price - p.cost_price;
-                    const margin = p.sale_price > 0 ? (profit / p.sale_price) * 100 : 0;
-                    return (
-                      <tr
-                        key={p.id}
-                        onClick={() => setSelectedProduct(p)}
-                        className={cn(
-                          "cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]",
-                          selectedIds.has(p.id) && "bg-neon-pink/[0.04]"
-                        )}
-                      >
-                        <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+          <>
+            {/* Desktop: tabela tradicional */}
+            <GlassCard padding="none" className="hidden overflow-hidden md:block">
+              <div className="overflow-x-auto scrollbar-glass">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
+                      <th className="w-10 px-4 py-4">
+                        <input
+                          type="checkbox"
+                          checked={allFilteredSelected}
+                          onChange={toggleSelectAllFiltered}
+                          className="accent-[#FF4EDF]"
+                          aria-label="Selecionar todos os produtos filtrados"
+                        />
+                      </th>
+                      <th className="px-6 py-4 font-medium">Produto</th>
+                      <th className="px-6 py-4 font-medium">Categoria</th>
+                      <th className="px-6 py-4 font-medium">Custo</th>
+                      <th className="px-6 py-4 font-medium">Venda</th>
+                      <th className="px-6 py-4 font-medium">Margem</th>
+                      <th className="px-6 py-4 font-medium">Estoque</th>
+                      <th className="w-12 px-4 py-4" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((p) => {
+                      const profit = p.sale_price - p.cost_price;
+                      const margin = p.sale_price > 0 ? (profit / p.sale_price) * 100 : 0;
+                      return (
+                        <tr
+                          key={p.id}
+                          onClick={() => setSelectedProduct(p)}
+                          className={cn(
+                            "cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]",
+                            selectedIds.has(p.id) && "bg-neon-pink/[0.04]"
+                          )}
+                        >
+                          <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(p.id)}
+                              onChange={() => toggleSelected(p.id)}
+                              className="accent-[#FF4EDF]"
+                              aria-label={`Selecionar ${p.name}`}
+                            />
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neon-gradient-soft">
+                                {p.image_url ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={p.image_url} alt="" className="h-full w-full object-cover" />
+                                ) : (
+                                  <span className="text-base">🧩</span>
+                                )}
+                              </div>
+                              <span className="font-medium text-text-primary">{p.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-text-secondary">{p.category || "—"}</td>
+                          <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(p.cost_price)}</td>
+                          <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(p.sale_price)}</td>
+                          <td className="px-6 py-4 font-numeric text-neon-pink">{margin.toFixed(0)}%</td>
+                          <td className="px-6 py-4 text-text-secondary">{p.stock_quantity}</td>
+                          <td className="px-2 py-4">
+                            <div className="flex items-center">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingProduct(p);
+                                }}
+                                className="p-2.5 text-text-muted hover:text-neon-pink"
+                                aria-label="Editar produto"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                onClick={(e) => handleDelete(p.id, e)}
+                                className="p-2.5 text-text-muted hover:text-red-400"
+                                aria-label="Excluir produto"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </GlassCard>
+
+            {/* Mobile: cards empilhados */}
+            <div className="space-y-3 md:hidden">
+              {filtered.map((p) => {
+                const profit = p.sale_price - p.cost_price;
+                const margin = p.sale_price > 0 ? (profit / p.sale_price) * 100 : 0;
+                return (
+                  <GlassCard
+                    key={p.id}
+                    hover
+                    padding="md"
+                    className={cn("cursor-pointer divide-y divide-border-glass/60", selectedIds.has(p.id) && "bg-neon-pink/[0.04]")}
+                    onClick={() => setSelectedProduct(p)}
+                  >
+                    <div className="flex items-start justify-between gap-2 pb-2">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div
+                          className="shrink-0 py-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <input
                             type="checkbox"
                             checked={selectedIds.has(p.id)}
                             onChange={() => toggleSelected(p.id)}
-                            className="accent-[#FF4EDF]"
+                            className="h-[18px] w-[18px] accent-[#FF4EDF]"
                             aria-label={`Selecionar ${p.name}`}
                           />
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neon-gradient-soft">
-                              {p.image_url ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={p.image_url} alt="" className="h-full w-full object-cover" />
-                              ) : (
-                                <span className="text-base">🧩</span>
-                              )}
-                            </div>
-                            <span className="font-medium text-text-primary">{p.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-text-secondary">{p.category || "—"}</td>
-                        <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(p.cost_price)}</td>
-                        <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(p.sale_price)}</td>
-                        <td className="px-6 py-4 font-numeric text-neon-pink">{margin.toFixed(0)}%</td>
-                        <td className="px-6 py-4 text-text-secondary">{p.stock_quantity}</td>
-                        <td className="px-2 py-4">
-                          <div className="flex items-center">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingProduct(p);
-                              }}
-                              className="p-2.5 text-text-muted hover:text-neon-pink"
-                              aria-label="Editar produto"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              onClick={(e) => handleDelete(p.id, e)}
-                              className="p-2.5 text-text-muted hover:text-red-400"
-                              aria-label="Excluir produto"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </div>
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neon-gradient-soft">
+                          {p.image_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={p.image_url} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="text-base">🧩</span>
+                          )}
+                        </div>
+                        <p className="min-w-0 truncate text-base font-semibold text-text-primary">{p.name}</p>
+                      </div>
+                      <div className="-mr-2 -mt-2 flex shrink-0 items-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingProduct(p);
+                          }}
+                          className="p-2.5 text-text-muted hover:text-neon-pink"
+                          aria-label="Editar produto"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => handleDelete(p.id, e)}
+                          className="p-2.5 text-text-muted hover:text-red-400"
+                          aria-label="Excluir produto"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    {p.category && <CardRow label="Categoria">{p.category}</CardRow>}
+                    <CardRow label="Custo">{formatBRL(p.cost_price)}</CardRow>
+                    <CardRow label="Venda">{formatBRL(p.sale_price)}</CardRow>
+                    <CardRow label="Margem">
+                      <span className="text-neon-pink">{margin.toFixed(0)}%</span>
+                    </CardRow>
+                    <CardRow label="Estoque">{p.stock_quantity}</CardRow>
+                  </GlassCard>
+                );
+              })}
             </div>
-          </GlassCard>
+          </>
         )}
       </main>
 

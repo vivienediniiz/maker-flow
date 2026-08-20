@@ -68,7 +68,7 @@ export function SocialAuthButtons({ refCode }: { refCode?: string } = {}) {
           onClick={() => handleClick(provider.id)}
           disabled={loadingProvider !== null}
           className={cn(
-            "flex w-full items-center justify-center gap-2.5 rounded-pill border border-border-glassStrong",
+            "flex min-h-[44px] w-full items-center justify-center gap-2.5 rounded-pill border border-border-glassStrong sm:min-h-0",
             "bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-text-primary",
             "transition-colors hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
           )}

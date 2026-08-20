@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { CardRow } from "@/components/ui/CardRow";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteDetailModal } from "@/components/dashboard/QuoteDetailModal";
 import { NewSaleModal } from "@/components/dashboard/NewSaleModal";
@@ -189,7 +190,7 @@ export default function OrdersPage() {
                   key={f.key}
                   onClick={() => setStatusFilter(f.key)}
                   className={cn(
-                    "rounded-pill px-4 py-2 text-xs font-medium transition-colors",
+                    "flex min-h-[44px] items-center justify-center rounded-pill px-4 py-2 text-xs font-medium transition-colors sm:min-h-0",
                     statusFilter === f.key ? "bg-neon-gradient text-white shadow-neon-glow" : "text-text-secondary hover:text-text-primary"
                   )}
                 >
@@ -234,34 +235,126 @@ export default function OrdersPage() {
             Nenhuma venda encontrada.
           </GlassCard>
         ) : (
-          <GlassCard padding="none" className="overflow-hidden">
-            <div className="overflow-x-auto scrollbar-glass">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
-                    <th className="px-6 py-4 font-medium">Origem</th>
-                    <th className="px-6 py-4 font-medium">Pedido</th>
-                    <th className="px-6 py-4 font-medium">Cliente</th>
-                    <th className="px-6 py-4 font-medium">Data</th>
-                    <th className="px-6 py-4 font-medium">Status</th>
-                    <th className="px-6 py-4 font-medium">Bruto</th>
-                    <th className="px-6 py-4 font-medium">Custos</th>
-                    <th className="px-6 py-4 font-medium">Líquido</th>
-                    <th className="w-40 px-6 py-4" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((q) => {
-                    const buyerName = q.buyer_name || q.clients?.name || "Cliente não informado";
-                    const costs = q.platform_fee + q.cost_amount;
-                    const action = nextQuoteAction(q.status);
-                    return (
-                      <tr
-                        key={q.id}
-                        onClick={() => setSelectedQuote(q)}
-                        className="cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]"
-                      >
-                        <td className="px-6 py-4">
+          <>
+            {/* Desktop: tabela tradicional */}
+            <GlassCard padding="none" className="hidden overflow-hidden md:block">
+              <div className="overflow-x-auto scrollbar-glass">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
+                      <th className="px-6 py-4 font-medium">Origem</th>
+                      <th className="px-6 py-4 font-medium">Pedido</th>
+                      <th className="px-6 py-4 font-medium">Cliente</th>
+                      <th className="px-6 py-4 font-medium">Data</th>
+                      <th className="px-6 py-4 font-medium">Status</th>
+                      <th className="px-6 py-4 font-medium">Bruto</th>
+                      <th className="px-6 py-4 font-medium">Custos</th>
+                      <th className="px-6 py-4 font-medium">Líquido</th>
+                      <th className="w-40 px-6 py-4" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((q) => {
+                      const buyerName = q.buyer_name || q.clients?.name || "Cliente não informado";
+                      const costs = q.platform_fee + q.cost_amount;
+                      const action = nextQuoteAction(q.status);
+                      return (
+                        <tr
+                          key={q.id}
+                          onClick={() => setSelectedQuote(q)}
+                          className="cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]"
+                        >
+                          <td className="px-6 py-4">
+                            <span
+                              className={cn(
+                                "rounded-pill border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                                QUOTE_SOURCE_BADGE_STYLES[q.source]
+                              )}
+                            >
+                              {QUOTE_SOURCE_LABELS[q.source]}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 font-numeric text-text-secondary">
+                            {q.external_order_id ?? formatOrderNumber(q.order_number)}
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="truncate text-sm font-medium text-text-primary">{buyerName}</p>
+                            <p className="truncate text-xs text-text-secondary">{q.project_name}</p>
+                          </td>
+                          <td className="px-6 py-4 text-xs text-text-muted">
+                            {new Date(q.sent_at).toLocaleString("pt-BR")}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={cn(
+                                "rounded-pill border px-2.5 py-1 text-[11px] font-medium",
+                                QUOTE_STATUS_PILL_STYLES[q.status]
+                              )}
+                            >
+                              {QUOTE_STATUS_LABELS[q.status]}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(q.final_price)}</td>
+                          <td className="px-6 py-4 font-numeric text-red-400">{formatBRL(costs)}</td>
+                          <td className="px-6 py-4 font-numeric text-neon-green">{formatBRL(q.net_amount)}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center justify-end gap-3">
+                              {action && action.label && (
+                                <NeonButton
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStatusChange(q.id, action.next);
+                                  }}
+                                >
+                                  {action.label}
+                                </NeonButton>
+                              )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingQuote(q);
+                                }}
+                                className="p-2 text-text-muted hover:text-neon-pink"
+                                aria-label="Editar venda"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                onClick={(e) => handleDelete(q.id, e)}
+                                className="p-2 text-text-muted hover:text-red-400"
+                                aria-label="Excluir venda"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </GlassCard>
+
+            {/* Mobile: cards empilhados */}
+            <div className="space-y-3 md:hidden">
+              {filtered.map((q) => {
+                const buyerName = q.buyer_name || q.clients?.name || "Cliente não informado";
+                const costs = q.platform_fee + q.cost_amount;
+                const action = nextQuoteAction(q.status);
+                return (
+                  <GlassCard
+                    key={q.id}
+                    hover
+                    padding="md"
+                    className="cursor-pointer divide-y divide-border-glass/60"
+                    onClick={() => setSelectedQuote(q)}
+                  >
+                    <div className="flex items-start justify-between gap-2 pb-2">
+                      <div className="min-w-0">
+                        <div className="mb-1.5 flex flex-wrap items-center gap-2">
                           <span
                             className={cn(
                               "rounded-pill border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
@@ -270,70 +363,71 @@ export default function OrdersPage() {
                           >
                             {QUOTE_SOURCE_LABELS[q.source]}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 font-numeric text-text-secondary">
-                          {q.external_order_id ?? formatOrderNumber(q.order_number)}
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="truncate text-sm font-medium text-text-primary">{buyerName}</p>
-                          <p className="truncate text-xs text-text-secondary">{q.project_name}</p>
-                        </td>
-                        <td className="px-6 py-4 text-xs text-text-muted">
-                          {new Date(q.sent_at).toLocaleString("pt-BR")}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={cn(
-                              "rounded-pill border px-2.5 py-1 text-[11px] font-medium",
-                              QUOTE_STATUS_PILL_STYLES[q.status]
-                            )}
-                          >
-                            {QUOTE_STATUS_LABELS[q.status]}
+                          <span className="font-numeric text-xs text-text-muted">
+                            {q.external_order_id ?? formatOrderNumber(q.order_number)}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(q.final_price)}</td>
-                        <td className="px-6 py-4 font-numeric text-red-400">{formatBRL(costs)}</td>
-                        <td className="px-6 py-4 font-numeric text-neon-green">{formatBRL(q.net_amount)}</td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-end gap-3">
-                            {action && action.label && (
-                              <NeonButton
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStatusChange(q.id, action.next);
-                                }}
-                              >
-                                {action.label}
-                              </NeonButton>
-                            )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingQuote(q);
-                              }}
-                              className="p-2 text-text-muted hover:text-neon-pink"
-                              aria-label="Editar venda"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              onClick={(e) => handleDelete(q.id, e)}
-                              className="p-2 text-text-muted hover:text-red-400"
-                              aria-label="Excluir venda"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </div>
+                        <p className="truncate text-base font-semibold text-text-primary">{buyerName}</p>
+                        <p className="truncate text-xs text-text-secondary">{q.project_name}</p>
+                      </div>
+                      <div className="-mr-2 -mt-2 flex shrink-0 items-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingQuote(q);
+                          }}
+                          className="p-2.5 text-text-muted hover:text-neon-pink"
+                          aria-label="Editar venda"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => handleDelete(q.id, e)}
+                          className="p-2.5 text-text-muted hover:text-red-400"
+                          aria-label="Excluir venda"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    <CardRow label="Status">
+                      <span
+                        className={cn(
+                          "rounded-pill border px-2.5 py-1 text-[11px] font-medium",
+                          QUOTE_STATUS_PILL_STYLES[q.status]
+                        )}
+                      >
+                        {QUOTE_STATUS_LABELS[q.status]}
+                      </span>
+                    </CardRow>
+                    <CardRow label="Data">{new Date(q.sent_at).toLocaleString("pt-BR")}</CardRow>
+                    <CardRow label="Bruto">{formatBRL(q.final_price)}</CardRow>
+                    <CardRow label="Custos">
+                      <span className="text-red-400">{formatBRL(costs)}</span>
+                    </CardRow>
+                    <CardRow label="Líquido">
+                      <span className="text-neon-green">{formatBRL(q.net_amount)}</span>
+                    </CardRow>
+                    {action && action.label && (
+                      <div className="pt-2.5">
+                        <NeonButton
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStatusChange(q.id, action.next);
+                          }}
+                        >
+                          {action.label}
+                        </NeonButton>
+                      </div>
+                    )}
+                  </GlassCard>
+                );
+              })}
             </div>
-          </GlassCard>
+          </>
         )}
       </main>
 

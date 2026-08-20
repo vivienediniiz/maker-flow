@@ -88,7 +88,7 @@ export function CouponsPeriodSummary() {
               key={p.key}
               onClick={() => setPeriod(p.key)}
               className={cn(
-                "rounded-pill px-3.5 py-1.5 text-xs font-medium transition-colors",
+                "flex min-h-[44px] items-center justify-center rounded-pill px-3.5 py-1.5 text-xs font-medium transition-colors sm:min-h-0",
                 period === p.key ? "bg-neon-gradient text-white shadow-neon-glow" : "text-text-secondary hover:text-text-primary"
               )}
             >

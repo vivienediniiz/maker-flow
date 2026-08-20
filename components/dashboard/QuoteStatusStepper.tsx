@@ -24,7 +24,7 @@ export function QuoteStatusStepper({
           <button
             type="button"
             onClick={() => onChange("sent")}
-            className="rounded-pill bg-red-500 px-3 py-1 text-[11px] font-semibold text-white hover:bg-red-400"
+            className="flex min-h-[44px] items-center justify-center rounded-pill bg-red-500 px-3 py-1 text-[11px] font-semibold text-white hover:bg-red-400 sm:min-h-0"
           >
             Reabrir
           </button>

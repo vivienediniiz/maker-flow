@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { CardRow } from "@/components/ui/CardRow";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { CouponModal } from "@/components/dashboard/CouponModal";
 import { createClient } from "@/lib/supabase/client";
@@ -87,54 +88,89 @@ export function CouponsRegistrationTab() {
           Nenhum cupom cadastrado ainda. Clique em &quot;Novo Cupom&quot; pra começar.
         </GlassCard>
       ) : (
-        <GlassCard padding="none" className="overflow-hidden">
-          <div className="overflow-x-auto scrollbar-glass">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
-                  <th className="px-6 py-4 font-medium">Código</th>
-                  <th className="px-6 py-4 font-medium">Campanha</th>
-                  <th className="px-6 py-4 font-medium">Desconto</th>
-                  <th className="px-6 py-4 font-medium">Uso</th>
-                  <th className="px-6 py-4 font-medium">Status</th>
-                  <th className="w-20 px-4 py-4" />
-                </tr>
-              </thead>
-              <tbody>
-                {coupons.map((c) => {
-                  const status = getCouponStatusLabel(c);
-                  return (
-                    <tr key={c.id} className="border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]">
-                      <td className="px-6 py-4 font-medium text-text-primary">{c.code}</td>
-                      <td className="px-6 py-4 text-text-secondary">{c.campaign_name || "—"}</td>
-                      <td className="px-6 py-4 font-numeric text-text-secondary">
-                        {c.discount_type === "percentage" ? `${c.discount_value}%` : formatBRL(c.discount_value)}
-                      </td>
-                      <td className="px-6 py-4 font-numeric text-text-secondary">
-                        {c.usage_limit != null ? `${c.times_used}/${c.usage_limit}` : `${c.times_used}`}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={cn("inline-flex items-center rounded-pill border px-2.5 py-1 text-[11px] font-medium", STATUS_STYLES[status])}>
-                          {status}
-                        </span>
-                      </td>
-                      <td className="px-2 py-4">
-                        <div className="flex items-center">
-                          <button onClick={() => openEdit(c)} className="p-2.5 text-text-muted hover:text-text-primary" aria-label="Editar cupom">
-                            <Pencil size={14} />
-                          </button>
-                          <button onClick={() => handleDelete(c.id)} className="p-2.5 text-text-muted hover:text-red-400" aria-label="Excluir cupom">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <>
+          {/* Desktop: tabela tradicional */}
+          <GlassCard padding="none" className="hidden overflow-hidden md:block">
+            <div className="overflow-x-auto scrollbar-glass">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
+                    <th className="px-6 py-4 font-medium">Código</th>
+                    <th className="px-6 py-4 font-medium">Campanha</th>
+                    <th className="px-6 py-4 font-medium">Desconto</th>
+                    <th className="px-6 py-4 font-medium">Uso</th>
+                    <th className="px-6 py-4 font-medium">Status</th>
+                    <th className="w-20 px-4 py-4" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {coupons.map((c) => {
+                    const status = getCouponStatusLabel(c);
+                    return (
+                      <tr key={c.id} className="border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]">
+                        <td className="px-6 py-4 font-medium text-text-primary">{c.code}</td>
+                        <td className="px-6 py-4 text-text-secondary">{c.campaign_name || "—"}</td>
+                        <td className="px-6 py-4 font-numeric text-text-secondary">
+                          {c.discount_type === "percentage" ? `${c.discount_value}%` : formatBRL(c.discount_value)}
+                        </td>
+                        <td className="px-6 py-4 font-numeric text-text-secondary">
+                          {c.usage_limit != null ? `${c.times_used}/${c.usage_limit}` : `${c.times_used}`}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={cn("inline-flex items-center rounded-pill border px-2.5 py-1 text-[11px] font-medium", STATUS_STYLES[status])}>
+                            {status}
+                          </span>
+                        </td>
+                        <td className="px-2 py-4">
+                          <div className="flex items-center">
+                            <button onClick={() => openEdit(c)} className="p-2.5 text-text-muted hover:text-text-primary" aria-label="Editar cupom">
+                              <Pencil size={14} />
+                            </button>
+                            <button onClick={() => handleDelete(c.id)} className="p-2.5 text-text-muted hover:text-red-400" aria-label="Excluir cupom">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </GlassCard>
+
+          {/* Mobile: cards empilhados */}
+          <div className="space-y-3 md:hidden">
+            {coupons.map((c) => {
+              const status = getCouponStatusLabel(c);
+              return (
+                <GlassCard key={c.id} padding="md" className="divide-y divide-border-glass/60">
+                  <div className="flex items-start justify-between gap-2 pb-2">
+                    <p className="min-w-0 truncate text-base font-semibold text-text-primary">{c.code}</p>
+                    <div className="-mr-2 -mt-2 flex shrink-0 items-center">
+                      <button onClick={() => openEdit(c)} className="p-2.5 text-text-muted hover:text-text-primary" aria-label="Editar cupom">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={() => handleDelete(c.id)} className="p-2.5 text-text-muted hover:text-red-400" aria-label="Excluir cupom">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  {c.campaign_name && <CardRow label="Campanha">{c.campaign_name}</CardRow>}
+                  <CardRow label="Desconto">
+                    {c.discount_type === "percentage" ? `${c.discount_value}%` : formatBRL(c.discount_value)}
+                  </CardRow>
+                  <CardRow label="Uso">{c.usage_limit != null ? `${c.times_used}/${c.usage_limit}` : `${c.times_used}`}</CardRow>
+                  <CardRow label="Status">
+                    <span className={cn("inline-flex items-center rounded-pill border px-2.5 py-1 text-[11px] font-medium", STATUS_STYLES[status])}>
+                      {status}
+                    </span>
+                  </CardRow>
+                </GlassCard>
+              );
+            })}
           </div>
-        </GlassCard>
+        </>
       )}
 
       <CouponModal open={modalOpen} onClose={() => setModalOpen(false)} coupon={editingCoupon} onSaved={handleSaved} />

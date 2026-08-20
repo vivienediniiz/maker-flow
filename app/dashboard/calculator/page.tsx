@@ -282,14 +282,14 @@ export default function CalculatorPage() {
             <div className="glass-card flex gap-1 p-1">
               <button
                 type="button"
-                className="flex-1 rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white"
+                className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white sm:min-h-0"
               >
                 Produto já cadastrado
               </button>
               <button
                 type="button"
                 onClick={() => setNewProductModalOpen(true)}
-                className="flex-1 rounded-pill py-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary"
+                className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary sm:min-h-0"
               >
                 Cadastrar Produto
               </button>

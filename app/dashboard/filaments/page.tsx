@@ -183,7 +183,7 @@ export default function FilamentsPage() {
 
                   <button
                     onClick={() => openPurchase(f.id)}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-pill border border-border-glassStrong py-2 text-xs font-medium text-text-secondary transition-colors hover:border-neon-pink/60 hover:text-text-primary"
+                    className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-pill border border-border-glassStrong py-2 text-xs font-medium text-text-secondary transition-colors hover:border-neon-pink/60 hover:text-text-primary sm:min-h-0"
                   >
                     <ShoppingCart size={12} /> Registrar Compra
                   </button>

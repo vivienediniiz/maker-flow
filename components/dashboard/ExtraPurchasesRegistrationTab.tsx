@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { CardRow } from "@/components/ui/CardRow";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { ExtraPurchaseModal } from "@/components/dashboard/ExtraPurchaseModal";
 import { createClient } from "@/lib/supabase/client";
@@ -84,43 +85,69 @@ export function ExtraPurchasesRegistrationTab() {
           Nenhuma compra extra registrada ainda. Clique em &quot;Nova Compra Extra&quot; pra começar.
         </GlassCard>
       ) : (
-        <GlassCard padding="none" className="overflow-hidden">
-          <div className="overflow-x-auto scrollbar-glass">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
-                  <th className="px-6 py-4 font-medium">Descrição</th>
-                  <th className="px-6 py-4 font-medium">Categoria</th>
-                  <th className="px-6 py-4 font-medium">Fornecedor</th>
-                  <th className="px-6 py-4 font-medium">Data</th>
-                  <th className="px-6 py-4 font-medium">Valor</th>
-                  <th className="w-20 px-4 py-4" />
-                </tr>
-              </thead>
-              <tbody>
-                {purchases.map((p) => (
-                  <tr key={p.id} className="border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]">
-                    <td className="px-6 py-4 font-medium text-text-primary">{p.description}</td>
-                    <td className="px-6 py-4 text-text-secondary">{p.category || "—"}</td>
-                    <td className="px-6 py-4 text-text-secondary">{p.supplier || "—"}</td>
-                    <td className="px-6 py-4 text-text-secondary">{formatDate(p.purchased_at)}</td>
-                    <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(p.amount)}</td>
-                    <td className="px-2 py-4">
-                      <div className="flex items-center">
-                        <button onClick={() => openEdit(p)} className="p-2.5 text-text-muted hover:text-text-primary" aria-label="Editar compra">
-                          <Pencil size={14} />
-                        </button>
-                        <button onClick={() => handleDelete(p.id)} className="p-2.5 text-text-muted hover:text-red-400" aria-label="Excluir compra">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
+        <>
+          {/* Desktop: tabela tradicional */}
+          <GlassCard padding="none" className="hidden overflow-hidden md:block">
+            <div className="overflow-x-auto scrollbar-glass">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
+                    <th className="px-6 py-4 font-medium">Descrição</th>
+                    <th className="px-6 py-4 font-medium">Categoria</th>
+                    <th className="px-6 py-4 font-medium">Fornecedor</th>
+                    <th className="px-6 py-4 font-medium">Data</th>
+                    <th className="px-6 py-4 font-medium">Valor</th>
+                    <th className="w-20 px-4 py-4" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {purchases.map((p) => (
+                    <tr key={p.id} className="border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]">
+                      <td className="px-6 py-4 font-medium text-text-primary">{p.description}</td>
+                      <td className="px-6 py-4 text-text-secondary">{p.category || "—"}</td>
+                      <td className="px-6 py-4 text-text-secondary">{p.supplier || "—"}</td>
+                      <td className="px-6 py-4 text-text-secondary">{formatDate(p.purchased_at)}</td>
+                      <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(p.amount)}</td>
+                      <td className="px-2 py-4">
+                        <div className="flex items-center">
+                          <button onClick={() => openEdit(p)} className="p-2.5 text-text-muted hover:text-text-primary" aria-label="Editar compra">
+                            <Pencil size={14} />
+                          </button>
+                          <button onClick={() => handleDelete(p.id)} className="p-2.5 text-text-muted hover:text-red-400" aria-label="Excluir compra">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </GlassCard>
+
+          {/* Mobile: cards empilhados */}
+          <div className="space-y-3 md:hidden">
+            {purchases.map((p) => (
+              <GlassCard key={p.id} padding="md" className="divide-y divide-border-glass/60">
+                <div className="flex items-start justify-between gap-2 pb-2">
+                  <p className="min-w-0 truncate text-base font-semibold text-text-primary">{p.description}</p>
+                  <div className="-mr-2 -mt-2 flex shrink-0 items-center">
+                    <button onClick={() => openEdit(p)} className="p-2.5 text-text-muted hover:text-text-primary" aria-label="Editar compra">
+                      <Pencil size={14} />
+                    </button>
+                    <button onClick={() => handleDelete(p.id)} className="p-2.5 text-text-muted hover:text-red-400" aria-label="Excluir compra">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+                {p.category && <CardRow label="Categoria">{p.category}</CardRow>}
+                {p.supplier && <CardRow label="Fornecedor">{p.supplier}</CardRow>}
+                <CardRow label="Data">{formatDate(p.purchased_at)}</CardRow>
+                <CardRow label="Valor">{formatBRL(p.amount)}</CardRow>
+              </GlassCard>
+            ))}
           </div>
-        </GlassCard>
+        </>
       )}
 
       <ExtraPurchaseModal

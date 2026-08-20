@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { CardRow } from "@/components/ui/CardRow";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { NewClientModal } from "@/components/dashboard/NewClientModal";
 import { ClientDetailModal } from "@/components/dashboard/ClientDetailModal";
@@ -108,63 +109,121 @@ export default function ClientsPage() {
               : "Nenhum cliente encontrado para essa busca."}
           </GlassCard>
         ) : (
-          <GlassCard padding="none" className="overflow-hidden">
-            <div className="overflow-x-auto scrollbar-glass">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
-                    <th className="px-6 py-4 font-medium">Nome</th>
-                    <th className="px-6 py-4 font-medium">Telefone</th>
-                    <th className="px-6 py-4 font-medium">E-mail</th>
-                    <th className="px-6 py-4 font-medium">Endereço</th>
-                    <th className="px-6 py-4 font-medium">Observações</th>
-                    <th className="w-12 px-4 py-4" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((c) => (
-                    <tr
-                      key={c.id}
-                      onClick={() => setSelectedClient(c)}
-                      className="cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]"
-                    >
-                      <td className="px-6 py-4 font-medium text-text-primary">{c.name}</td>
-                      <td className="px-6 py-4 text-text-secondary">
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                          {c.phone ? <WhatsAppLink phone={c.phone} /> : "—"}
-                          {c.instagram && <InstagramLink handle={c.instagram} />}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-text-secondary">{c.email || "—"}</td>
-                      <td className="max-w-[220px] truncate px-6 py-4 text-text-secondary">{c.address || "—"}</td>
-                      <td className="max-w-[220px] truncate px-6 py-4 text-text-muted">{c.notes || "—"}</td>
-                      <td className="px-2 py-4">
-                        <div className="flex items-center">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingClient(c);
-                            }}
-                            className="p-2.5 text-text-muted hover:text-neon-pink"
-                            aria-label="Editar cliente"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            onClick={(e) => handleDelete(c.id, e)}
-                            className="p-2.5 text-text-muted hover:text-red-400"
-                            aria-label="Remover cliente"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
+          <>
+            {/* Desktop: tabela tradicional */}
+            <GlassCard padding="none" className="hidden overflow-hidden md:block">
+              <div className="overflow-x-auto scrollbar-glass">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
+                      <th className="px-6 py-4 font-medium">Nome</th>
+                      <th className="px-6 py-4 font-medium">Telefone</th>
+                      <th className="px-6 py-4 font-medium">E-mail</th>
+                      <th className="px-6 py-4 font-medium">Endereço</th>
+                      <th className="px-6 py-4 font-medium">Observações</th>
+                      <th className="w-12 px-4 py-4" />
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filtered.map((c) => (
+                      <tr
+                        key={c.id}
+                        onClick={() => setSelectedClient(c)}
+                        className="cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]"
+                      >
+                        <td className="px-6 py-4 font-medium text-text-primary">{c.name}</td>
+                        <td className="px-6 py-4 text-text-secondary">
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                            {c.phone ? <WhatsAppLink phone={c.phone} /> : "—"}
+                            {c.instagram && <InstagramLink handle={c.instagram} />}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-text-secondary">{c.email || "—"}</td>
+                        <td className="max-w-[220px] truncate px-6 py-4 text-text-secondary">{c.address || "—"}</td>
+                        <td className="max-w-[220px] truncate px-6 py-4 text-text-muted">{c.notes || "—"}</td>
+                        <td className="px-2 py-4">
+                          <div className="flex items-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingClient(c);
+                              }}
+                              className="p-2.5 text-text-muted hover:text-neon-pink"
+                              aria-label="Editar cliente"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => handleDelete(c.id, e)}
+                              className="p-2.5 text-text-muted hover:text-red-400"
+                              aria-label="Remover cliente"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </GlassCard>
+
+            {/* Mobile: cards empilhados */}
+            <div className="space-y-3 md:hidden">
+              {filtered.map((c) => (
+                <GlassCard
+                  key={c.id}
+                  hover
+                  padding="md"
+                  className="cursor-pointer divide-y divide-border-glass/60"
+                  onClick={() => setSelectedClient(c)}
+                >
+                  <div className="flex items-start justify-between gap-2 pb-2">
+                    <p className="min-w-0 truncate text-base font-semibold text-text-primary">{c.name}</p>
+                    <div className="-mr-2 -mt-2 flex shrink-0 items-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingClient(c);
+                        }}
+                        className="p-2.5 text-text-muted hover:text-neon-pink"
+                        aria-label="Editar cliente"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => handleDelete(c.id, e)}
+                        className="p-2.5 text-text-muted hover:text-red-400"
+                        aria-label="Remover cliente"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  {(c.phone || c.instagram) && (
+                    <CardRow label="Contato">
+                      <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+                        {c.phone && <WhatsAppLink phone={c.phone} />}
+                        {c.instagram && <InstagramLink handle={c.instagram} />}
+                      </div>
+                    </CardRow>
+                  )}
+                  {c.email && <CardRow label="E-mail">{c.email}</CardRow>}
+                  {c.address && (
+                    <CardRow label="Endereço">
+                      <span className="line-clamp-2">{c.address}</span>
+                    </CardRow>
+                  )}
+                  {c.notes && (
+                    <CardRow label="Observações">
+                      <span className="line-clamp-2">{c.notes}</span>
+                    </CardRow>
+                  )}
+                </GlassCard>
+              ))}
             </div>
-          </GlassCard>
+          </>
         )}
       </main>
 

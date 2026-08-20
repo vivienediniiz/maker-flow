@@ -28,7 +28,7 @@ export default function RegistrationsPage() {
               key={t}
               onClick={() => setTab(t)}
               className={cn(
-                "shrink-0 rounded-pill px-4 py-2 text-xs font-medium transition-colors",
+                "flex min-h-[44px] shrink-0 items-center justify-center rounded-pill px-4 py-2 text-xs font-medium transition-colors sm:min-h-0",
                 tab === t ? "bg-neon-gradient text-white shadow-neon-glow" : "text-text-secondary hover:text-text-primary"
               )}
             >

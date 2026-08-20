@@ -314,7 +314,7 @@ export function GenerateQuoteModal({
           <button
             type="button"
             onClick={() => setMode("select")}
-            className={`flex-1 rounded-pill py-2 text-xs font-medium transition-colors ${
+            className={`flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium transition-colors sm:min-h-0 ${
               mode === "select" ? "bg-neon-gradient text-white" : "text-text-secondary"
             }`}
           >
@@ -323,7 +323,7 @@ export function GenerateQuoteModal({
           <button
             type="button"
             onClick={() => setMode("new")}
-            className={`flex-1 rounded-pill py-2 text-xs font-medium transition-colors ${
+            className={`flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium transition-colors sm:min-h-0 ${
               mode === "new" ? "bg-neon-gradient text-white" : "text-text-secondary"
             }`}
           >

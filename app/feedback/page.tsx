@@ -182,7 +182,7 @@ function SuggestionForm({
             type="button"
             onClick={() => setCategory("suggestion")}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-pill py-2 text-xs font-medium transition-colors",
+              "flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-pill py-2 text-xs font-medium transition-colors sm:min-h-0",
               category === "suggestion" ? "bg-neon-gradient text-white" : "text-text-secondary hover:text-text-primary"
             )}
           >
@@ -192,7 +192,7 @@ function SuggestionForm({
             type="button"
             onClick={() => setCategory("complaint")}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-pill py-2 text-xs font-medium transition-colors",
+              "flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-pill py-2 text-xs font-medium transition-colors sm:min-h-0",
               category === "complaint" ? "bg-neon-gradient text-white" : "text-text-secondary hover:text-text-primary"
             )}
           >
