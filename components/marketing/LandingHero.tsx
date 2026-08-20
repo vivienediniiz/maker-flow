@@ -139,7 +139,14 @@ export function LandingHero() {
 
         {/* Prova visual: dashboard real dentro de um mockup de navegador */}
         <div className="mx-auto mt-16 max-w-4xl text-left">
-          <BrowserFrame src="/landing/dashboard.jpg" alt="Dashboard do StudioMaker com resumo de vendas, metas e evolução financeira" />
+          <BrowserFrame
+            src="/landing/dashboard.jpg"
+            alt="Dashboard do StudioMaker com resumo de vendas, metas e evolução financeira"
+            width={1897}
+            height={908}
+            sizes="(max-width: 896px) 100vw, 896px"
+            priority
+          />
         </div>
       </main>
     </div>

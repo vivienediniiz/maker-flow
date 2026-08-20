@@ -56,49 +56,49 @@ const FEATURES = [
     title: "Calculadora Inteligente",
     description:
       "Some peso, tempo, energia e insumos de várias mesas de impressão de uma vez, defina sua margem e o StudioMaker calcula o custo por unidade e o preço de venda sugerido na hora. Gere o orçamento em PDF e mande o link de cobrança direto pro cliente.",
-    image: { src: "/landing/calculadora.jpg", alt: "Tela da Calculadora Inteligente com mesas de impressão e resumo de custo por unidade" },
+    image: { src: "/landing/calculadora.jpg", alt: "Tela da Calculadora Inteligente com mesas de impressão e resumo de custo por unidade", width: 1887, height: 902 },
   },
   {
     icon: ShoppingBag,
     title: "Vendas Multicanal",
     description:
       "Mercado Livre, Mercado Pago, Shopee e TikTok Shop sincronizam sozinhos: pedido novo em qualquer uma dessas plataformas cai automaticamente em Vendas, sem importar nada. Fez venda pelo WhatsApp ou Instagram? Cadastra manual em segundos. Tudo no mesmo painel, com filtro por canal e status.",
-    image: { src: "/landing/vendas.jpg", alt: "Tela de Vendas com pedidos, status, origem e valores líquidos" },
+    image: { src: "/landing/vendas.jpg", alt: "Tela de Vendas com pedidos, status, origem e valores líquidos", width: 1915, height: 902 },
   },
   {
     icon: Disc3,
     title: "Prateleira de Filamentos",
     description:
       "Estoque visual, por combinação real de marca, material e cor — cada carretel mostra o nível de sobra em tempo real. Alerta automático quando um rolo tá acabando, e histórico completo de toda compra e todo consumo.",
-    image: { src: "/landing/filamentos.jpg", alt: "Prateleira de filamentos com nível de estoque por carretel e histórico de movimentações" },
+    image: { src: "/landing/filamentos.jpg", alt: "Prateleira de filamentos com nível de estoque por carretel e histórico de movimentações", width: 1906, height: 893 },
   },
   {
     icon: Printer,
     title: "Controle Patrimonial de Impressoras",
     description:
       "Cada impressora do seu farm cadastrada com data de compra, valor pago, nota fiscal, garantia e histórico de manutenção. Não é só ver status de impressão — é saber quanto cada máquina custou e quando vence a garantia.",
-    image: { src: "/landing/impressoras.jpg", alt: "Lista de impressoras cadastradas com status e data de compra" },
+    image: { src: "/landing/impressoras.jpg", alt: "Lista de impressoras cadastradas com status e data de compra", width: 1644, height: 472 },
   },
   {
     icon: LineChart,
     title: "Financeiro Completo",
     description:
       "Receita bruta, custos totais e lucro líquido real — sem estimativa. Lance despesas fixas, insumos e compras extras, e veja o lucro de verdade mês a mês, com gráfico de evolução e exportação em CSV.",
-    image: { src: "/landing/financeiro.jpg", alt: "Painel financeiro com receita bruta, custos, lucro líquido e evolução de vendas" },
+    image: { src: "/landing/financeiro.jpg", alt: "Painel financeiro com receita bruta, custos, lucro líquido e evolução de vendas", width: 1879, height: 904 },
   },
   {
     icon: Truck,
     title: "Frete Integrado",
     description:
       "Cote o frete direto no painel, sem abrir outro site. Com o Melhor Envio conectado, você emite a etiqueta e o rastreio já entra automaticamente na venda — inclusive pra avisar o cliente pelo WhatsApp assim que o pedido sair.",
-    image: { src: "/landing/frete.jpg", alt: "Tela de cálculo de frete com Melhor Envio conectado" },
+    image: { src: "/landing/frete.jpg", alt: "Tela de cálculo de frete com Melhor Envio conectado", width: 1647, height: 443 },
   },
   {
     icon: BarChart3,
     title: "Insights & BI",
     description:
       "Produto mais lucrativo, cliente que mais compra, filamento mais usado, taxa de recompra — tudo calculado a partir das suas vendas reais, pra decidir o que produzir e pra quem vender com dado, não achismo.",
-    image: { src: "/landing/insights.jpg", alt: "Painel de Insights e BI com produto mais lucrativo, cliente top e prateleira de filamentos" },
+    image: { src: "/landing/insights.jpg", alt: "Painel de Insights e BI com produto mais lucrativo, cliente top e prateleira de filamentos", width: 1887, height: 903 },
   },
 ];
 
@@ -236,7 +236,7 @@ export default function HomePage() {
           {FEATURES.map((f, i) => (
             <div key={f.title} className="grid grid-cols-1 items-center gap-8 md:grid-cols-2 md:gap-12">
               <div className={i % 2 === 1 ? "md:order-2" : ""}>
-                <BrowserFrame src={f.image.src} alt={f.image.alt} />
+                <BrowserFrame src={f.image.src} alt={f.image.alt} width={f.image.width} height={f.image.height} />
               </div>
               <div className={i % 2 === 1 ? "md:order-1" : ""}>
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">

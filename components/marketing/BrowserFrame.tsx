@@ -1,12 +1,25 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface BrowserFrameProps {
   src: string;
   alt: string;
+  width: number;
+  height: number;
+  sizes?: string;
   className?: string;
+  priority?: boolean;
 }
 
-export function BrowserFrame({ src, alt, className }: BrowserFrameProps) {
+export function BrowserFrame({
+  src,
+  alt,
+  width,
+  height,
+  sizes = "(max-width: 768px) 100vw, 50vw",
+  className,
+  priority,
+}: BrowserFrameProps) {
   return (
     <div className={cn("glass-card overflow-hidden shadow-neon-glow", className)}>
       <div className="flex items-center gap-2 border-b border-border-glass bg-white/[0.03] px-4 py-2.5">
@@ -19,8 +32,16 @@ export function BrowserFrame({ src, alt, className }: BrowserFrameProps) {
           app.studiomaker.com.br
         </div>
       </div>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={alt} className="w-full" />
+      <Image
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        sizes={sizes}
+        quality={92}
+        priority={priority}
+        className="h-auto w-full"
+      />
     </div>
   );
 }
