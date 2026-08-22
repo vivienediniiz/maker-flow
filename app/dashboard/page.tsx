@@ -287,15 +287,6 @@ export default async function DashboardPage() {
           <AffiliateSummaryCard />
         </section>
 
-        {/* Produtos mais vendidos + atenção prioritária */}
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <TopProductsCard />
-          <div>
-            <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-text-muted">Atenção Prioritária</h3>
-            <PriorityAlertsSection />
-          </div>
-        </section>
-
         {/* KPI Cards */}
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KpiCard
@@ -314,6 +305,15 @@ export default async function DashboardPage() {
           />
           <KpiCard label="Filamento em Estoque" value={`${filamentStockKg.toFixed(1)} kg`} icon={Layers} accent="orange" />
           <KpiCard label="Status do Farm" value={`${farmStatus.active}/${farmStatus.total} ativas`} icon={Server} accent="purple" />
+        </section>
+
+        {/* Produtos mais vendidos + atenção prioritária */}
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <TopProductsCard />
+          <div>
+            <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-text-muted">Atenção Prioritária</h3>
+            <PriorityAlertsSection />
+          </div>
         </section>
 
         {/* Printer farm */}
