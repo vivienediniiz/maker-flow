@@ -34,18 +34,17 @@ function AlertCard({ data }: { data: AlertCardData }) {
   return (
     <Link
       href={data.href}
-      className={cn(
-        "glass-card flex flex-col items-center justify-center gap-1.5 px-3 py-4 text-center transition-colors hover:bg-white/[0.04]",
-        data.urgent ? "border-amber-500/30 hover:border-amber-500/50" : "hover:border-neon-pink/40"
-      )}
+      className="group flex flex-col items-center gap-2 px-2 py-3 text-center transition-transform hover:-translate-y-0.5"
     >
       <span
         className={cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5",
-          data.urgent ? "text-amber-400" : "text-neon-green"
+          "flex h-20 w-20 shrink-0 items-center justify-center rounded-full p-[3px] transition-shadow",
+          data.urgent ? "bg-neon-gradient shadow-neon-glow" : "bg-neon-gradient-soft group-hover:shadow-neon-glow"
         )}
       >
-        <Icon size={15} />
+        <span className="flex h-full w-full items-center justify-center rounded-full bg-bg-raised">
+          <Icon size={24} className={data.urgent ? "text-white" : "text-neon-green"} />
+        </span>
       </span>
       <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">{data.title}</span>
       <p className={cn("text-sm font-semibold", data.urgent ? "text-text-primary" : "text-text-secondary")}>
