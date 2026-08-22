@@ -6,6 +6,10 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
 import type { SalesGoal } from "@/lib/types";
 
+function formatCurrencyInput(value: number) {
+  return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 interface SalesGoalModalProps {
   open: boolean;
   onClose: () => void;
@@ -24,16 +28,25 @@ export function SalesGoalModal({ open, onClose, month, goal, onSaved }: SalesGoa
 
   useEffect(() => {
     if (!open) return;
-    setRevenueGoal(goal?.revenue_goal != null ? String(goal.revenue_goal) : "");
+    setRevenueGoal(goal?.revenue_goal != null ? formatCurrencyInput(goal.revenue_goal) : "");
     setSalesCountGoal(goal?.sales_count_goal != null ? String(goal.sales_count_goal) : "");
     setError(null);
   }, [open, goal]);
+
+  function handleRevenueChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const digits = e.target.value.replace(/\D/g, "");
+    if (!digits) {
+      setRevenueGoal("");
+      return;
+    }
+    setRevenueGoal(formatCurrencyInput(Number(digits) / 100));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    const revenue = revenueGoal.trim() === "" ? null : Number(revenueGoal);
+    const revenue = revenueGoal.trim() === "" ? null : Number(revenueGoal.replace(/\./g, "").replace(",", "."));
     const count = salesCountGoal.trim() === "" ? null : Number(salesCountGoal);
     if (revenue == null && count == null) {
       setError("Defina pelo menos uma meta (faturamento ou quantidade de vendas).");
@@ -81,13 +94,12 @@ export function SalesGoalModal({ open, onClose, month, goal, onSaved }: SalesGoa
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Meta de faturamento (R$)</label>
           <input
-            type="number"
-            step="0.01"
-            min="0"
+            type="text"
+            inputMode="numeric"
             value={revenueGoal}
-            onChange={(e) => setRevenueGoal(e.target.value)}
+            onChange={handleRevenueChange}
             className="glass-input w-full"
-            placeholder="Ex: 5000"
+            placeholder="Ex: 5.000,00"
           />
         </div>
         <div>
