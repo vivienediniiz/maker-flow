@@ -12,8 +12,8 @@ function adminClient() {
 /**
  * Cotação de frete via Melhor Envio — o token nunca sai do servidor.
  * Body: { destinationCep, weightG, heightCm, widthCm, lengthCm }.
- * CEP de origem vem do perfil (profiles.cep) ou de settings.origin_cep,
- * mesma referência já usada em /dashboard/shipping.
+ * CEP de origem vem sempre do perfil (profiles.cep), mesma referência já
+ * usada em /dashboard/shipping.
  */
 export async function POST(req: NextRequest) {
   const supabase = createServerClient();
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   const admin = adminClient();
 
-  const [{ data: integration }, { data: profile }, { data: settings }] = await Promise.all([
+  const [{ data: integration }, { data: profile }] = await Promise.all([
     admin
       .from("integrations")
       .select("id, credential_secret_id, status")
@@ -42,10 +42,9 @@ export async function POST(req: NextRequest) {
       .eq("platform", "melhor_envio")
       .maybeSingle(),
     admin.from("profiles").select("cep").eq("id", user.id).single(),
-    admin.from("settings").select("origin_cep").eq("user_id", user.id).single(),
   ]);
 
-  const originCep = profile?.cep || settings?.origin_cep;
+  const originCep = profile?.cep;
   if (!originCep) {
     return NextResponse.json(
       { error: "Cadastre o CEP do seu estúdio em Minha Conta antes de cotar frete." },

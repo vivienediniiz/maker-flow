@@ -38,13 +38,7 @@ export default function ShippingPage() {
       .eq("id", user.id)
       .single();
 
-    const { data: settings } = await supabase
-      .from("settings")
-      .select("origin_cep")
-      .eq("user_id", user.id)
-      .single();
-
-    setOriginCep(profile?.cep || settings?.origin_cep || "");
+    setOriginCep(profile?.cep || "");
     setLoadingOrigin(false);
   }
 

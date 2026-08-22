@@ -10,9 +10,7 @@ import { Save, Plus, Trash2, Loader2 } from "lucide-react";
 
 const SECTIONS = [
   { id: "energy", label: "Tarifa de Luz" },
-  { id: "printers", label: "Parque de Impressoras" },
   { id: "marketplaces", label: "Taxas de Marketplaces" },
-  { id: "shipping", label: "Frete (Remetente)" },
   { id: "risk", label: "Faixas de Risco Operacional" },
   { id: "labor", label: "Mão de Obra" },
   { id: "pdf", label: "Aparência do PDF" },
@@ -39,8 +37,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [marketplaces, setMarketplaces] = useState<MarketplaceRow[]>([]);
   const [newName, setNewName] = useState("");
-  const [originCep, setOriginCep] = useState("");
-  const [originAddress, setOriginAddress] = useState("");
+  const [electricityKwhRate, setElectricityKwhRate] = useState(0.95);
+  const [hourlyWorkRate, setHourlyWorkRate] = useState(25);
 
   useEffect(() => {
     loadSettings();
@@ -58,12 +56,12 @@ export default function SettingsPage() {
 
     const { data } = await supabase
       .from("settings")
-      .select("marketplace_fees_json, origin_cep, origin_address")
+      .select("marketplace_fees_json, electricity_kwh_rate, hourly_work_rate")
       .eq("user_id", user.id)
       .single();
 
-    setOriginCep(data?.origin_cep ?? "");
-    setOriginAddress(data?.origin_address ?? "");
+    if (data?.electricity_kwh_rate != null) setElectricityKwhRate(data.electricity_kwh_rate);
+    if (data?.hourly_work_rate != null) setHourlyWorkRate(data.hourly_work_rate);
 
     const hasExisting = data?.marketplace_fees_json && Object.keys(data.marketplace_fees_json).length > 0;
     const feesObj: Record<string, number> = hasExisting ? data!.marketplace_fees_json : DEFAULT_MARKETPLACES;
@@ -118,7 +116,11 @@ export default function SettingsPage() {
 
     await supabase
       .from("settings")
-      .update({ marketplace_fees_json: feesObj, origin_cep: originCep || null, origin_address: originAddress || null })
+      .update({
+        marketplace_fees_json: feesObj,
+        electricity_kwh_rate: electricityKwhRate,
+        hourly_work_rate: hourlyWorkRate,
+      })
       .eq("user_id", user.id);
 
     setSaving(false);
@@ -151,13 +153,17 @@ export default function SettingsPage() {
             <h3 className="font-display text-lg">Tarifa de Luz</h3>
             <label className="block max-w-xs">
               <span className="mb-1.5 block text-xs text-text-muted">Tarifa (R$/kWh)</span>
-              <input type="number" step="0.01" defaultValue={0.95} onChange={markDirty} className="glass-input w-full" />
+              <input
+                type="number"
+                step="0.01"
+                value={electricityKwhRate}
+                onChange={(e) => {
+                  setElectricityKwhRate(Number(e.target.value));
+                  markDirty();
+                }}
+                className="glass-input w-full"
+              />
             </label>
-          </GlassCard>
-
-          <GlassCard id="printers" padding="lg" className="scroll-mt-24 space-y-4">
-            <h3 className="font-display text-lg">Parque de Impressoras</h3>
-            <p className="text-sm text-text-secondary">Gerencie o cadastro completo em Cadastros → Impressoras.</p>
           </GlassCard>
 
           <GlassCard id="marketplaces" padding="lg" className="scroll-mt-24 space-y-4">
@@ -211,40 +217,6 @@ export default function SettingsPage() {
             )}
           </GlassCard>
 
-          <GlassCard id="shipping" padding="lg" className="scroll-mt-24 space-y-4">
-            <h3 className="font-display text-lg">Frete (Remetente)</h3>
-            <p className="text-sm text-text-secondary">
-              Cadastre o CEP e endereço do seu estúdio aqui — assim, ao criar um pedido, você só
-              precisa informar o frete do destinatário, sem repetir os dados de origem toda vez.
-            </p>
-            <div className="grid max-w-md grid-cols-2 gap-4">
-              <label className="block">
-                <span className="mb-1.5 block text-xs text-text-muted">CEP de origem</span>
-                <input
-                  value={originCep}
-                  onChange={(e) => {
-                    setOriginCep(e.target.value);
-                    markDirty();
-                  }}
-                  className="glass-input w-full"
-                  placeholder="00000-000"
-                />
-              </label>
-            </div>
-            <label className="block max-w-md">
-              <span className="mb-1.5 block text-xs text-text-muted">Endereço completo</span>
-              <input
-                value={originAddress}
-                onChange={(e) => {
-                  setOriginAddress(e.target.value);
-                  markDirty();
-                }}
-                className="glass-input w-full"
-                placeholder="Rua, número, cidade — UF"
-              />
-            </label>
-          </GlassCard>
-
           <GlassCard id="risk" padding="lg" className="scroll-mt-24 space-y-4">
             <h3 className="font-display text-lg">Faixas de Risco Operacional</h3>
             <p className="text-sm text-text-secondary">
@@ -256,7 +228,15 @@ export default function SettingsPage() {
             <h3 className="font-display text-lg">Mão de Obra</h3>
             <label className="block max-w-xs">
               <span className="mb-1.5 block text-xs text-text-muted">Valor hora padrão (R$)</span>
-              <input type="number" defaultValue={25} onChange={markDirty} className="glass-input w-full" />
+              <input
+                type="number"
+                value={hourlyWorkRate}
+                onChange={(e) => {
+                  setHourlyWorkRate(Number(e.target.value));
+                  markDirty();
+                }}
+                className="glass-input w-full"
+              />
             </label>
           </GlassCard>
 

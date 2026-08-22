@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { IntegrationCard } from "@/components/dashboard/IntegrationCard";
+import { ConfigNudgeBanner } from "@/components/dashboard/ConfigNudgeBanner";
 import { createClient } from "@/lib/supabase/client";
 import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import type { Integration, IntegrationPlatform } from "@/lib/types";
@@ -26,6 +27,7 @@ function IntegrationsPageContent() {
   const router = useRouter();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [marketplaceFeesConfigured, setMarketplaceFeesConfigured] = useState(true);
 
   const mlConnected = searchParams.get("ml_connected");
   const mlError = searchParams.get("ml_error");
@@ -52,8 +54,12 @@ function IntegrationsPageContent() {
       setLoading(false);
       return;
     }
-    const { data } = await supabase.from("integrations").select("*").eq("user_id", user.id);
+    const [{ data }, { data: settings }] = await Promise.all([
+      supabase.from("integrations").select("*").eq("user_id", user.id),
+      supabase.from("settings").select("marketplace_fees_json").eq("user_id", user.id).single(),
+    ]);
     setIntegrations((data as Integration[]) ?? []);
+    setMarketplaceFeesConfigured(!!settings?.marketplace_fees_json && Object.keys(settings.marketplace_fees_json).length > 0);
     setLoading(false);
   }
 
@@ -64,6 +70,14 @@ function IntegrationsPageContent() {
   return (
     <>
       <Topbar title="Integrações" />
+      {!loading && !marketplaceFeesConfigured && (
+        <ConfigNudgeBanner
+          id="marketplace-fees"
+          message="Configure suas taxas de marketplace para cálculos mais precisos."
+          ctaLabel="Configurar agora"
+          ctaHref="/dashboard/settings#marketplaces"
+        />
+      )}
       <main className="space-y-6 px-6 py-8 md:px-8">
         <p className="max-w-2xl text-sm text-text-secondary">
           Conecte suas contas de vendas pra receber pedidos automaticamente em Vendas, via webhook — sem precisar

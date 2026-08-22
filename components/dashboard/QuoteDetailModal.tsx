@@ -77,10 +77,11 @@ export function QuoteDetailModal({
       data: { user },
     } = await supabase.auth.getUser();
 
-    const [{ data: profile }, { data: settings }] = await Promise.all([
-      supabase.from("profiles").select("studio_name, full_name, phone").eq("id", user!.id).single(),
-      supabase.from("settings").select("origin_cep, origin_address").eq("user_id", user!.id).single(),
-    ]);
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("studio_name, full_name, phone, cep, address")
+      .eq("id", user!.id)
+      .single();
 
     const container = document.createElement("div");
     container.style.width = "600px";
@@ -99,8 +100,8 @@ export function QuoteDetailModal({
         <div style="border:1px solid #EEE6F2; border-radius:10px; padding:14px;">
           <p style="margin:0 0 8px; font-size:11px; font-weight:700; color:#AA17DB;">REMETENTE</p>
           <p style="margin:0; font-size:13px; font-weight:600;">${profile?.studio_name || profile?.full_name || "Meu Estúdio"}</p>
-          <p style="margin:4px 0 0; font-size:12px; color:#3A3548;">${settings?.origin_address || "Endereço não cadastrado"}</p>
-          <p style="margin:2px 0 0; font-size:12px; color:#3A3548;">CEP: ${settings?.origin_cep || "—"}</p>
+          <p style="margin:4px 0 0; font-size:12px; color:#3A3548;">${profile?.address || "Endereço não cadastrado"}</p>
+          <p style="margin:2px 0 0; font-size:12px; color:#3A3548;">CEP: ${profile?.cep || "—"}</p>
           ${profile?.phone ? `<p style="margin:2px 0 0; font-size:12px; color:#3A3548;">${profile.phone}</p>` : ""}
         </div>
         <div style="border:1px solid #EEE6F2; border-radius:10px; padding:14px;">

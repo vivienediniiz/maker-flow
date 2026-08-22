@@ -12,6 +12,7 @@ import { GenerateQuoteModal } from "@/components/dashboard/GenerateQuoteModal";
 import { FilamentModal } from "@/components/dashboard/FilamentModal";
 import { FilamentPickerDropdown } from "@/components/dashboard/FilamentPickerDropdown";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { ConfigNudgeBanner } from "@/components/dashboard/ConfigNudgeBanner";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import { calculateCost } from "@/lib/costCalculator";
@@ -83,6 +84,8 @@ export default function CalculatorPage() {
   const [supplies, setSupplies] = useState<Supply[]>([]);
   const [supplyLines, setSupplyLines] = useState<SupplyLine[]>([]);
   const [printerAssets, setPrinterAssets] = useState<PrinterAsset[]>([]);
+  const [energyConfigured, setEnergyConfigured] = useState(true);
+  const [laborConfigured, setLaborConfigured] = useState(true);
 
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [newProductModalOpen, setNewProductModalOpen] = useState(false);
@@ -94,6 +97,7 @@ export default function CalculatorPage() {
     loadSupplies();
     loadFilaments();
     loadPrinterAssets();
+    loadCalculatorSettings();
   }, []);
 
   async function loadProducts() {
@@ -145,6 +149,23 @@ export default function CalculatorPage() {
     if (!user) return;
     const { data } = await supabase.from("printer_assets").select("*").eq("user_id", user.id).order("model");
     setPrinterAssets((data as PrinterAsset[]) ?? []);
+  }
+
+  async function loadCalculatorSettings() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from("settings")
+      .select("electricity_kwh_rate, hourly_work_rate")
+      .eq("user_id", user.id)
+      .single();
+
+    setEnergyConfigured(data?.electricity_kwh_rate != null);
+    setLaborConfigured(data?.hourly_work_rate != null);
+    if (data?.electricity_kwh_rate != null) setKwhRate(data.electricity_kwh_rate);
+    if (data?.hourly_work_rate != null) setHourlyRate(data.hourly_work_rate);
   }
 
   function handleSelectPrinterAsset(bedId: string, printerAssetId: string) {
@@ -301,6 +322,23 @@ export default function CalculatorPage() {
   return (
     <>
       <Topbar title="Calculadora Inteligente" />
+
+      {!energyConfigured && (
+        <ConfigNudgeBanner
+          id="energy-rate"
+          message="Configure sua tarifa de energia para cálculos mais precisos."
+          ctaLabel="Configurar agora"
+          ctaHref="/dashboard/settings#energy"
+        />
+      )}
+      {!laborConfigured && (
+        <ConfigNudgeBanner
+          id="labor-rate"
+          message="Configure o valor padrão da sua mão de obra para cálculos mais precisos."
+          ctaLabel="Configurar agora"
+          ctaHref="/dashboard/settings#labor"
+        />
+      )}
 
       <main className="grid grid-cols-1 gap-6 px-6 py-8 md:px-8 xl:grid-cols-[1fr_360px]">
         {/* Left column: inputs */}
