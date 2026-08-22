@@ -40,6 +40,7 @@ const SOURCE_FILTERS: { key: "all" | QuoteSource; label: string }[] = [
   { key: "tiktok_shop", label: QUOTE_SOURCE_LABELS.tiktok_shop },
   { key: "shopee", label: QUOTE_SOURCE_LABELS.shopee },
   { key: "mercado_pago", label: QUOTE_SOURCE_LABELS.mercado_pago },
+  { key: "loja_online", label: QUOTE_SOURCE_LABELS.loja_online },
   { key: "manual", label: QUOTE_SOURCE_LABELS.manual },
 ];
 

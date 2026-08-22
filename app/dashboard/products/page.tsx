@@ -9,10 +9,11 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { ProductDetailModal } from "@/components/dashboard/ProductDetailModal";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
+import { Toggle } from "@/components/ui/Toggle";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { canCreateMore, limitFor } from "@/lib/entitlements";
-import { SlidersHorizontal, PackagePlus, Sparkles, Loader2, Trash2, Lock, Pencil, FileDown, X } from "lucide-react";
+import { SlidersHorizontal, PackagePlus, Sparkles, Loader2, Trash2, Lock, Pencil, FileDown, X, ChevronUp, ChevronDown } from "lucide-react";
 import type { Product } from "@/lib/types";
 
 export default function ProductsPage() {
@@ -57,6 +58,46 @@ export default function ProductsPage() {
   }
 
   const categories = Array.from(new Set(products.map((p) => p.category).filter(Boolean))) as string[];
+
+  async function handleToggleInStore(product: Product) {
+    const turningOn = !product.in_store;
+    let order = product.store_display_order;
+    if (turningOn && order == null) {
+      const maxOrder = products.reduce(
+        (max, p) => (p.in_store && p.store_display_order != null ? Math.max(max, p.store_display_order) : max),
+        0
+      );
+      order = maxOrder + 1;
+    }
+    setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, in_store: turningOn, store_display_order: order } : p)));
+    await supabase.from("products").update({ in_store: turningOn, store_display_order: order }).eq("id", product.id);
+  }
+
+  async function handleMoveInStore(product: Product, direction: "up" | "down") {
+    const storeItems = products
+      .filter((p) => p.in_store)
+      .sort((a, b) => (a.store_display_order ?? 0) - (b.store_display_order ?? 0));
+    const idx = storeItems.findIndex((p) => p.id === product.id);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (idx === -1 || swapIdx < 0 || swapIdx >= storeItems.length) return;
+
+    const other = storeItems[swapIdx];
+    const aOrder = product.store_display_order ?? 0;
+    const bOrder = other.store_display_order ?? 0;
+
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id === product.id) return { ...p, store_display_order: bOrder };
+        if (p.id === other.id) return { ...p, store_display_order: aOrder };
+        return p;
+      })
+    );
+
+    await Promise.all([
+      supabase.from("products").update({ store_display_order: bOrder }).eq("id", product.id),
+      supabase.from("products").update({ store_display_order: aOrder }).eq("id", other.id),
+    ]);
+  }
 
   async function handleDelete(productId: string, e: React.MouseEvent) {
     e.stopPropagation();
@@ -326,6 +367,7 @@ export default function ProductsPage() {
                       <th className="px-6 py-4 font-medium">Venda</th>
                       <th className="px-6 py-4 font-medium">Margem</th>
                       <th className="px-6 py-4 font-medium">Estoque</th>
+                      <th className="px-6 py-4 font-medium">Loja</th>
                       <th className="w-12 px-4 py-4" />
                     </tr>
                   </thead>
@@ -369,6 +411,29 @@ export default function ProductsPage() {
                           <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(p.sale_price)}</td>
                           <td className="px-6 py-4 font-numeric text-neon-pink">{margin.toFixed(0)}%</td>
                           <td className="px-6 py-4 text-text-secondary">{p.stock_quantity}</td>
+                          <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1.5">
+                              <Toggle checked={p.in_store} onChange={() => handleToggleInStore(p)} />
+                              {p.in_store && (
+                                <div className="flex flex-col">
+                                  <button
+                                    onClick={() => handleMoveInStore(p, "up")}
+                                    className="text-text-muted hover:text-text-primary"
+                                    aria-label="Mover pra cima na loja"
+                                  >
+                                    <ChevronUp size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleMoveInStore(p, "down")}
+                                    className="text-text-muted hover:text-text-primary"
+                                    aria-label="Mover pra baixo na loja"
+                                  >
+                                    <ChevronDown size={14} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-2 py-4">
                             <div className="flex items-center">
                               <button
@@ -458,6 +523,29 @@ export default function ProductsPage() {
                       <span className="text-neon-pink">{margin.toFixed(0)}%</span>
                     </CardRow>
                     <CardRow label="Estoque">{p.stock_quantity}</CardRow>
+                    <CardRow label="Exibir na Loja">
+                      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <Toggle checked={p.in_store} onChange={() => handleToggleInStore(p)} />
+                        {p.in_store && (
+                          <>
+                            <button
+                              onClick={() => handleMoveInStore(p, "up")}
+                              className="text-text-muted hover:text-text-primary"
+                              aria-label="Mover pra cima na loja"
+                            >
+                              <ChevronUp size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleMoveInStore(p, "down")}
+                              className="text-text-muted hover:text-text-primary"
+                              aria-label="Mover pra baixo na loja"
+                            >
+                              <ChevronDown size={16} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </CardRow>
                   </CollapsibleCard>
                 );
               })}

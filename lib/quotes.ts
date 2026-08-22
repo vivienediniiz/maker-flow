@@ -1,4 +1,4 @@
-import { CreditCard, ShoppingCart, ShoppingBag, Video, Store, type LucideIcon } from "lucide-react";
+import { CreditCard, ShoppingCart, ShoppingBag, Video, Store, Globe, type LucideIcon } from "lucide-react";
 import type { QuoteStatus, QuoteSource, QuotePaymentMethod } from "./types";
 
 export const QUOTE_EXPIRY_DAYS = 15;
@@ -60,6 +60,7 @@ export const QUOTE_SOURCE_LABELS: Record<QuoteSource, string> = {
   shopee: "Shopee",
   tiktok_shop: "TikTok Shop",
   manual: "Manual",
+  loja_online: "Loja Online",
 };
 
 export const QUOTE_SOURCE_ICONS: Record<QuoteSource, LucideIcon> = {
@@ -68,16 +69,20 @@ export const QUOTE_SOURCE_ICONS: Record<QuoteSource, LucideIcon> = {
   shopee: ShoppingBag,
   tiktok_shop: Video,
   manual: Store,
+  loja_online: Globe,
 };
 
 // Cores reais de cada marca (não são tokens do design system — hex direto
 // da identidade visual de cada plataforma). "Manual" não é uma marca, fica neutro.
+// "Loja Online" usa o rosa neon da própria marca StudioMaker, já que é um canal
+// nosso, não de terceiros.
 export const QUOTE_SOURCE_BADGE_STYLES: Record<QuoteSource, string> = {
   mercado_pago: "bg-[#00B1EA]/15 text-[#00B1EA] border-[#00B1EA]/30",
   mercado_livre: "bg-[#FFE600]/15 text-[#FFE600] border-[#FFE600]/40",
   shopee: "bg-[#EE4D2D]/15 text-[#EE4D2D] border-[#EE4D2D]/30",
   tiktok_shop: "bg-[#FE2C55]/15 text-[#FE2C55] border-[#FE2C55]/30",
   manual: "bg-white/10 text-text-secondary border-white/10",
+  loja_online: "bg-neon-pink/15 text-neon-pink border-neon-pink/30",
 };
 
 /** Próximo estágio no fluxo linear (sent → paid → in_production → shipped), com o rótulo do botão de ação rápida. */

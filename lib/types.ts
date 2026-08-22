@@ -37,6 +37,51 @@ export interface Profile {
   referred_by: string | null;
   /** Carimbo da primeira cobrança de assinatura confirmada — usado só pra não gerar comissão de afiliado de novo em renovações. */
   first_payment_confirmed_at: string | null;
+  store_enabled: boolean;
+  store_slug: string | null;
+  store_headline: string | null;
+}
+
+export interface StoreCheckout {
+  id: string;
+  seller_user_id: string;
+  mp_preference_id: string | null;
+  status: "pending" | "paid" | "expired";
+  buyer_name: string;
+  buyer_email: string;
+  buyer_phone: string | null;
+  buyer_cep: string | null;
+  buyer_street: string | null;
+  buyer_number: string | null;
+  buyer_complement: string | null;
+  buyer_neighborhood: string | null;
+  buyer_city: string | null;
+  buyer_state: string | null;
+  items: { product_id: string; name: string; unit_price: number; quantity: number }[];
+  total_amount: number;
+  created_at: string;
+}
+
+/** Espelha a view pública `store_products_public` — só as colunas seguras pra expor a visitante sem login. */
+export interface StoreProductPublic {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  sale_price: number;
+  store_display_order: number | null;
+}
+
+/** Espelha a view pública `store_profiles_public`. */
+export interface StoreProfilePublic {
+  user_id: string;
+  store_slug: string;
+  store_headline: string | null;
+  studio_name: string | null;
+  avatar_url: string | null;
+  store_enabled: boolean;
+  payment_ready: boolean;
 }
 
 export interface AffiliateCommission {
@@ -103,7 +148,7 @@ export type QuoteChannel = "whatsapp" | "instagram" | "tiktok" | "presencial" | 
 
 // Origem do REGISTRO (quem criou/atualizou essa venda) — diferente de `channel`
 // (canal de venda escolhido manualmente, usado em cálculo de taxa/margem).
-export type QuoteSource = "mercado_pago" | "mercado_livre" | "shopee" | "tiktok_shop" | "manual";
+export type QuoteSource = "mercado_pago" | "mercado_livre" | "shopee" | "tiktok_shop" | "manual" | "loja_online";
 
 export type QuoteStatus = "sent" | "paid" | "in_production" | "shipped" | "expired" | "cancelled";
 
@@ -146,6 +191,8 @@ export interface Quote {
   discount_type: QuoteDiscountType | null;
   discount_percent: number | null;
   production_deadline: string | null;
+  /** Agrupa quotes criadas a partir do mesmo checkout da Loja Online (uma linha por produto do carrinho). */
+  storefront_checkout_id: string | null;
 }
 
 export type QuoteDiscountType = "fixed" | "percentage" | "coupon";
@@ -221,6 +268,10 @@ export interface Product {
   low_stock_threshold: number | null;
   price_tiers: PriceTier[];
   calc_inputs: CalcInputs | null;
+  /** Aparece na vitrine pública da Loja Online quando true. */
+  in_store: boolean;
+  /** Ordem de exibição na loja — só relevante entre produtos com in_store=true. */
+  store_display_order: number | null;
 }
 
 export interface Category {

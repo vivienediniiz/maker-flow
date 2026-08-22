@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getIntegrationCredential, setIntegrationCredential } from "@/lib/vault";
+import type { StoreCheckout } from "@/lib/types";
 
 interface MpFeeDetail {
   amount: number;
@@ -146,6 +147,60 @@ async function refreshAndSave(
   return refreshed;
 }
 
+// ---- Checkout Pro (preferência de pagamento — usada pela Loja Online) ----
+
+export interface MpPreferenceItem {
+  title: string;
+  quantity: number;
+  unit_price: number;
+  currency_id?: string;
+}
+
+export interface MpPreferenceRequest {
+  items: MpPreferenceItem[];
+  payer?: { name?: string; email?: string };
+  external_reference?: string;
+  notification_url?: string;
+  back_urls?: { success?: string; failure?: string; pending?: string };
+  auto_return?: "approved";
+}
+
+interface MpPreferenceResponse {
+  id: string;
+  init_point: string;
+  sandbox_init_point?: string;
+}
+
+async function createPreferenceRaw(accessToken: string, body: MpPreferenceRequest) {
+  const res = await fetch("https://api.mercadopago.com/checkout/preferences", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return { res, preference: res.ok ? ((await res.json()) as MpPreferenceResponse) : null };
+}
+
+/** Cria uma preferência de Checkout Pro na conta MP do próprio vendedor (token OAuth via Vault) — usada pelo checkout da Loja Online. */
+export async function createMercadoPagoPreferenceForIntegration(
+  admin: SupabaseClient,
+  integration: { id: string; credential_secret_id: string | null },
+  body: MpPreferenceRequest
+): Promise<MpPreferenceResponse> {
+  const tokens = await loadTokens(admin, integration);
+
+  let { res, preference } = await createPreferenceRaw(tokens.access_token, body);
+
+  if (res.status === 401) {
+    const refreshed = await refreshAndSave(admin, integration, tokens.refresh_token);
+    ({ res, preference } = await createPreferenceRaw(refreshed.access_token, body));
+  }
+
+  if (!res.ok || !preference) {
+    throw new Error(`Mercado Pago respondeu ${res.status} ao criar a preferência de pagamento`);
+  }
+  return preference;
+}
+
 // ---- Orders API (webhook em tempo real - o que a aplicação "MakerFlow Vendas" está configurada pra usar) ----
 
 async function fetchOrderRaw(accessToken: string, orderId: string) {
@@ -201,6 +256,29 @@ export async function upsertQuoteFromMercadoPagoOrder(admin: SupabaseClient, use
   const payment = order.transactions?.payments?.[0] ?? null;
   const externalId = payment ? String(payment.id) : order.id;
 
+  // Vendas da Loja Online carregam o id do checkout em external_reference —
+  // desviam pro fluxo de N linhas (uma por produto do carrinho) em vez do
+  // genérico "1 venda = 1 quote" usado pelas demais integrações. Se não bater
+  // com nenhum checkout (fluxo normal de marketplace), segue o código abaixo
+  // sem nenhuma mudança de comportamento.
+  if (order.external_reference) {
+    const { data: checkout } = await admin
+      .from("store_checkouts")
+      .select("*")
+      .eq("id", order.external_reference)
+      .maybeSingle();
+    if (checkout) {
+      const platformFee = (payment?.fee_details ?? []).reduce((sum, f) => sum + (Number(f.amount) || 0), 0);
+      return upsertQuotesFromStorefrontCheckout(
+        admin,
+        checkout as StoreCheckout,
+        externalId,
+        order.date_created ?? new Date().toISOString(),
+        platformFee
+      );
+    }
+  }
+
   const platformFee = (payment?.fee_details ?? []).reduce((sum, f) => sum + (Number(f.amount) || 0), 0);
   const grossAmount = Number(payment?.amount ?? order.total_amount ?? 0);
 
@@ -238,6 +316,96 @@ export async function upsertQuoteFromMercadoPagoOrder(admin: SupabaseClient, use
     .single();
 
   if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * Cria uma linha em `quotes` por produto do carrinho (o schema hoje é 1
+ * produto por venda) — todas ligadas ao mesmo cliente, achado/criado por
+ * e-mail. `external_order_id` combina o id do pagamento com o id do produto
+ * pra manter unicidade (o unique index é por user_id+source+external_order_id,
+ * e aqui um mesmo pagamento gera N linhas). O rateio de `platform_fee` entre
+ * os itens é proporcional ao valor de cada um.
+ */
+async function upsertQuotesFromStorefrontCheckout(
+  admin: SupabaseClient,
+  checkout: StoreCheckout,
+  paymentId: string,
+  sentAt: string,
+  totalPlatformFee: number
+) {
+  let clientId: string | null = null;
+  const { data: existingClient } = await admin
+    .from("clients")
+    .select("id")
+    .eq("user_id", checkout.seller_user_id)
+    .eq("email", checkout.buyer_email)
+    .maybeSingle();
+
+  if (existingClient) {
+    clientId = existingClient.id;
+  } else {
+    const address = [checkout.buyer_street, checkout.buyer_number, checkout.buyer_complement]
+      .filter(Boolean)
+      .join(", ");
+    const { data: newClient } = await admin
+      .from("clients")
+      .insert({
+        user_id: checkout.seller_user_id,
+        name: checkout.buyer_name,
+        email: checkout.buyer_email,
+        phone: checkout.buyer_phone,
+        cep: checkout.buyer_cep,
+        street: checkout.buyer_street,
+        number: checkout.buyer_number,
+        complement: checkout.buyer_complement,
+        neighborhood: checkout.buyer_neighborhood,
+        city: checkout.buyer_city,
+        state: checkout.buyer_state,
+        address: address || null,
+      })
+      .select("id")
+      .single();
+    clientId = newClient?.id ?? null;
+  }
+
+  const totalGross = checkout.items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0) || 1;
+
+  const rows = checkout.items.map((item) => {
+    const itemGross = item.unit_price * item.quantity;
+    return {
+      user_id: checkout.seller_user_id,
+      project_name: item.name,
+      final_price: itemGross,
+      platform_fee: totalPlatformFee * (itemGross / totalGross),
+      cost_amount: 0,
+      status: "paid" as const,
+      source: "loja_online" as const,
+      external_order_id: `${paymentId}:${item.product_id}`,
+      buyer_name: checkout.buyer_name,
+      sent_at: sentAt,
+      client_id: clientId,
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      storefront_checkout_id: checkout.id,
+      weight_g: 0,
+      print_time_min: 0,
+      energy_cost: 0,
+      filament_cost: 0,
+      margin_percent: 0,
+    };
+  });
+
+  const { data, error } = await admin
+    .from("quotes")
+    .upsert(rows, { onConflict: "user_id,source,external_order_id" })
+    .select();
+
+  if (error) throw new Error(error.message);
+
+  await admin.from("store_checkouts").update({ status: "paid" }).eq("id", checkout.id);
+
   return data;
 }
 
