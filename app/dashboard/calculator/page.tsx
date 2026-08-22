@@ -477,60 +477,63 @@ export default function CalculatorPage() {
                   </Field>
                 </div>
 
-                <Field label="Quantas peças estão nesta mesa? (opcional, só referência)">
-                  <input
-                    type="number"
-                    min={1}
-                    value={bed.piecesInBed || ""}
-                    onChange={(e) => updateBed(bed.id, { piecesInBed: Math.max(1, Number(e.target.value)) })}
-                    className="glass-input w-full sm:w-32"
-                  />
-                </Field>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-[100px_160px_1fr] sm:items-end">
+                  <Field label="Peças (opcional)">
+                    <input
+                      type="number"
+                      min={1}
+                      value={bed.piecesInBed || ""}
+                      onChange={(e) => updateBed(bed.id, { piecesInBed: Math.max(1, Number(e.target.value)) })}
+                      className="glass-input w-full"
+                    />
+                  </Field>
+                  <Field label="Margem de segurança (%, opcional)">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={bed.safetyMarginPercent || ""}
+                      onChange={(e) => updateBed(bed.id, { safetyMarginPercent: Math.max(0, Number(e.target.value)) })}
+                      className="glass-input w-full"
+                      placeholder="5-10%"
+                    />
+                  </Field>
+                  <div className="col-span-2 sm:col-span-1">
+                    <Field label="Filamento">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <FilamentPickerDropdown
+                            filaments={filaments}
+                            value={bed.filamentId}
+                            onChange={(id) => updateBed(bed.id, { filamentId: id })}
+                          />
+                        </div>
+                        <NeonButton
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={() => setFilamentModalBedId(bed.id)}
+                        >
+                          <Plus size={14} /> Cadastrar
+                        </NeonButton>
+                      </div>
+                    </Field>
+                  </div>
+                </div>
+
                 {bed.piecesInBed > 1 && (
                   <p className="text-[11px] text-neon-green">
                     ≈ {Math.round(bed.weightG / bed.piecesInBed)}g e{" "}
                     {Math.round((bed.timeH * 60 + bed.timeM) / bed.piecesInBed)}min por peça nesta mesa
                   </p>
                 )}
-
-                <Field label="Margem de segurança — falhas de impressão (%, opcional)">
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={bed.safetyMarginPercent || ""}
-                    onChange={(e) => updateBed(bed.id, { safetyMarginPercent: Math.max(0, Number(e.target.value)) })}
-                    className="glass-input w-full sm:w-32"
-                    placeholder="5-10%"
-                  />
-                </Field>
                 {bed.safetyMarginPercent > 0 && (
                   <p className="text-[11px] text-neon-pink">
                     Considerando +{bed.safetyMarginPercent}% de margem no custo: {Math.round(bed.weightG * (1 + bed.safetyMarginPercent / 100))}g e{" "}
                     {Math.round((bed.timeH * 60 + bed.timeM) * (1 + bed.safetyMarginPercent / 100))}min
                   </p>
                 )}
-
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <Field label="Filamento">
-                      <FilamentPickerDropdown
-                        filaments={filaments}
-                        value={bed.filamentId}
-                        onChange={(id) => updateBed(bed.id, { filamentId: id })}
-                      />
-                    </Field>
-                  </div>
-                  <NeonButton
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mb-0.5 shrink-0"
-                    onClick={() => setFilamentModalBedId(bed.id)}
-                  >
-                    <Plus size={14} /> Cadastrar Filamento
-                  </NeonButton>
-                </div>
                 {!bed.filamentId && (
                   <p className="text-[11px] text-amber-400">Selecione um filamento cadastrado pra calcular o custo desta mesa.</p>
                 )}
@@ -546,7 +549,7 @@ export default function CalculatorPage() {
             <p className="-mt-3 text-[11px] text-text-muted">
               Fixos por pedido — não multiplicam pela Quantidade de Produtos Finais.
             </p>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <Field label="Tarifa energia (R$/kWh)">
                 <CurrencyInput value={String(kwhRate)} onChange={(v) => setKwhRate(v === "" ? 0 : Number(v))} />
               </Field>
