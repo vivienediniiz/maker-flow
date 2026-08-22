@@ -368,6 +368,18 @@ export interface Settings {
   operational_risk_json: Record<string, number>;
   origin_cep: string | null;
   origin_address: string | null;
+  pdf_accent_color: string | null;
+  pdf_footer_message: string | null;
+  pdf_show_production_deadline: boolean;
+}
+
+export interface RiskTier {
+  id: string;
+  user_id: string;
+  name: string;
+  extra_margin_percent: number;
+  description: string | null;
+  created_at: string;
 }
 
 export type CouponDiscountType = "percentage" | "fixed";

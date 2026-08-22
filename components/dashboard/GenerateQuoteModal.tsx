@@ -26,6 +26,8 @@ interface StudioInfo {
   phone: string | null;
   email: string | null;
   website: string | null;
+  accentColor: string;
+  footerMessage: string | null;
 }
 
 export function GenerateQuoteModal({
@@ -79,13 +81,22 @@ export function GenerateQuoteModal({
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return { studioName: "Meu Estúdio", avatarUrl: null, phone: null, email: null, website: null };
+    if (!user) {
+      return {
+        studioName: "Meu Estúdio",
+        avatarUrl: null,
+        phone: null,
+        email: null,
+        website: null,
+        accentColor: "#FF4EDF",
+        footerMessage: null,
+      };
+    }
 
-    const { data } = await supabase
-      .from("profiles")
-      .select("studio_name, full_name, avatar_url, phone, email, website")
-      .eq("id", user.id)
-      .single();
+    const [{ data }, { data: settings }] = await Promise.all([
+      supabase.from("profiles").select("studio_name, full_name, avatar_url, phone, email, website").eq("id", user.id).single(),
+      supabase.from("settings").select("pdf_accent_color, pdf_footer_message").eq("user_id", user.id).single(),
+    ]);
 
     return {
       studioName: data?.studio_name || data?.full_name || "Meu Estúdio",
@@ -93,6 +104,8 @@ export function GenerateQuoteModal({
       phone: data?.phone ?? null,
       email: data?.email ?? user.email ?? null,
       website: data?.website ?? null,
+      accentColor: settings?.pdf_accent_color || "#FF4EDF",
+      footerMessage: settings?.pdf_footer_message ?? null,
     };
   }
 
@@ -117,7 +130,7 @@ export function GenerateQuoteModal({
     container.style.color = "#1A1625";
 
     container.innerHTML = `
-      <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid #FF4EDF; padding-bottom:16px; margin-bottom:24px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid ${studio.accentColor}; padding-bottom:16px; margin-bottom:24px;">
         <div style="display:flex; align-items:center; gap:14px;">
           ${
             studio.avatarUrl
@@ -143,7 +156,7 @@ export function GenerateQuoteModal({
       </div>
 
       <div style="margin-bottom:8px;">
-        <div style="border-left:4px solid #FF4EDF;padding-left:10px;font-size:14px;font-weight:700;color:#1A1625;margin-bottom:12px;">
+        <div style="border-left:4px solid ${studio.accentColor};padding-left:10px;font-size:14px;font-weight:700;color:#1A1625;margin-bottom:12px;">
           DESCRIÇÃO DO PROJETO
         </div>
         <p style="font-size:13px;color:#3A3548;margin:0 0 24px;">${summary.projectName || "Projeto personalizado"}</p>
@@ -185,6 +198,11 @@ export function GenerateQuoteModal({
       <p style="text-align:center;font-size:10px;color:#B4AFC4;margin-top:32px;">
         ${studio.studioName}${studio.website ? " · " + studio.website : ""}${studio.email ? " · " + studio.email : ""}
       </p>
+      ${
+        studio.footerMessage
+          ? `<p style="text-align:center;font-size:11px;color:#726C85;margin-top:8px;">${studio.footerMessage}</p>`
+          : ""
+      }
     `;
 
     document.body.appendChild(container);

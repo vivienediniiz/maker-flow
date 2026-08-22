@@ -24,6 +24,8 @@ export interface CalcInput {
   suppliesCost?: number;
   marketplaceFee: number;
   marginPercent: number;
+  /** % extra da faixa de risco operacional selecionada (opcional) — aplicado sobre o preço já com margem+taxa de marketplace, não sobre o custo. */
+  riskMarginPercent?: number;
   /** Quantidade de Produtos Finais do pedido — multiplica custo/preço por unidade (mesas + insumos), nunca os fixos. */
   quantity: number;
 }
@@ -43,7 +45,9 @@ export interface CalcResult {
   laborCost: number;
   paint: number;
   fixedCosts: number;
-  /** Preço de Venda Sugerido por Unidade (margem + taxa de marketplace aplicadas sobre costPerUnit). */
+  /** Preço com margem + taxa de marketplace, ANTES do acréscimo de risco — só pra exibir a comparação no resumo. */
+  pricePerUnitBeforeRisk: number;
+  /** Preço de Venda Sugerido por Unidade — inclui o acréscimo de risco quando uma faixa é selecionada. É esse valor que flui pra Criar Pedido/PDF/Link de Cobrança. */
   pricePerUnit: number;
   /** Custo Total do Pedido = costPerUnit × quantity + fixedCosts. */
   orderCost: number;
@@ -64,6 +68,7 @@ export interface CalcResult {
 export function calculateCost(input: CalcInput): CalcResult {
   const { beds, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, marketplaceFee, marginPercent, quantity } = input;
   const suppliesCost = input.suppliesCost ?? 0;
+  const riskMarginPercent = Math.max(input.riskMarginPercent ?? 0, 0);
   const defaultFilamentPricePerKg = input.filamentPricePerKg ?? 0;
 
   // Totais exibidos/salvos continuam com o valor REAL digitado — a margem de
@@ -95,7 +100,8 @@ export function calculateCost(input: CalcInput): CalcResult {
   // já que nesse ponto o preço tenderia ao infinito — a UI restringe a faixa (0-99%) via slider.
   const clampedMargin = Math.min(Math.max(marginPercent, 0), 99);
   const priceWithMargin = costPerUnit / (1 - clampedMargin / 100);
-  const pricePerUnit = marketplaceFee > 0 ? priceWithMargin / (1 - marketplaceFee / 100) : priceWithMargin;
+  const pricePerUnitBeforeRisk = marketplaceFee > 0 ? priceWithMargin / (1 - marketplaceFee / 100) : priceWithMargin;
+  const pricePerUnit = pricePerUnitBeforeRisk * (1 + riskMarginPercent / 100);
 
   const qty = Math.max(quantity, 1);
   const orderCost = costPerUnit * qty + fixedCosts;
@@ -112,6 +118,7 @@ export function calculateCost(input: CalcInput): CalcResult {
     laborCost,
     paint,
     fixedCosts,
+    pricePerUnitBeforeRisk,
     pricePerUnit,
     orderCost,
     orderPrice,

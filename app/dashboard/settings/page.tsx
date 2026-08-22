@@ -7,6 +7,8 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Save, Plus, Trash2, Loader2 } from "lucide-react";
+import { RiskTiersManager } from "@/components/dashboard/RiskTiersManager";
+import { PdfAppearanceSettings } from "@/components/dashboard/PdfAppearanceSettings";
 
 const SECTIONS = [
   { id: "energy", label: "Tarifa de Luz" },
@@ -226,8 +228,10 @@ export default function SettingsPage() {
           <GlassCard id="risk" padding="lg" className="scroll-mt-24 space-y-4">
             <h3 className="font-display text-lg">Faixas de Risco Operacional</h3>
             <p className="text-sm text-text-secondary">
-              Defina percentuais de contingência (falha de impressão, quebra de peça) por faixa de complexidade.
+              Defina percentuais de contingência (falha de impressão, quebra de peça) por faixa de complexidade —
+              use na Calculadora Inteligente pra reforçar o preço de peças mais arriscadas.
             </p>
+            <RiskTiersManager />
           </GlassCard>
 
           <GlassCard id="labor" padding="lg" className="scroll-mt-24 space-y-4">
@@ -244,11 +248,17 @@ export default function SettingsPage() {
                 className="glass-input w-full"
               />
             </label>
+            <p className="max-w-md text-[11px] leading-relaxed text-text-muted">
+              Defina quanto você quer ganhar por mês trabalhando no seu ateliê (seu pró-labore) e divida pelas
+              horas que realmente dedica por mês. Exemplo: quer ganhar R$3.000/mês trabalhando 120 horas → sua
+              hora vale R$25,00. Inclua tempo de modelagem, fatiamento, acompanhamento da impressão e
+              acabamento — não só o tempo de impressão em si.
+            </p>
           </GlassCard>
 
           <GlassCard id="pdf" padding="lg" className="scroll-mt-24 space-y-4">
             <h3 className="font-display text-lg">Aparência do PDF</h3>
-            <p className="text-sm text-text-secondary">Logo, cores da marca e rodapé usados nos orçamentos exportados.</p>
+            <PdfAppearanceSettings />
           </GlassCard>
 
           <GlassCard id="locale" padding="lg" className="scroll-mt-24 space-y-4">

@@ -17,6 +17,12 @@ interface ReceiptProfile {
   avatar_url: string | null;
 }
 
+interface ReceiptAppearance {
+  accentColor: string;
+  footerMessage: string | null;
+  showProductionDeadline: boolean;
+}
+
 interface SaleReceiptModalProps {
   quote: QuoteWithClient | null;
   open: boolean;
@@ -69,13 +75,22 @@ export function SaleReceiptModal({ quote, open, onClose, zIndexClass }: SaleRece
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("studio_name, instagram, website, avatar_url")
-        .eq("id", user!.id)
-        .single();
+      const [{ data: profile }, { data: settings }] = await Promise.all([
+        supabase.from("profiles").select("studio_name, instagram, website, avatar_url").eq("id", user!.id).single(),
+        supabase
+          .from("settings")
+          .select("pdf_accent_color, pdf_footer_message, pdf_show_production_deadline")
+          .eq("user_id", user!.id)
+          .single(),
+      ]);
 
-      container = buildReceiptContainer(quote, profile as ReceiptProfile | null);
+      const appearance: ReceiptAppearance = {
+        accentColor: settings?.pdf_accent_color || "#FF4EDF",
+        footerMessage: settings?.pdf_footer_message ?? null,
+        showProductionDeadline: settings?.pdf_show_production_deadline ?? true,
+      };
+
+      container = buildReceiptContainer(quote, profile as ReceiptProfile | null, appearance);
       document.body.appendChild(container);
 
       await document.fonts.ready;
@@ -198,7 +213,7 @@ function initials(name: string) {
 }
 
 /** Monta o elemento off-screen (1080x1350) que vira o comprovante via html2canvas. */
-function buildReceiptContainer(quote: QuoteWithClient, profile: ReceiptProfile | null) {
+function buildReceiptContainer(quote: QuoteWithClient, profile: ReceiptProfile | null, appearance: ReceiptAppearance) {
   const container = document.createElement("div");
   container.style.position = "fixed";
   container.style.left = "-9999px";
@@ -253,12 +268,13 @@ function buildReceiptContainer(quote: QuoteWithClient, profile: ReceiptProfile |
          </div>`
       : "";
 
-  const deadlineLine = quote.production_deadline
-    ? `<div style="display:flex; justify-content:space-between; font-size:24px; color:#B4AFC4; margin-top:10px;">
+  const deadlineLine =
+    quote.production_deadline && appearance.showProductionDeadline
+      ? `<div style="display:flex; justify-content:space-between; font-size:24px; color:#B4AFC4; margin-top:10px;">
          <span>Prazo de Produção</span>
          <span style="color:#F5F3FA; font-weight:600;">${quote.production_deadline}</span>
        </div>`
-    : "";
+      : "";
 
   const footerParts = [
     profile?.instagram ? `@${profile.instagram.replace(/^@/, "")}` : null,
@@ -295,7 +311,7 @@ function buildReceiptContainer(quote: QuoteWithClient, profile: ReceiptProfile |
 
     <div style="display:flex; justify-content:space-between; align-items:baseline;">
       <span style="font-size:28px; color:#B4AFC4;">Valor Total</span>
-      <span style="font-size:56px; font-weight:800; color:#FF4EDF;">${formatBRL(quote.final_price)}</span>
+      <span style="font-size:56px; font-weight:800; color:${appearance.accentColor};">${formatBRL(quote.final_price)}</span>
     </div>
 
     <div style="margin-top:24px; display:flex; justify-content:space-between; font-size:24px; color:#B4AFC4;">
@@ -309,6 +325,11 @@ function buildReceiptContainer(quote: QuoteWithClient, profile: ReceiptProfile |
     ${
       footerParts.length > 0
         ? `<div style="text-align:center; font-size:22px; color:#726C85; border-top:1px solid rgba(255,255,255,0.08); padding-top:24px;">${footerParts.join(" · ")}</div>`
+        : ""
+    }
+    ${
+      appearance.footerMessage
+        ? `<div style="text-align:center; font-size:20px; color:#726C85; margin-top:10px;">${appearance.footerMessage}</div>`
         : ""
     }
   `;

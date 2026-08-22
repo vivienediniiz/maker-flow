@@ -17,7 +17,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import { calculateCost } from "@/lib/costCalculator";
 import { Plus, Trash2, FileDown, Link2, Rocket, Info, Weight, Timer, Zap, TrendingUp } from "lucide-react";
-import type { Product, Supply, Filament, PrinterAsset } from "@/lib/types";
+import type { Product, Supply, Filament, PrinterAsset, RiskTier } from "@/lib/types";
 
 interface PrintBed {
   id: string;
@@ -86,6 +86,8 @@ export default function CalculatorPage() {
   const [printerAssets, setPrinterAssets] = useState<PrinterAsset[]>([]);
   const [energyConfigured, setEnergyConfigured] = useState(true);
   const [laborConfigured, setLaborConfigured] = useState(true);
+  const [riskTiers, setRiskTiers] = useState<RiskTier[]>([]);
+  const [selectedRiskTierId, setSelectedRiskTierId] = useState("");
 
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [newProductModalOpen, setNewProductModalOpen] = useState(false);
@@ -98,6 +100,7 @@ export default function CalculatorPage() {
     loadFilaments();
     loadPrinterAssets();
     loadCalculatorSettings();
+    loadRiskTiers();
   }, []);
 
   async function loadProducts() {
@@ -166,6 +169,19 @@ export default function CalculatorPage() {
     setLaborConfigured(data?.hourly_work_rate != null);
     if (data?.electricity_kwh_rate != null) setKwhRate(data.electricity_kwh_rate);
     if (data?.hourly_work_rate != null) setHourlyRate(data.hourly_work_rate);
+  }
+
+  async function loadRiskTiers() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from("risk_tiers")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("extra_margin_percent");
+    setRiskTiers((data as RiskTier[]) ?? []);
   }
 
   function handleSelectPrinterAsset(bedId: string, printerAssetId: string) {
@@ -277,6 +293,8 @@ export default function CalculatorPage() {
     [beds, filaments]
   );
 
+  const selectedRiskTier = riskTiers.find((r) => r.id === selectedRiskTierId) ?? null;
+
   const calc = useMemo(
     () =>
       calculateCost({
@@ -290,9 +308,23 @@ export default function CalculatorPage() {
         suppliesCost,
         marketplaceFee,
         marginPercent,
+        riskMarginPercent: selectedRiskTier?.extra_margin_percent ?? 0,
         quantity,
       }),
-    [calcBeds, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, suppliesCost, marketplaceFee, marginPercent, quantity]
+    [
+      calcBeds,
+      kwhRate,
+      laborHours,
+      hourlyRate,
+      extras,
+      paintedByHand,
+      paintCost,
+      suppliesCost,
+      marketplaceFee,
+      marginPercent,
+      selectedRiskTier,
+      quantity,
+    ]
   );
 
   const missingFilament = beds.some((b) => !b.filamentId);
@@ -675,6 +707,28 @@ export default function CalculatorPage() {
                 />
               </div>
             </Field>
+
+            {riskTiers.length > 0 && (
+              <Field label="Nível de risco (opcional)">
+                <select
+                  value={selectedRiskTierId}
+                  onChange={(e) => setSelectedRiskTierId(e.target.value)}
+                  className="glass-input w-full"
+                >
+                  <option value="" className="bg-bg-raised">
+                    Nenhum
+                  </option>
+                  {riskTiers.map((r) => (
+                    <option key={r.id} value={r.id} className="bg-bg-raised">
+                      {r.name} (+{r.extra_margin_percent}%)
+                    </option>
+                  ))}
+                </select>
+                {selectedRiskTier?.description && (
+                  <p className="mt-1.5 text-[11px] text-text-muted">{selectedRiskTier.description}</p>
+                )}
+              </Field>
+            )}
           </GlassCard>
 
         </div>
@@ -703,7 +757,17 @@ export default function CalculatorPage() {
               {suppliesCost > 0 && <SummaryRow label="Insumos" value={formatBRL(calc.suppliesCost)} />}
               <div className="my-2 h-px bg-border-glass" />
               <SummaryRow label="Custo por Unidade" value={formatBRL(calc.costPerUnit)} />
-              <SummaryRow label="Preço de Venda Sugerido" value={formatBRL(calc.pricePerUnit)} />
+              {selectedRiskTier ? (
+                <>
+                  <SummaryRow label="Preço com margem" value={formatBRL(calc.pricePerUnitBeforeRisk)} />
+                  <SummaryRow
+                    label={`+${selectedRiskTier.extra_margin_percent}% risco ${selectedRiskTier.name}`}
+                    value={formatBRL(calc.pricePerUnit)}
+                  />
+                </>
+              ) : (
+                <SummaryRow label="Preço de Venda Sugerido" value={formatBRL(calc.pricePerUnit)} />
+              )}
             </div>
 
             <div className="space-y-2 border-t border-border-glass pt-4 text-sm">
