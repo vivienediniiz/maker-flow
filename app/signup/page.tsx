@@ -4,15 +4,34 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { AppLogo } from "@/components/ui/AppLogo";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
+import { Starfield } from "@/components/auth/Starfield";
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={null}>
-      <SignupForm />
-    </Suspense>
+    <div className="relative min-h-screen overflow-hidden bg-bg">
+      {/* Mesmo fundo da tela de login: degradê diagonal roxo escuro → magenta → laranja */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ background: "linear-gradient(135deg, #280248 0%, #8F1E97 55%, #8F1E97 78%, #E86333 100%)" }}
+      />
+      <Starfield />
+
+      <AppLogo
+        wrapperClassName="absolute left-6 top-6 z-20 flex items-center gap-3 sm:left-10 sm:top-8"
+        iconClassName="h-14 w-14"
+        textClassName="font-display text-2xl tracking-wide text-text-primary"
+      />
+
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-6 py-24">
+        <Suspense fallback={null}>
+          <SignupForm />
+        </Suspense>
+      </div>
+    </div>
   );
 }
 
@@ -53,7 +72,7 @@ function SignupForm() {
 
   if (done) {
     return (
-      <div className="space-y-3">
+      <div className="glass-card animate-panel-in w-full max-w-sm space-y-3 bg-bg/80 p-8 opacity-0 shadow-neon-glow">
         <h1 className="font-display text-2xl">Confirme seu e-mail</h1>
         <p className="text-sm text-text-secondary">
           Enviamos um link de confirmação para <strong>{email}</strong>. Clique nele para ativar sua conta.
@@ -63,7 +82,7 @@ function SignupForm() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="glass-card animate-panel-in w-full max-w-sm space-y-6 bg-bg/80 p-8 opacity-0 shadow-neon-glow">
       <div>
         <h1 className="font-display text-2xl">Crie sua conta</h1>
         <p className="mt-1 text-sm text-text-secondary">Comece grátis, sem cartão de crédito.</p>
