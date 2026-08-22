@@ -11,7 +11,18 @@ import {
   CartesianGrid,
 } from "recharts";
 import { createClient } from "@/lib/supabase/client";
+import { formatBRL } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+
+const SERIES_LABELS: Record<string, string> = {
+  receita: "Receita",
+  custo: "Custo",
+  lucro: "Lucro",
+};
+
+function round2(n: number) {
+  return Math.round(n * 100) / 100;
+}
 
 interface MonthPoint {
   month: string;
@@ -70,7 +81,9 @@ export function FinancialChart() {
       setData(
         months.map((m) => {
           const b = buckets.get(monthKey(m))!;
-          return { month: shortMonthLabel(m), receita: b.receita, custo: b.custo, lucro: b.receita - b.custo };
+          const receita = round2(b.receita);
+          const custo = round2(b.custo);
+          return { month: shortMonthLabel(m), receita, custo, lucro: round2(receita - custo) };
         })
       );
     })();
@@ -113,6 +126,7 @@ export function FinancialChart() {
               fontSize: 12,
             }}
             labelStyle={{ color: "#F5F3FA" }}
+            formatter={(value: number, name: string) => [formatBRL(value), SERIES_LABELS[name] ?? name]}
           />
           <Area type="monotone" dataKey="receita" stroke="#FF4EDF" fill="url(#receita)" strokeWidth={2} />
           <Area type="monotone" dataKey="lucro" stroke="#00FF9D" fill="url(#lucro)" strokeWidth={2} />
