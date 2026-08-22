@@ -164,6 +164,12 @@ export default function SettingsPage() {
                 className="glass-input w-full"
               />
             </label>
+            <p className="max-w-md text-[11px] leading-relaxed text-text-muted">
+              Não sabe o valor exato? Pegue sua última conta de luz, encontre o campo &quot;Consumo (kWh)&quot; e
+              divida o valor total pago por essa quantidade. Como referência, a tarifa residencial no Brasil
+              costuma ficar entre R$ 0,70 e R$ 1,00/kWh, variando por estado, distribuidora e bandeira tarifária —
+              mas o valor real da sua conta é sempre mais preciso.
+            </p>
           </GlassCard>
 
           <GlassCard id="marketplaces" padding="lg" className="scroll-mt-24 space-y-4">
