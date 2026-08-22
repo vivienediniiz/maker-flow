@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import type { Filament, FilamentMovement } from "@/lib/types";
@@ -175,15 +176,7 @@ export function RegisterFilamentPurchaseModal({
           <label className="mb-1.5 block text-xs text-text-muted">
             Novo preço por kg (R$) <span className="text-text-muted/60">— opcional, atualiza o cadastro</span>
           </label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={newPricePerKg}
-            onChange={(e) => setNewPricePerKg(e.target.value)}
-            className="glass-input w-full"
-            placeholder="0,00"
-          />
+          <CurrencyInput value={newPricePerKg} onChange={setNewPricePerKg} />
         </div>
 
         <div>

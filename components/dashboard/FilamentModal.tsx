@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import { FILAMENT_MATERIAL_OPTIONS, FILAMENT_BRAND_SUGGESTIONS } from "@/lib/filaments";
 import type { Filament } from "@/lib/types";
@@ -228,15 +229,7 @@ export function FilamentModal({ open, onClose, filament, onSaved }: FilamentModa
 
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Preço por kg (R$)</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={pricePerKg}
-            onChange={(e) => setPricePerKg(e.target.value)}
-            className="glass-input w-full"
-            placeholder="89.00"
-          />
+          <CurrencyInput value={pricePerKg} onChange={setPricePerKg} placeholder="89,00" />
         </div>
 
         <div className="grid grid-cols-2 gap-4">

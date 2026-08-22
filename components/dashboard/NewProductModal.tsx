@@ -7,6 +7,7 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { CategorySelect } from "@/components/dashboard/CategorySelect";
 import { PriceTierEditor } from "@/components/dashboard/PriceTierEditor";
 import { CostCalculatorModal } from "@/components/dashboard/CostCalculatorModal";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import type { Product, PriceTier, CalcInputs } from "@/lib/types";
 
@@ -222,15 +223,7 @@ export function NewProductModal({
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Custo (R$)</label>
             <div className="relative">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                value={costPrice}
-                onChange={(e) => setCostPrice(e.target.value)}
-                className="glass-input w-full pr-9"
-              />
+              <CurrencyInput value={costPrice} onChange={setCostPrice} required className="pr-9" />
               <button
                 type="button"
                 onClick={() => setCalculatorOpen(true)}
@@ -244,15 +237,7 @@ export function NewProductModal({
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Venda (R$)</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              required
-              value={salePrice}
-              onChange={(e) => setSalePrice(e.target.value)}
-              className="glass-input w-full"
-            />
+            <CurrencyInput value={salePrice} onChange={setSalePrice} required />
           </div>
         </div>
 

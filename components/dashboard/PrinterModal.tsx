@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Check, Copy, KeyRound } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import type { Printer } from "@/lib/types";
 
@@ -126,14 +127,10 @@ export function PrinterModal({ open, onClose, printer, onSaved }: PrinterModalPr
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Custo por hora (R$)</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
+            <CurrencyInput
               value={costPerHour}
-              onChange={(e) => setCostPerHour(e.target.value)}
-              className="glass-input w-full"
-              placeholder="0.42"
+              onChange={setCostPerHour}
+              placeholder="0,42"
             />
           </div>
         </div>

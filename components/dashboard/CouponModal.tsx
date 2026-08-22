@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { Toggle } from "@/components/ui/Toggle";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import type { Coupon, CouponDiscountType } from "@/lib/types";
 
@@ -155,31 +156,27 @@ export function CouponModal({ open, onClose, coupon, onSaved }: CouponModalProps
             <label className="mb-1.5 block text-xs text-text-muted">
               Valor {discountType === "percentage" ? "(%)" : "(R$)"}
             </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              max={discountType === "percentage" ? 100 : undefined}
-              value={discountValue}
-              onChange={(e) => setDiscountValue(e.target.value)}
-              className="glass-input w-full"
-              placeholder="0,00"
-            />
+            {discountType === "fixed" ? (
+              <CurrencyInput value={discountValue} onChange={setDiscountValue} placeholder="0,00" />
+            ) : (
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max={100}
+                value={discountValue}
+                onChange={(e) => setDiscountValue(e.target.value)}
+                className="glass-input w-full"
+                placeholder="0,00"
+              />
+            )}
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Pedido mínimo (opcional)</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={minOrderValue}
-              onChange={(e) => setMinOrderValue(e.target.value)}
-              className="glass-input w-full"
-              placeholder="R$ 0,00"
-            />
+            <CurrencyInput value={minOrderValue} onChange={setMinOrderValue} placeholder="0,00" />
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Limite de uso (opcional)</label>

@@ -8,6 +8,7 @@ import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { NewClientModal } from "@/components/dashboard/NewClientModal";
 import { ShippingQuoteWidget, type ShippingQuoteSelection } from "@/components/dashboard/ShippingQuoteWidget";
 import { FilamentPickerDropdown } from "@/components/dashboard/FilamentPickerDropdown";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { buildPriceTierRanges } from "@/lib/priceTiers";
@@ -671,15 +672,11 @@ export function NewSaleModal({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1.5 block text-xs text-text-muted">Valor Unitário (R$)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                <CurrencyInput
                   value={unitPrice}
-                  onChange={(e) => setUnitPrice(e.target.value)}
+                  onChange={setUnitPrice}
                   disabled={unitPriceLocked}
-                  className={`glass-input w-full ${unitPriceLocked ? "cursor-not-allowed opacity-60" : ""}`}
-                  placeholder="0,00"
+                  className={unitPriceLocked ? "cursor-not-allowed opacity-60" : ""}
                 />
               </div>
               <div>
@@ -717,15 +714,7 @@ export function NewSaleModal({
         ) : (
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Valor final (R$)</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={finalPrice}
-              onChange={(e) => setFinalPrice(e.target.value)}
-              className="glass-input w-full"
-              placeholder="0,00"
-            />
+            <CurrencyInput value={finalPrice} onChange={setFinalPrice} />
           </div>
         )}
 
@@ -916,15 +905,7 @@ export function NewSaleModal({
 
           {discountType === "fixed" && (
             <>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={discount}
-                onChange={(e) => handleDiscountChange(e.target.value)}
-                className="glass-input w-full"
-                placeholder="0,00"
-              />
+              <CurrencyInput value={discount} onChange={handleDiscountChange} />
               {discountWarning && <p className="mt-1 text-[11px] text-amber-400">{discountWarning}</p>}
             </>
           )}

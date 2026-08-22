@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import type { PriceTier } from "@/lib/types";
 
 export function PriceTierEditor({
@@ -38,13 +39,9 @@ export function PriceTierEditor({
           </div>
           <span className="text-xs text-text-muted">un. =</span>
           <div className="flex-1">
-            <input
-              type="number"
-              step="0.01"
-              min={0}
-              value={tier.price || ""}
-              onChange={(e) => updateTier(i, { price: Number(e.target.value) })}
-              className="glass-input w-full"
+            <CurrencyInput
+              value={tier.price ? String(tier.price) : ""}
+              onChange={(v) => updateTier(i, { price: v === "" ? 0 : Number(v) })}
               placeholder="Preço unit."
             />
           </div>

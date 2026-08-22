@@ -11,6 +11,7 @@ import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { GenerateQuoteModal } from "@/components/dashboard/GenerateQuoteModal";
 import { FilamentModal } from "@/components/dashboard/FilamentModal";
 import { FilamentPickerDropdown } from "@/components/dashboard/FilamentPickerDropdown";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import { calculateCost } from "@/lib/costCalculator";
@@ -443,16 +444,16 @@ export default function CalculatorPage() {
             </p>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <Field label="Tarifa energia (R$/kWh)">
-                <input type="number" step="0.01" value={kwhRate} onChange={(e) => setKwhRate(Number(e.target.value))} className="glass-input w-full" />
+                <CurrencyInput value={String(kwhRate)} onChange={(v) => setKwhRate(v === "" ? 0 : Number(v))} />
               </Field>
               <Field label="Mão de obra (h)">
                 <input type="number" step="0.1" value={laborHours} onChange={(e) => setLaborHours(Number(e.target.value))} className="glass-input w-full" />
               </Field>
               <Field label="Valor hora (R$)">
-                <input type="number" value={hourlyRate} onChange={(e) => setHourlyRate(Number(e.target.value))} className="glass-input w-full" />
+                <CurrencyInput value={String(hourlyRate)} onChange={(v) => setHourlyRate(v === "" ? 0 : Number(v))} />
               </Field>
               <Field label="Consumíveis extras (R$)">
-                <input type="number" value={extras} onChange={(e) => setExtras(Number(e.target.value))} className="glass-input w-full" />
+                <CurrencyInput value={String(extras)} onChange={(v) => setExtras(v === "" ? 0 : Number(v))} />
               </Field>
             </div>
 
@@ -460,7 +461,11 @@ export default function CalculatorPage() {
               <Toggle checked={paintedByHand} onChange={setPaintedByHand} label="Pintado à mão" />
               {paintedByHand && (
                 <Field label="Custo de pintura (R$)">
-                  <input type="number" value={paintCost} onChange={(e) => setPaintCost(Number(e.target.value))} className="glass-input w-32" />
+                  <CurrencyInput
+                    value={String(paintCost)}
+                    onChange={(v) => setPaintCost(v === "" ? 0 : Number(v))}
+                    className="w-32"
+                  />
                 </Field>
               )}
             </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { Toggle } from "@/components/ui/Toggle";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import type { FixedExpense } from "@/lib/types";
 
@@ -125,15 +126,7 @@ export function FixedExpenseModal({ open, onClose, expense, onSaved }: FixedExpe
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Valor mensal (R$)</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="glass-input w-full"
-              placeholder="0.00"
-            />
+            <CurrencyInput value={amount} onChange={setAmount} />
           </div>
         </div>
 

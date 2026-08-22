@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { MarginSlider } from "@/components/ui/MarginSlider";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import { calculateCost, type CalcBed } from "@/lib/costCalculator";
@@ -200,24 +201,16 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
         {/* Filamento e energia */}
         <div className="grid grid-cols-2 gap-3">
           <MiniField label="Filamento (R$/kg)">
-            <input
-              type="number"
-              value={filamentPricePerKg}
-              onChange={(e) => {
+            <CurrencyInput
+              value={String(filamentPricePerKg)}
+              onChange={(v) => {
                 setSelectedFilamentId("");
-                setFilamentPricePerKg(Number(e.target.value));
+                setFilamentPricePerKg(v === "" ? 0 : Number(v));
               }}
-              className="glass-input w-full"
             />
           </MiniField>
           <MiniField label="Tarifa energia (R$/kWh)">
-            <input
-              type="number"
-              step="0.01"
-              value={kwhRate}
-              onChange={(e) => setKwhRate(Number(e.target.value))}
-              className="glass-input w-full"
-            />
+            <CurrencyInput value={String(kwhRate)} onChange={(v) => setKwhRate(v === "" ? 0 : Number(v))} />
           </MiniField>
         </div>
         {filaments.length > 0 && (

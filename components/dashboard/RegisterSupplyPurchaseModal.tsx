@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import type { Supply, SupplyMovement } from "@/lib/types";
@@ -169,16 +170,7 @@ export function RegisterSupplyPurchaseModal({
 
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Valor total pago (R$)</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            required
-            value={totalPaid}
-            onChange={(e) => setTotalPaid(e.target.value)}
-            className="glass-input w-full"
-            placeholder="45,00"
-          />
+          <CurrencyInput value={totalPaid} onChange={setTotalPaid} required placeholder="45,00" />
         </div>
 
         {newCostPerUnit != null && (

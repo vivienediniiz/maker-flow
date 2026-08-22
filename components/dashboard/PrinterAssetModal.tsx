@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2, Paperclip, ExternalLink } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import { PRINTER_ASSET_STATUS_LABELS, PRINTER_MODEL_OPTIONS } from "@/lib/printerAssets";
 import type { PrinterAsset, PrinterAssetStatus, Branch } from "@/lib/types";
@@ -241,15 +242,7 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Valor pago (R$)</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={purchasePrice}
-              onChange={(e) => setPurchasePrice(e.target.value)}
-              className="glass-input w-full"
-              placeholder="0.00"
-            />
+            <CurrencyInput value={purchasePrice} onChange={setPurchasePrice} />
           </div>
         </div>
 

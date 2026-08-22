@@ -3,12 +3,9 @@
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import type { SalesGoal } from "@/lib/types";
-
-function formatCurrencyInput(value: number) {
-  return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
 interface SalesGoalModalProps {
   open: boolean;
@@ -28,25 +25,16 @@ export function SalesGoalModal({ open, onClose, month, goal, onSaved }: SalesGoa
 
   useEffect(() => {
     if (!open) return;
-    setRevenueGoal(goal?.revenue_goal != null ? formatCurrencyInput(goal.revenue_goal) : "");
+    setRevenueGoal(goal?.revenue_goal != null ? String(goal.revenue_goal) : "");
     setSalesCountGoal(goal?.sales_count_goal != null ? String(goal.sales_count_goal) : "");
     setError(null);
   }, [open, goal]);
-
-  function handleRevenueChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const digits = e.target.value.replace(/\D/g, "");
-    if (!digits) {
-      setRevenueGoal("");
-      return;
-    }
-    setRevenueGoal(formatCurrencyInput(Number(digits) / 100));
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    const revenue = revenueGoal.trim() === "" ? null : Number(revenueGoal.replace(/\./g, "").replace(",", "."));
+    const revenue = revenueGoal.trim() === "" ? null : Number(revenueGoal);
     const count = salesCountGoal.trim() === "" ? null : Number(salesCountGoal);
     if (revenue == null && count == null) {
       setError("Defina pelo menos uma meta (faturamento ou quantidade de vendas).");
@@ -93,14 +81,7 @@ export function SalesGoalModal({ open, onClose, month, goal, onSaved }: SalesGoa
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Meta de faturamento (R$)</label>
-          <input
-            type="text"
-            inputMode="numeric"
-            value={revenueGoal}
-            onChange={handleRevenueChange}
-            className="glass-input w-full"
-            placeholder="Ex: 5.000,00"
-          />
+          <CurrencyInput value={revenueGoal} onChange={setRevenueGoal} placeholder="Ex: 5.000,00" />
         </div>
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Meta de quantidade de vendas</label>
