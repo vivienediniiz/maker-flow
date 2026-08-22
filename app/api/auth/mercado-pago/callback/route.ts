@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       `mercado_pago:${userId}`
     );
 
-    await admin.from("integrations").upsert(
+    const { error: upsertError } = await admin.from("integrations").upsert(
       {
         ...(existing?.id ? { id: existing.id } : {}),
         user_id: userId,
@@ -66,6 +66,8 @@ export async function GET(req: NextRequest) {
       },
       { onConflict: "user_id,platform" }
     );
+
+    if (upsertError) throw new Error(upsertError.message);
   } catch (err) {
     return NextResponse.redirect(
       `${SITE_URL}/dashboard/integrations?mp_error=${encodeURIComponent((err as Error).message)}`
