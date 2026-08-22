@@ -17,11 +17,11 @@ interface AffiliateStats {
 
 function StatBlock({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: string }) {
   return (
-    <div className="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border border-border-glass bg-white/[0.02] p-2 text-center">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 text-neon-pink">
-        <Icon size={14} />
+    <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-border-glass bg-white/[0.02] px-2 py-2.5 text-center">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/5 text-neon-pink">
+        <Icon size={12} />
       </span>
-      <p className="font-numeric truncate text-sm font-semibold text-text-primary">{value}</p>
+      <p className="font-numeric truncate text-lg font-semibold text-text-primary">{value}</p>
       <p className="truncate text-[10px] leading-snug text-text-muted">{label}</p>
     </div>
   );
