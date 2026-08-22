@@ -176,6 +176,7 @@ export default function InventoryPage() {
           productId={saleTarget.id}
           itemName={saleTarget.name}
           unitPrice={saleTarget.sale_price}
+          costPrice={saleTarget.cost_price}
           maxQuantity={saleTarget.stock_quantity}
           onConfirm={({ quantity, stockAdjustedAutomatically }) => {
             if (stockAdjustedAutomatically) {

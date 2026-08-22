@@ -310,11 +310,12 @@ export default function OrdersPage() {
                           <td className="px-6 py-4 font-numeric text-red-400">{formatBRL(costs)}</td>
                           <td className="px-6 py-4 font-numeric text-neon-green">{formatBRL(q.net_amount)}</td>
                           <td className="px-6 py-4">
-                            <div className="flex items-center justify-end gap-3">
+                            <div className="flex items-center gap-3">
                               {action && action.label && (
                                 <NeonButton
                                   size="sm"
                                   variant="outline"
+                                  className="flex-1 justify-center"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleStatusChange(q.id, action.next);

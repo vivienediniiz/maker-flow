@@ -6,6 +6,16 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
+import type { QuoteChannel } from "@/lib/types";
+
+// "Registrar Venda" usa um select livre de canal (inclui "site", que não tem
+// correspondente em QuoteChannel) — mapeia só o que tem equivalente direto;
+// o resto fica sem canal (null), sem travar o registro da venda em quotes.
+const CHANNEL_MAP: Record<string, QuoteChannel | undefined> = {
+  presencial: "presencial",
+  whatsapp: "whatsapp",
+  marketplace: "marketplaces",
+};
 
 export function QuickSaleModal({
   open,
@@ -13,6 +23,7 @@ export function QuickSaleModal({
   productId,
   itemName,
   unitPrice,
+  costPrice,
   maxQuantity,
   onConfirm,
 }: {
@@ -21,6 +32,7 @@ export function QuickSaleModal({
   productId: string;
   itemName: string;
   unitPrice: number;
+  costPrice?: number;
   maxQuantity: number;
   onConfirm?: (data: { quantity: number; channel: string; stockAdjustedAutomatically: boolean }) => void;
 }) {
@@ -68,6 +80,38 @@ export function QuickSaleModal({
     if (saleError) {
       setSaving(false);
       setError(saleError.message);
+      return;
+    }
+
+    // Também registra em `quotes` — é essa tabela que alimenta Resumo de
+    // Vendas, Metas do Mês, Financeiro e a lista de Vendas. Sem isso, uma
+    // venda registrada aqui ficava invisível em todo o resto do app (só
+    // entrava no ranking de produtos do Insights, que lê `sales` direto).
+    const costAmount = (costPrice ?? 0) * quantity;
+    const { error: quoteError } = await supabase.from("quotes").insert({
+      user_id: user.id,
+      project_name: itemName,
+      final_price: total,
+      platform_fee: 0,
+      cost_amount: costAmount,
+      status: "paid",
+      source: "manual",
+      channel: CHANNEL_MAP[channel] ?? null,
+      product_id: productId,
+      quantity,
+      unit_price: unitPrice,
+      sent_at: new Date().toISOString(),
+      client_id: null,
+      weight_g: 0,
+      print_time_min: 0,
+      energy_cost: 0,
+      filament_cost: 0,
+      margin_percent: 0,
+    });
+
+    if (quoteError) {
+      setSaving(false);
+      setError(quoteError.message);
       return;
     }
 
