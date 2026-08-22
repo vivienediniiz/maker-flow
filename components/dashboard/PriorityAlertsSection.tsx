@@ -208,7 +208,7 @@ export function PriorityAlertsSection() {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       {cards.map((c) => (
         <AlertCard key={c.key} data={c} />
       ))}

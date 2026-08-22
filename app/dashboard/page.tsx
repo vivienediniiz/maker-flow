@@ -4,7 +4,6 @@ import { KpiCard } from "@/components/ui/KpiCard";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { PrinterCard } from "@/components/dashboard/PrinterCard";
 import { SalesPeriodSummary } from "@/components/dashboard/SalesPeriodSummary";
-import { TopProductsCard } from "@/components/dashboard/TopProductsCard";
 import { SalesGoalsCard } from "@/components/dashboard/SalesGoalsCard";
 import { AffiliateSummaryCard } from "@/components/dashboard/AffiliateSummaryCard";
 import { PriorityAlertsSection } from "@/components/dashboard/PriorityAlertsSection";
@@ -307,13 +306,10 @@ export default async function DashboardPage() {
           <KpiCard label="Status do Farm" value={`${farmStatus.active}/${farmStatus.total} ativas`} icon={Server} accent="purple" />
         </section>
 
-        {/* Produtos mais vendidos + atenção prioritária */}
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <TopProductsCard />
-          <div>
-            <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-text-muted">Atenção Prioritária</h3>
-            <PriorityAlertsSection />
-          </div>
+        {/* Atenção prioritária */}
+        <section>
+          <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-text-muted">Atenção Prioritária</h3>
+          <PriorityAlertsSection />
         </section>
 
         {/* Printer farm */}
