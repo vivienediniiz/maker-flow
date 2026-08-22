@@ -220,51 +220,85 @@ export function SalesGoalsCard() {
               </NeonButton>
             </div>
           ) : (
-            <div className="relative mx-auto h-48 w-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <defs>
-                    <linearGradient id="goalProgress" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#E86333" />
-                      <stop offset="50%" stopColor="#FF4EDF" />
-                      <stop offset="100%" stopColor="#AA17DB" />
-                    </linearGradient>
-                    <linearGradient id="goalComplete" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#00FF9D" />
-                      <stop offset="100%" stopColor="#FFD24D" />
-                    </linearGradient>
-                  </defs>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    innerRadius={68}
-                    outerRadius={90}
-                    startAngle={90}
-                    endAngle={-270}
-                    stroke="none"
-                    isAnimationActive={false}
-                  >
-                    {pieData.map((entry) => (
-                      <Cell
-                        key={entry.name}
-                        fill={
-                          entry.name === "remaining" ? "rgba(255,255,255,0.08)" : exceeded ? "url(#goalComplete)" : "url(#goalProgress)"
-                        }
-                      />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
-                <span className={`font-numeric text-2xl font-semibold ${exceeded ? "text-neon-green" : "text-text-primary"}`}>
-                  {Math.round(rawPct ?? 0)}%
-                </span>
-                <span className="font-numeric text-[11px] leading-tight text-text-secondary">
-                  {formatBRL(revenue)}
-                  <br />
-                  de {formatBRL(revenueGoal)}
-                </span>
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <div className="relative h-48 w-48 shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <defs>
+                      <linearGradient id="goalProgress" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#E86333" />
+                        <stop offset="50%" stopColor="#FF4EDF" />
+                        <stop offset="100%" stopColor="#AA17DB" />
+                      </linearGradient>
+                      <linearGradient id="goalComplete" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#00FF9D" />
+                        <stop offset="100%" stopColor="#FFD24D" />
+                      </linearGradient>
+                    </defs>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      innerRadius={68}
+                      outerRadius={90}
+                      startAngle={90}
+                      endAngle={-270}
+                      stroke="none"
+                      isAnimationActive={false}
+                    >
+                      {pieData.map((entry) => (
+                        <Cell
+                          key={entry.name}
+                          fill={
+                            entry.name === "remaining" ? "rgba(255,255,255,0.08)" : exceeded ? "url(#goalComplete)" : "url(#goalProgress)"
+                          }
+                        />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
+                  <span className={`font-numeric text-2xl font-semibold ${exceeded ? "text-neon-green" : "text-text-primary"}`}>
+                    {Math.round(rawPct ?? 0)}%
+                  </span>
+                  <span className="font-numeric text-[11px] leading-tight text-text-secondary">
+                    {formatBRL(revenue)}
+                    <br />
+                    de {formatBRL(revenueGoal)}
+                  </span>
+                </div>
               </div>
+
+              {showPacing && (dailyPaceNeeded != null || projectedPct != null) && (
+                <div className="min-w-[200px] flex-1 space-y-2.5">
+                  {dailyPaceNeeded != null && (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-border-glass bg-white/[0.02] px-3 py-2.5">
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5 text-neon-pink">
+                        <Gauge size={13} />
+                      </span>
+                      <p className="text-[11px] leading-relaxed text-text-secondary">
+                        Faltam <span className="font-medium text-text-primary">{daysRemaining} dias</span> · você
+                        precisa vender{" "}
+                        <span className="font-numeric font-medium text-text-primary">{formatBRL(dailyPaceNeeded)}/dia</span>{" "}
+                        para bater a meta
+                      </p>
+                    </div>
+                  )}
+                  {projectedPct != null && (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-border-glass bg-white/[0.02] px-3 py-2.5">
+                      <span className={cn("mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5", toneTextClass[projectionTone])}>
+                        <TrendingUp size={13} />
+                      </span>
+                      <p className="text-[11px] leading-relaxed text-text-secondary">
+                        No ritmo atual, você deve fechar o mês em{" "}
+                        <span className={cn("font-numeric font-medium", toneTextClass[projectionTone])}>
+                          {formatBRL(projectedTotal)}
+                        </span>{" "}
+                        ({Math.round(projectedPct)}% da meta)
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -279,37 +313,6 @@ export function SalesGoalsCard() {
               <div className="h-2 overflow-hidden rounded-pill bg-white/5">
                 <div className="h-full rounded-pill bg-neon-gradient" style={{ width: `${salesCountPct}%` }} />
               </div>
-            </div>
-          )}
-
-          {showPacing && (dailyPaceNeeded != null || projectedPct != null) && (
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-              {dailyPaceNeeded != null && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-border-glass bg-white/[0.02] px-3 py-2.5">
-                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5 text-neon-pink">
-                    <Gauge size={13} />
-                  </span>
-                  <p className="text-[11px] leading-relaxed text-text-secondary">
-                    Faltam <span className="font-medium text-text-primary">{daysRemaining} dias</span> · você precisa
-                    vender <span className="font-numeric font-medium text-text-primary">{formatBRL(dailyPaceNeeded)}/dia</span>{" "}
-                    para bater a meta
-                  </p>
-                </div>
-              )}
-              {projectedPct != null && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-border-glass bg-white/[0.02] px-3 py-2.5">
-                  <span className={cn("mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5", toneTextClass[projectionTone])}>
-                    <TrendingUp size={13} />
-                  </span>
-                  <p className="text-[11px] leading-relaxed text-text-secondary">
-                    No ritmo atual, você deve fechar o mês em{" "}
-                    <span className={cn("font-numeric font-medium", toneTextClass[projectionTone])}>
-                      {formatBRL(projectedTotal)}
-                    </span>{" "}
-                    ({Math.round(projectedPct)}% da meta)
-                  </p>
-                </div>
-              )}
             </div>
           )}
 

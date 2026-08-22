@@ -287,15 +287,13 @@ export default async function DashboardPage() {
           <AffiliateSummaryCard />
         </section>
 
-        {/* Produtos mais vendidos do mês */}
-        <section>
+        {/* Produtos mais vendidos + atenção prioritária */}
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <TopProductsCard />
-        </section>
-
-        {/* Atenção prioritária */}
-        <section>
-          <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-text-muted">Atenção Prioritária</h3>
-          <PriorityAlertsSection />
+          <div>
+            <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-text-muted">Atenção Prioritária</h3>
+            <PriorityAlertsSection />
+          </div>
         </section>
 
         {/* KPI Cards */}

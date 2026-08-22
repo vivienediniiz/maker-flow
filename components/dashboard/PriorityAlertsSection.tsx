@@ -35,27 +35,23 @@ function AlertCard({ data }: { data: AlertCardData }) {
     <Link
       href={data.href}
       className={cn(
-        "glass-card block space-y-2.5 px-4 py-4 transition-colors hover:bg-white/[0.04]",
+        "glass-card flex flex-col items-center justify-center gap-1.5 px-3 py-4 text-center transition-colors hover:bg-white/[0.04]",
         data.urgent ? "border-amber-500/30 hover:border-amber-500/50" : "hover:border-neon-pink/40"
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-text-muted">{data.title}</span>
-        <span
-          className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5",
-            data.urgent ? "text-amber-400" : "text-neon-green"
-          )}
-        >
-          <Icon size={15} />
-        </span>
-      </div>
-      <div>
-        <p className={cn("text-sm font-semibold", data.urgent ? "text-text-primary" : "text-text-secondary")}>
-          {data.primaryText}
-        </p>
-        {data.secondaryText && <p className="mt-0.5 text-xs leading-snug text-text-muted">{data.secondaryText}</p>}
-      </div>
+      <span
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5",
+          data.urgent ? "text-amber-400" : "text-neon-green"
+        )}
+      >
+        <Icon size={15} />
+      </span>
+      <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">{data.title}</span>
+      <p className={cn("text-sm font-semibold", data.urgent ? "text-text-primary" : "text-text-secondary")}>
+        {data.primaryText}
+      </p>
+      {data.secondaryText && <p className="text-[10px] leading-snug text-text-muted">{data.secondaryText}</p>}
     </Link>
   );
 }
@@ -213,7 +209,7 @@ export function PriorityAlertsSection() {
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3">
       {cards.map((c) => (
         <AlertCard key={c.key} data={c} />
       ))}
