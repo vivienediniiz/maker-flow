@@ -53,8 +53,9 @@ export function SalesGoalsCard() {
       return;
     }
 
-    const monthStart = new Date(targetMonth);
-    const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
+    const [y, m] = targetMonth.split("-").map(Number);
+    const monthStart = new Date(y, m - 1, 1);
+    const monthEnd = new Date(y, m, 1);
 
     const [{ data: goalData }, { data: quotesData }] = await Promise.all([
       supabase.from("sales_goals").select("*").eq("user_id", user.id).eq("month", targetMonth).maybeSingle(),
