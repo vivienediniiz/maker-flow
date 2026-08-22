@@ -5,6 +5,8 @@ export interface CalcBed {
   watts: number;
   /** Preço/kg específico dessa mesa (filamento próprio) — sobrepõe o `filamentPricePerKg` do input quando presente. */
   filamentPricePerKg?: number;
+  /** Margem de segurança (%) pra falhas de impressão — infla peso/tempo só no cálculo de filamento/energia desta mesa, sem alterar `weightG`/`timeH`/`timeM` (que continuam representando o valor real digitado). */
+  safetyMarginPercent?: number;
 }
 
 export interface CalcInput {
@@ -64,17 +66,22 @@ export function calculateCost(input: CalcInput): CalcResult {
   const suppliesCost = input.suppliesCost ?? 0;
   const defaultFilamentPricePerKg = input.filamentPricePerKg ?? 0;
 
+  // Totais exibidos/salvos continuam com o valor REAL digitado — a margem de
+  // segurança não infla peso/tempo aqui, só entra no cálculo de custo abaixo.
   const totalWeightG = beds.reduce((sum, b) => sum + (b.weightG || 0), 0);
   const totalHours = beds.reduce((sum, b) => sum + (b.timeH || 0) + (b.timeM || 0) / 60, 0);
+
   const energyCost = beds.reduce((sum, b) => {
-    const hours = (b.timeH || 0) + (b.timeM || 0) / 60;
+    const marginMult = 1 + (b.safetyMarginPercent || 0) / 100;
+    const hours = ((b.timeH || 0) + (b.timeM || 0) / 60) * marginMult;
     return sum + (b.watts / 1000) * hours * kwhRate;
   }, 0);
   // Cada mesa pode ter seu proprio filamento (produtos multicoloridos) — soma
   // o custo mesa a mesa em vez de aplicar um preço/kg único sobre o peso total.
   const filamentCost = beds.reduce((sum, b) => {
+    const marginMult = 1 + (b.safetyMarginPercent || 0) / 100;
     const pricePerKg = b.filamentPricePerKg ?? defaultFilamentPricePerKg;
-    return sum + ((b.weightG || 0) / 1000) * pricePerKg;
+    return sum + (((b.weightG || 0) * marginMult) / 1000) * pricePerKg;
   }, 0);
 
   const printCost = filamentCost + energyCost;

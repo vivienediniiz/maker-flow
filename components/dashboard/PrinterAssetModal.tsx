@@ -39,6 +39,7 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
   const [warrantyExpiryDate, setWarrantyExpiryDate] = useState("");
   const [status, setStatus] = useState<PrinterAssetStatus>("active");
   const [estimatedUsageHours, setEstimatedUsageHours] = useState("0");
+  const [powerConsumptionW, setPowerConsumptionW] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -65,6 +66,7 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
     setWarrantyExpiryDate(asset?.warranty_expiry_date ?? "");
     setStatus(asset?.status ?? "active");
     setEstimatedUsageHours(asset ? String(asset.estimated_usage_hours) : "0");
+    setPowerConsumptionW(asset?.power_consumption_w != null ? String(asset.power_consumption_w) : "");
     setNotes(asset?.notes ?? "");
     setError(null);
     loadBranches();
@@ -133,6 +135,7 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
       warranty_expiry_date: warrantyExpiryDate || null,
       status,
       estimated_usage_hours: Number(estimatedUsageHours) || 0,
+      power_consumption_w: powerConsumptionW ? Number(powerConsumptionW) : null,
       notes: notes || null,
     };
 
@@ -303,16 +306,32 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
           </div>
         </div>
 
-        <div>
-          <label className="mb-1.5 block text-xs text-text-muted">Horas de uso estimadas</label>
-          <input
-            type="number"
-            step="1"
-            min="0"
-            value={estimatedUsageHours}
-            onChange={(e) => setEstimatedUsageHours(e.target.value)}
-            className="glass-input w-full"
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1.5 block text-xs text-text-muted">Horas de uso estimadas</label>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              value={estimatedUsageHours}
+              onChange={(e) => setEstimatedUsageHours(e.target.value)}
+              className="glass-input w-full"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs text-text-muted">
+              Consumo de energia (W) <span className="text-text-muted/60">— opcional</span>
+            </label>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              value={powerConsumptionW}
+              onChange={(e) => setPowerConsumptionW(e.target.value)}
+              className="glass-input w-full"
+              placeholder="Ex: 350"
+            />
+          </div>
         </div>
 
         <div>

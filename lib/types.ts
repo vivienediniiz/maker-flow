@@ -187,6 +187,8 @@ export interface CalcInputs {
     filamentId?: string;
     /** Só informativo (ex: "≈ Xg por peça") — nunca entra em nenhum cálculo. Default 1. */
     piecesInBed?: number;
+    /** % aplicado só no cálculo de custo (filamento/energia) — peso/tempo digitados não mudam. */
+    safetyMarginPercent?: number;
     /** @deprecated Modo Item Único/Lote removido — mantido só pra ler registros salvos antes dessa mudança (tratado como "single"). */
     mode?: "single" | "batch";
     /** @deprecated Ver `mode`. */
@@ -311,6 +313,7 @@ export interface PrinterAsset {
   warranty_expiry_date: string | null;
   status: PrinterAssetStatus;
   estimated_usage_hours: number;
+  power_consumption_w: number | null;
   notes: string | null;
   created_at: string;
 }

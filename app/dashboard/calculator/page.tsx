@@ -15,8 +15,8 @@ import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import { calculateCost } from "@/lib/costCalculator";
-import { Plus, Trash2, FileDown, Link2, Rocket } from "lucide-react";
-import type { Product, Supply, Filament } from "@/lib/types";
+import { Plus, Trash2, FileDown, Link2, Rocket, Info, Weight, Timer, Zap, TrendingUp } from "lucide-react";
+import type { Product, Supply, Filament, PrinterAsset } from "@/lib/types";
 
 interface PrintBed {
   id: string;
@@ -29,6 +29,10 @@ interface PrintBed {
   filamentId: string;
   /** Só informativo (dica visual "≈ Xg por peça") — nunca entra em nenhum cálculo. */
   piecesInBed: number;
+  /** Opcional — só usada pra preencher `watts` automaticamente; não é salva no calc_inputs do produto. */
+  printerAssetId: string;
+  /** % aplicado só no cálculo de custo (filamento/energia) — peso/tempo digitados não mudam. */
+  safetyMarginPercent: number;
 }
 
 interface SupplyLine {
@@ -47,6 +51,8 @@ function newBed(index: number): PrintBed {
     watts: 200,
     filamentId: "",
     piecesInBed: 1,
+    printerAssetId: "",
+    safetyMarginPercent: 0,
   };
 }
 
@@ -76,6 +82,7 @@ export default function CalculatorPage() {
   const [quantity, setQuantity] = useState(1);
   const [supplies, setSupplies] = useState<Supply[]>([]);
   const [supplyLines, setSupplyLines] = useState<SupplyLine[]>([]);
+  const [printerAssets, setPrinterAssets] = useState<PrinterAsset[]>([]);
 
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [newProductModalOpen, setNewProductModalOpen] = useState(false);
@@ -86,6 +93,7 @@ export default function CalculatorPage() {
     loadMarketplaces();
     loadSupplies();
     loadFilaments();
+    loadPrinterAssets();
   }, []);
 
   async function loadProducts() {
@@ -128,6 +136,23 @@ export default function CalculatorPage() {
     if (!user) return;
     const { data } = await supabase.from("filaments").select("*").eq("user_id", user.id).order("material");
     setFilaments((data as Filament[]) ?? []);
+  }
+
+  async function loadPrinterAssets() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from("printer_assets").select("*").eq("user_id", user.id).order("model");
+    setPrinterAssets((data as PrinterAsset[]) ?? []);
+  }
+
+  function handleSelectPrinterAsset(bedId: string, printerAssetId: string) {
+    const printer = printerAssets.find((p) => p.id === printerAssetId);
+    updateBed(bedId, {
+      printerAssetId,
+      ...(printer?.power_consumption_w != null ? { watts: printer.power_consumption_w } : {}),
+    });
   }
 
   function handleFilamentSaved(filament: Filament) {
@@ -174,6 +199,8 @@ export default function CalculatorPage() {
           watts: b.watts,
           filamentId: b.filamentId ?? "",
           piecesInBed: b.piecesInBed ?? 1,
+          printerAssetId: "",
+          safetyMarginPercent: b.safetyMarginPercent ?? 0,
         }))
       );
       setKwhRate(ci.kwhRate);
@@ -224,6 +251,7 @@ export default function CalculatorPage() {
         timeM: b.timeM,
         watts: b.watts,
         filamentPricePerKg: filaments.find((f) => f.id === b.filamentId)?.price_per_kg ?? 0,
+        safetyMarginPercent: b.safetyMarginPercent,
       })),
     [beds, filaments]
   );
@@ -351,6 +379,26 @@ export default function CalculatorPage() {
                   )}
                 </div>
 
+                {printerAssets.length > 0 && (
+                  <Field label="Impressora utilizada (opcional, preenche a potência)">
+                    <select
+                      value={bed.printerAssetId}
+                      onChange={(e) => handleSelectPrinterAsset(bed.id, e.target.value)}
+                      className="glass-input w-full"
+                    >
+                      <option value="" className="bg-bg-raised">
+                        Nenhuma / preencher manualmente
+                      </option>
+                      {printerAssets.map((p) => (
+                        <option key={p.id} value={p.id} className="bg-bg-raised">
+                          {p.model}
+                          {p.power_consumption_w != null ? ` (${p.power_consumption_w}W)` : " (sem consumo cadastrado)"}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                )}
+
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <Field label="Peso (g)">
                     <input
@@ -404,6 +452,24 @@ export default function CalculatorPage() {
                   <p className="text-[11px] text-neon-green">
                     ≈ {Math.round(bed.weightG / bed.piecesInBed)}g e{" "}
                     {Math.round((bed.timeH * 60 + bed.timeM) / bed.piecesInBed)}min por peça nesta mesa
+                  </p>
+                )}
+
+                <Field label="Margem de segurança — falhas de impressão (%, opcional)">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={bed.safetyMarginPercent || ""}
+                    onChange={(e) => updateBed(bed.id, { safetyMarginPercent: Math.max(0, Number(e.target.value)) })}
+                    className="glass-input w-full sm:w-32"
+                    placeholder="5-10%"
+                  />
+                </Field>
+                {bed.safetyMarginPercent > 0 && (
+                  <p className="text-[11px] text-neon-pink">
+                    Considerando +{bed.safetyMarginPercent}% de margem no custo: {Math.round(bed.weightG * (1 + bed.safetyMarginPercent / 100))}g e{" "}
+                    {Math.round((bed.timeH * 60 + bed.timeM) * (1 + bed.safetyMarginPercent / 100))}min
                   </p>
                 )}
 
@@ -643,6 +709,10 @@ export default function CalculatorPage() {
         </div>
       </main>
 
+      <div className="px-6 pb-8 md:px-8">
+        <CalculatorTips />
+      </div>
+
       <NewSaleModal
         open={orderModalOpen}
         onClose={() => setOrderModalOpen(false)}
@@ -701,5 +771,78 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <span className="font-numeric text-text-primary">{value}</span>
     </div>
+  );
+}
+
+const TIP_COLUMNS: { icon: typeof Weight; title: string; items: string[] }[] = [
+  {
+    icon: Weight,
+    title: "Peso da Peça",
+    items: [
+      "Use o peso estimado pelo fatiador",
+      "Inclua suportes e preenchimento",
+      "Considere material de purga entre cores",
+    ],
+  },
+  {
+    icon: Timer,
+    title: "Tempo de Impressão",
+    items: [
+      "Use o tempo total do fatiador",
+      "Considere tempo de aquecimento",
+      "Use a margem de segurança para prever falhas (5-10%)",
+    ],
+  },
+  {
+    icon: Zap,
+    title: "Consumo da Máquina",
+    items: [
+      "Selecione a impressora cadastrada para preencher automaticamente",
+      "Configure o consumo de cada impressora em Cadastros > Impressoras",
+    ],
+  },
+  {
+    icon: TrendingUp,
+    title: "Margem de Lucro",
+    items: [
+      "40-50% é um ponto de partida comum, ajuste conforme a complexidade da peça",
+      "Considere o tempo de pós-processamento (lixar, pintar, montar) na sua margem",
+      "Lembre-se: aqui a margem é sobre o preço de venda, não sobre o custo — valores acima de 99% não são permitidos",
+    ],
+  },
+];
+
+function CalculatorTips() {
+  return (
+    <GlassCard padding="lg" className="space-y-4">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">
+          <Info size={14} />
+        </span>
+        <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
+          Dicas pra um cálculo mais preciso
+        </h3>
+      </div>
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {TIP_COLUMNS.map((col) => (
+          <div key={col.title} className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5 text-neon-pink">
+                <col.icon size={13} />
+              </span>
+              <p className="text-xs font-semibold text-text-primary">{col.title}</p>
+            </div>
+            <ul className="space-y-1.5 pl-1">
+              {col.items.map((item) => (
+                <li key={item} className="flex gap-1.5 text-[11px] leading-relaxed text-text-secondary">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-text-muted" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </GlassCard>
   );
 }
