@@ -23,11 +23,12 @@ import {
 import { Loader2, Plus, RefreshCw, Trash2, Pencil } from "lucide-react";
 import type { QuoteWithClient, QuoteStatus, QuoteSource, Integration } from "@/lib/types";
 
-const STATUS_FILTERS: { key: "all" | QuoteStatus; label: string }[] = [
+const STATUS_FILTERS: { key: "all" | QuoteStatus | "awaiting_shipment"; label: string }[] = [
   { key: "all", label: "Todos" },
   { key: "sent", label: QUOTE_STATUS_LABELS.sent },
   { key: "paid", label: QUOTE_STATUS_LABELS.paid },
   { key: "in_production", label: QUOTE_STATUS_LABELS.in_production },
+  { key: "awaiting_shipment", label: "Aguardando Envio" },
   { key: "shipped", label: "Pedido Concluído" },
   { key: "expired", label: QUOTE_STATUS_LABELS.expired },
   { key: "cancelled", label: QUOTE_STATUS_LABELS.cancelled },
@@ -70,6 +71,10 @@ export default function OrdersPage() {
 
   useEffect(() => {
     loadAll();
+    const initialStatus = new URLSearchParams(window.location.search).get("status");
+    if (initialStatus && STATUS_FILTERS.some((f) => f.key === initialStatus)) {
+      setStatusFilter(initialStatus as (typeof STATUS_FILTERS)[number]["key"]);
+    }
   }, []);
 
   async function loadAll() {
@@ -146,7 +151,12 @@ export default function OrdersPage() {
     await supabase.from("quotes").delete().eq("id", quoteId);
   }
 
-  const statusFiltered = statusFilter === "all" ? quotes : quotes.filter((q) => q.status === statusFilter);
+  const statusFiltered =
+    statusFilter === "all"
+      ? quotes
+      : statusFilter === "awaiting_shipment"
+        ? quotes.filter((q) => (q.status === "paid" || q.status === "in_production") && !q.shipping_tracking_code)
+        : quotes.filter((q) => q.status === statusFilter);
   const sourceFiltered = sourceFilter === "all" ? statusFiltered : statusFiltered.filter((q) => q.source === sourceFilter);
 
   const searchLower = search.trim().toLowerCase().replace(/^#/, "");

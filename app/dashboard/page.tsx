@@ -7,6 +7,7 @@ import { SalesPeriodSummary } from "@/components/dashboard/SalesPeriodSummary";
 import { TopProductsCard } from "@/components/dashboard/TopProductsCard";
 import { SalesGoalsCard } from "@/components/dashboard/SalesGoalsCard";
 import { AffiliateSummaryCard } from "@/components/dashboard/AffiliateSummaryCard";
+import { PriorityAlertsSection } from "@/components/dashboard/PriorityAlertsSection";
 import { DashboardClock } from "@/components/dashboard/DashboardClock";
 import { GreetingTypewriter } from "@/components/dashboard/GreetingTypewriter";
 import { GlassAccordion } from "@/components/ui/GlassAccordion";
@@ -289,6 +290,12 @@ export default async function DashboardPage() {
         {/* Produtos mais vendidos do mês */}
         <section>
           <TopProductsCard />
+        </section>
+
+        {/* Atenção prioritária */}
+        <section>
+          <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-text-muted">Atenção Prioritária</h3>
+          <PriorityAlertsSection />
         </section>
 
         {/* KPI Cards */}
