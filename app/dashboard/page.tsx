@@ -6,6 +6,7 @@ import { PrinterCard } from "@/components/dashboard/PrinterCard";
 import { SalesPeriodSummary } from "@/components/dashboard/SalesPeriodSummary";
 import { TopProductsCard } from "@/components/dashboard/TopProductsCard";
 import { SalesGoalsCard } from "@/components/dashboard/SalesGoalsCard";
+import { AffiliateSummaryCard } from "@/components/dashboard/AffiliateSummaryCard";
 import { DashboardClock } from "@/components/dashboard/DashboardClock";
 import { GreetingTypewriter } from "@/components/dashboard/GreetingTypewriter";
 import { GlassAccordion } from "@/components/ui/GlassAccordion";
@@ -278,15 +279,16 @@ export default async function DashboardPage() {
       <main className="space-y-8 px-6 py-8 md:px-8">
         <DashboardHeader studioName={studioName} />
 
-        {/* Resumo de vendas por período + produtos mais vendidos */}
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {/* Resumo de vendas por período + metas do mês + indicações */}
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           <SalesPeriodSummary />
-          <TopProductsCard />
+          <SalesGoalsCard />
+          <AffiliateSummaryCard />
         </section>
 
-        {/* Metas de vendas do mês */}
+        {/* Produtos mais vendidos do mês */}
         <section>
-          <SalesGoalsCard />
+          <TopProductsCard />
         </section>
 
         {/* KPI Cards */}
