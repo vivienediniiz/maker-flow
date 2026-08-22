@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   AreaChart,
   Area,
@@ -9,17 +10,80 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { createClient } from "@/lib/supabase/client";
+import { Loader2 } from "lucide-react";
 
-const data = [
-  { month: "Fev", receita: 4200, custo: 1800, lucro: 2400 },
-  { month: "Mar", receita: 5100, custo: 2100, lucro: 3000 },
-  { month: "Abr", receita: 4700, custo: 2300, lucro: 2400 },
-  { month: "Mai", receita: 6200, custo: 2500, lucro: 3700 },
-  { month: "Jun", receita: 7100, custo: 2700, lucro: 4400 },
-  { month: "Jul", receita: 8300, custo: 3100, lucro: 5200 },
-];
+interface MonthPoint {
+  month: string;
+  receita: number;
+  custo: number;
+  lucro: number;
+}
+
+function monthKey(date: Date) {
+  return `${date.getFullYear()}-${date.getMonth()}`;
+}
+
+function shortMonthLabel(date: Date) {
+  const label = date.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
 
 export function FinancialChart() {
+  const supabase = createClient();
+  const [data, setData] = useState<MonthPoint[] | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setData([]);
+        return;
+      }
+
+      const now = new Date();
+      const months = Array.from({ length: 6 }, (_, i) => new Date(now.getFullYear(), now.getMonth() - (5 - i), 1));
+      const rangeStart = months[0];
+      const rangeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+      const { data: quotes } = await supabase
+        .from("quotes")
+        .select("final_price, platform_fee, cost_amount, sent_at")
+        .eq("user_id", user.id)
+        .in("status", ["paid", "in_production", "shipped"])
+        .gte("sent_at", rangeStart.toISOString())
+        .lt("sent_at", rangeEnd.toISOString());
+
+      const buckets = new Map<string, { receita: number; custo: number }>();
+      for (const m of months) buckets.set(monthKey(m), { receita: 0, custo: 0 });
+
+      for (const q of quotes ?? []) {
+        const sentAt = new Date(q.sent_at);
+        const bucket = buckets.get(monthKey(new Date(sentAt.getFullYear(), sentAt.getMonth(), 1)));
+        if (!bucket) continue;
+        bucket.receita += q.final_price;
+        bucket.custo += q.platform_fee + q.cost_amount;
+      }
+
+      setData(
+        months.map((m) => {
+          const b = buckets.get(monthKey(m))!;
+          return { month: shortMonthLabel(m), receita: b.receita, custo: b.custo, lucro: b.receita - b.custo };
+        })
+      );
+    })();
+  }, []);
+
+  if (data == null) {
+    return (
+      <div className="flex h-72 items-center justify-center text-text-muted">
+        <Loader2 size={18} className="animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
