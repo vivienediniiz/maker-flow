@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardRow } from "@/components/ui/CardRow";
+import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteDetailModal } from "@/components/dashboard/QuoteDetailModal";
 import { NewSaleModal } from "@/components/dashboard/NewSaleModal";
@@ -338,21 +339,16 @@ export default function OrdersPage() {
               </div>
             </GlassCard>
 
-            {/* Mobile: cards empilhados */}
+            {/* Mobile: cards recolhíveis */}
             <div className="space-y-3 md:hidden">
               {filtered.map((q) => {
                 const buyerName = q.buyer_name || q.clients?.name || "Cliente não informado";
                 const costs = q.platform_fee + q.cost_amount;
                 const action = nextQuoteAction(q.status);
                 return (
-                  <GlassCard
+                  <CollapsibleCard
                     key={q.id}
-                    hover
-                    padding="md"
-                    className="cursor-pointer divide-y divide-border-glass/60"
-                    onClick={() => setSelectedQuote(q)}
-                  >
-                    <div className="flex items-start justify-between gap-2 pb-2">
+                    header={
                       <div className="min-w-0">
                         <div className="mb-1.5 flex flex-wrap items-center gap-2">
                           <span
@@ -366,11 +362,21 @@ export default function OrdersPage() {
                           <span className="font-numeric text-xs text-text-muted">
                             {q.external_order_id ?? formatOrderNumber(q.order_number)}
                           </span>
+                          <span
+                            className={cn(
+                              "rounded-pill border px-2.5 py-1 text-[11px] font-medium",
+                              QUOTE_STATUS_PILL_STYLES[q.status]
+                            )}
+                          >
+                            {QUOTE_STATUS_LABELS[q.status]}
+                          </span>
                         </div>
                         <p className="truncate text-base font-semibold text-text-primary">{buyerName}</p>
                         <p className="truncate text-xs text-text-secondary">{q.project_name}</p>
                       </div>
-                      <div className="-mr-2 -mt-2 flex shrink-0 items-center">
+                    }
+                    actions={
+                      <>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -388,18 +394,9 @@ export default function OrdersPage() {
                         >
                           <Trash2 size={14} />
                         </button>
-                      </div>
-                    </div>
-                    <CardRow label="Status">
-                      <span
-                        className={cn(
-                          "rounded-pill border px-2.5 py-1 text-[11px] font-medium",
-                          QUOTE_STATUS_PILL_STYLES[q.status]
-                        )}
-                      >
-                        {QUOTE_STATUS_LABELS[q.status]}
-                      </span>
-                    </CardRow>
+                      </>
+                    }
+                  >
                     <CardRow label="Data">{new Date(q.sent_at).toLocaleString("pt-BR")}</CardRow>
                     <CardRow label="Bruto">{formatBRL(q.final_price)}</CardRow>
                     <CardRow label="Custos">
@@ -423,7 +420,7 @@ export default function OrdersPage() {
                         </NeonButton>
                       </div>
                     )}
-                  </GlassCard>
+                  </CollapsibleCard>
                 );
               })}
             </div>

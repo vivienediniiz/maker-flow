@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardRow } from "@/components/ui/CardRow";
+import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { ProductDetailModal } from "@/components/dashboard/ProductDetailModal";
@@ -397,25 +398,18 @@ export default function ProductsPage() {
               </div>
             </GlassCard>
 
-            {/* Mobile: cards empilhados */}
+            {/* Mobile: cards recolhíveis */}
             <div className="space-y-3 md:hidden">
               {filtered.map((p) => {
                 const profit = p.sale_price - p.cost_price;
                 const margin = p.sale_price > 0 ? (profit / p.sale_price) * 100 : 0;
                 return (
-                  <GlassCard
+                  <CollapsibleCard
                     key={p.id}
-                    hover
-                    padding="md"
-                    className={cn("cursor-pointer divide-y divide-border-glass/60", selectedIds.has(p.id) && "bg-neon-pink/[0.04]")}
-                    onClick={() => setSelectedProduct(p)}
-                  >
-                    <div className="flex items-start justify-between gap-2 pb-2">
+                    className={selectedIds.has(p.id) ? "bg-neon-pink/[0.04]" : undefined}
+                    header={
                       <div className="flex min-w-0 items-center gap-3">
-                        <div
-                          className="shrink-0 py-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        <div className="shrink-0 py-1" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selectedIds.has(p.id)}
@@ -434,7 +428,9 @@ export default function ProductsPage() {
                         </div>
                         <p className="min-w-0 truncate text-base font-semibold text-text-primary">{p.name}</p>
                       </div>
-                      <div className="-mr-2 -mt-2 flex shrink-0 items-center">
+                    }
+                    actions={
+                      <>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -452,8 +448,9 @@ export default function ProductsPage() {
                         >
                           <Trash2 size={14} />
                         </button>
-                      </div>
-                    </div>
+                      </>
+                    }
+                  >
                     {p.category && <CardRow label="Categoria">{p.category}</CardRow>}
                     <CardRow label="Custo">{formatBRL(p.cost_price)}</CardRow>
                     <CardRow label="Venda">{formatBRL(p.sale_price)}</CardRow>
@@ -461,7 +458,7 @@ export default function ProductsPage() {
                       <span className="text-neon-pink">{margin.toFixed(0)}%</span>
                     </CardRow>
                     <CardRow label="Estoque">{p.stock_quantity}</CardRow>
-                  </GlassCard>
+                  </CollapsibleCard>
                 );
               })}
             </div>

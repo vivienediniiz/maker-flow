@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardRow } from "@/components/ui/CardRow";
+import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { NewClientModal } from "@/components/dashboard/NewClientModal";
 import { ClientDetailModal } from "@/components/dashboard/ClientDetailModal";
@@ -169,19 +170,14 @@ export default function ClientsPage() {
               </div>
             </GlassCard>
 
-            {/* Mobile: cards empilhados */}
+            {/* Mobile: cards recolhíveis */}
             <div className="space-y-3 md:hidden">
               {filtered.map((c) => (
-                <GlassCard
+                <CollapsibleCard
                   key={c.id}
-                  hover
-                  padding="md"
-                  className="cursor-pointer divide-y divide-border-glass/60"
-                  onClick={() => setSelectedClient(c)}
-                >
-                  <div className="flex items-start justify-between gap-2 pb-2">
-                    <p className="min-w-0 truncate text-base font-semibold text-text-primary">{c.name}</p>
-                    <div className="-mr-2 -mt-2 flex shrink-0 items-center">
+                  header={<p className="min-w-0 truncate text-base font-semibold text-text-primary">{c.name}</p>}
+                  actions={
+                    <>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -199,8 +195,9 @@ export default function ClientsPage() {
                       >
                         <Trash2 size={14} />
                       </button>
-                    </div>
-                  </div>
+                    </>
+                  }
+                >
                   {(c.phone || c.instagram) && (
                     <CardRow label="Contato">
                       <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
@@ -220,7 +217,10 @@ export default function ClientsPage() {
                       <span className="line-clamp-2">{c.notes}</span>
                     </CardRow>
                   )}
-                </GlassCard>
+                  {!(c.phone || c.instagram) && !c.email && !c.address && !c.notes && (
+                    <p className="py-2 text-xs text-text-muted">Sem informações adicionais.</p>
+                  )}
+                </CollapsibleCard>
               ))}
             </div>
           </>
