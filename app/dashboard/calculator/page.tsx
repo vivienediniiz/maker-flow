@@ -13,23 +13,40 @@ import { FilamentModal } from "@/components/dashboard/FilamentModal";
 import { FilamentPickerDropdown } from "@/components/dashboard/FilamentPickerDropdown";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { ConfigNudgeBanner } from "@/components/dashboard/ConfigNudgeBanner";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { createClient } from "@/lib/supabase/client";
-import { formatBRL } from "@/lib/utils";
-import { calculateCost } from "@/lib/costCalculator";
+import { formatBRL, cn } from "@/lib/utils";
+import { calculateCost, type CalcMixedItem } from "@/lib/costCalculator";
 import { Plus, Trash2, FileDown, Link2, Rocket, Info, Weight, Timer, Zap, TrendingUp, PackagePlus } from "lucide-react";
 import type { Product, Supply, Filament, PrinterAsset, RiskTier, CalcInputs } from "@/lib/types";
+
+type BedModelType = "A" | "B" | "C";
+
+const BED_MODEL_OPTIONS: { value: BedModelType; label: string }[] = [
+  { value: "B", label: "Peça única / Montagem" },
+  { value: "A", label: "Lote (peças idênticas)" },
+  { value: "C", label: "Mix (peças diferentes)" },
+];
 
 interface PrintBed {
   id: string;
   name: string;
-  /** Peso/tempo TOTAIS da mesa cheia, direto do fatiador — a soma de todas as mesas é o custo de 1 unidade completa do produto. */
+  /** Peso/tempo TOTAIS da mesa cheia, direto do fatiador — a soma de todas as mesas é o custo de 1 unidade completa do produto (mesas Modelo A/B). */
   weightG: number;
   timeH: number;
   timeM: number;
   watts: number;
   filamentId: string;
-  /** Só informativo (dica visual "≈ Xg por peça") — nunca entra em nenhum cálculo. */
+  /**
+   * "A" = lote de peças idênticas nesta mesa (divide o custo por `piecesInBed`);
+   * "B" = peça única/montagem, mesa inteira conta como 1 contribuição (padrão);
+   * "C" = mix de peças diferentes, custo rateado por peso entre `mixedItems`, fora do custo do produto principal.
+   */
+  modelType: BedModelType;
+  /** Divisor real do custo desta mesa quando `modelType === "A"`. */
   piecesInBed: number;
+  /** Só usado quando `modelType === "C"`. */
+  mixedItems: CalcMixedItem[];
   /** Opcional — só usada pra preencher `watts` automaticamente; não é salva no calc_inputs do produto. */
   printerAssetId: string;
   /** % aplicado só no cálculo de custo (filamento/energia) — peso/tempo digitados não mudam. */
@@ -51,10 +68,16 @@ function newBed(index: number): PrintBed {
     timeM: 0,
     watts: 200,
     filamentId: "",
+    modelType: "B",
     piecesInBed: 1,
+    mixedItems: [],
     printerAssetId: "",
     safetyMarginPercent: 0,
   };
+}
+
+function newMixedItem(): CalcMixedItem {
+  return { id: crypto.randomUUID(), description: "", weightG: 0, quantity: 1 };
 }
 
 function newSupplyLine(): SupplyLine {
@@ -219,6 +242,23 @@ export default function CalculatorPage() {
   function updateBed(id: string, patch: Partial<PrintBed>) {
     setBeds((b) => b.map((bed) => (bed.id === id ? { ...bed, ...patch } : bed)));
   }
+  function addMixedItem(bedId: string) {
+    setBeds((b) => b.map((bed) => (bed.id === bedId ? { ...bed, mixedItems: [...bed.mixedItems, newMixedItem()] } : bed)));
+  }
+  function updateMixedItem(bedId: string, itemId: string, patch: Partial<CalcMixedItem>) {
+    setBeds((b) =>
+      b.map((bed) =>
+        bed.id === bedId
+          ? { ...bed, mixedItems: bed.mixedItems.map((i) => (i.id === itemId ? { ...i, ...patch } : i)) }
+          : bed
+      )
+    );
+  }
+  function removeMixedItem(bedId: string, itemId: string) {
+    setBeds((b) =>
+      b.map((bed) => (bed.id === bedId ? { ...bed, mixedItems: bed.mixedItems.filter((i) => i.id !== itemId) } : bed))
+    );
+  }
 
   const suppliesCost = useMemo(() => {
     return supplyLines.reduce((sum, line) => {
@@ -234,12 +274,16 @@ export default function CalculatorPage() {
   const calcBeds = useMemo(
     () =>
       beds.map((b) => ({
+        name: b.name,
         weightG: b.weightG,
         timeH: b.timeH,
         timeM: b.timeM,
         watts: b.watts,
         filamentPricePerKg: filaments.find((f) => f.id === b.filamentId)?.price_per_kg ?? 0,
         safetyMarginPercent: b.safetyMarginPercent,
+        modelType: b.modelType,
+        piecesInBed: b.piecesInBed,
+        mixedItems: b.mixedItems,
       })),
     [beds, filaments]
   );
@@ -283,14 +327,16 @@ export default function CalculatorPage() {
   // preenchido aqui, sem pedir pra digitar tudo de novo.
   const calcInputsForProduct: CalcInputs = useMemo(
     () => ({
-      beds: beds.map(({ name, weightG, timeH, timeM, watts, filamentId, piecesInBed, safetyMarginPercent }) => ({
+      beds: beds.map(({ name, weightG, timeH, timeM, watts, filamentId, modelType, piecesInBed, mixedItems, safetyMarginPercent }) => ({
         name,
         weightG,
         timeH,
         timeM,
         watts,
         filamentId: filamentId || undefined,
+        modelType,
         piecesInBed,
+        mixedItems,
         safetyMarginPercent,
       })),
       kwhRate,
@@ -307,6 +353,10 @@ export default function CalculatorPage() {
   );
 
   const missingFilament = beds.some((b) => !b.filamentId);
+  // Mesas Mix (Modelo C) não contribuem pro custo do produto principal — sem
+  // ao menos uma mesa Peça única/Montagem ou Lote, costPerUnit fica 0.
+  const noUnitBeds = beds.every((b) => b.modelType === "C");
+  const actionsDisabled = missingFilament || noUnitBeds;
 
   // Snapshot estável dos insumos selecionados aqui — só muda quando o usuário
   // de fato edita a lista, pra não resetar a seção "Insumo(s) Utilizados" da
@@ -375,11 +425,18 @@ export default function CalculatorPage() {
               </NeonButton>
             </div>
             <p className="-mt-3 text-[11px] text-text-muted">
-              Peso e tempo são sempre da mesa cheia, direto do fatiador — a soma de todas as mesas é o custo de
-              produzir 1 unidade completa do produto.
+              Peso e tempo são sempre da mesa cheia, direto do fatiador. Escolha o tipo de cada mesa: <strong>Peça
+              única/Montagem</strong> (mesa inteira = 1 contribuição pro custo do produto), <strong>Lote</strong>
+              (várias peças idênticas dividem o custo da mesa) ou <strong>Mix</strong> (peças diferentes, custo
+              rateado por peso entre elas — não entra no preço do produto principal).
             </p>
 
-            {beds.map((bed) => (
+            {beds.map((bed) => {
+              const cIndex = beds.filter((b) => b.modelType === "C").findIndex((b) => b.id === bed.id);
+              const mixedBreakdown = bed.modelType === "C" && cIndex >= 0 ? calc.mixedBreakdowns[cIndex] : undefined;
+              const mixedItemsWeight = bed.mixedItems.reduce((s, i) => s + (i.weightG || 0) * (i.quantity || 0), 0);
+
+              return (
               <div key={bed.id} className="glass-card space-y-3 p-4">
                 <div className="flex items-center justify-between">
                   <input
@@ -397,6 +454,12 @@ export default function CalculatorPage() {
                     </button>
                   )}
                 </div>
+
+                <SegmentedControl
+                  options={BED_MODEL_OPTIONS}
+                  value={bed.modelType}
+                  onChange={(v) => updateBed(bed.id, { modelType: v })}
+                />
 
                 {printerAssets.length > 0 && (
                   <Field label="Impressora utilizada (opcional, preenche a potência)">
@@ -458,16 +521,23 @@ export default function CalculatorPage() {
                   </Field>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-[100px_160px_1fr] sm:items-end">
-                  <Field label="Peças (opcional)">
-                    <input
-                      type="number"
-                      min={1}
-                      value={bed.piecesInBed || ""}
-                      onChange={(e) => updateBed(bed.id, { piecesInBed: Number(e.target.value) })}
-                      className="glass-input w-full"
-                    />
-                  </Field>
+                <div
+                  className={cn(
+                    "grid grid-cols-2 gap-3 sm:items-end",
+                    bed.modelType === "A" ? "sm:grid-cols-[140px_160px_1fr]" : "sm:grid-cols-[160px_1fr]"
+                  )}
+                >
+                  {bed.modelType === "A" && (
+                    <Field label="Peças idênticas nesta mesa">
+                      <input
+                        type="number"
+                        min={1}
+                        value={bed.piecesInBed || ""}
+                        onChange={(e) => updateBed(bed.id, { piecesInBed: Number(e.target.value) })}
+                        className="glass-input w-full"
+                      />
+                    </Field>
+                  )}
                   <Field label="Margem de segurança (%, opcional)">
                     <input
                       type="number"
@@ -503,12 +573,97 @@ export default function CalculatorPage() {
                   </div>
                 </div>
 
-                {bed.piecesInBed > 1 && (
+                {bed.modelType === "A" && bed.piecesInBed > 1 && (
                   <p className="text-[11px] text-neon-green">
                     ≈ {Math.round(bed.weightG / bed.piecesInBed)}g e{" "}
-                    {Math.round((bed.timeH * 60 + bed.timeM) / bed.piecesInBed)}min por peça nesta mesa
+                    {Math.round((bed.timeH * 60 + bed.timeM) / bed.piecesInBed)}min por peça — custo desta mesa
+                    dividido por {bed.piecesInBed}
                   </p>
                 )}
+
+                {bed.modelType === "C" && (
+                  <div className="space-y-2 rounded-xl border border-border-glass bg-white/[0.02] p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-text-secondary">Itens diferentes nesta mesa</p>
+                      <NeonButton type="button" variant="outline" size="sm" onClick={() => addMixedItem(bed.id)}>
+                        <Plus size={12} /> Adicionar item
+                      </NeonButton>
+                    </div>
+
+                    {bed.mixedItems.length === 0 && (
+                      <p className="text-[11px] text-text-muted">Nenhum item adicionado ainda.</p>
+                    )}
+
+                    {bed.mixedItems.map((item, itemIdx) => {
+                      const itemResult = mixedBreakdown?.items[itemIdx];
+                      return (
+                        <div key={item.id} className="grid grid-cols-[1fr_80px_60px_auto] items-end gap-2">
+                          <Field label="Descrição">
+                            <input
+                              value={item.description}
+                              onChange={(e) => updateMixedItem(bed.id, item.id, { description: e.target.value })}
+                              className="glass-input w-full"
+                              placeholder="Ex: Chaveiro Gato"
+                            />
+                          </Field>
+                          <Field label="Peso un. (g)">
+                            <input
+                              type="number"
+                              min={0}
+                              value={item.weightG || ""}
+                              onChange={(e) => updateMixedItem(bed.id, item.id, { weightG: Number(e.target.value) })}
+                              className="glass-input w-full"
+                            />
+                          </Field>
+                          <Field label="Qtd">
+                            <input
+                              type="number"
+                              min={1}
+                              value={item.quantity || ""}
+                              onChange={(e) => updateMixedItem(bed.id, item.id, { quantity: Number(e.target.value) })}
+                              className="glass-input w-full"
+                            />
+                          </Field>
+                          <button
+                            type="button"
+                            onClick={() => removeMixedItem(bed.id, item.id)}
+                            className="mb-2.5 text-text-muted hover:text-red-400"
+                            aria-label="Remover item"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                          {itemResult && (
+                            <p className="col-span-4 -mt-1 text-[11px] text-neon-green">
+                              Custo do item: {formatBRL(itemResult.itemTotalCost)} total —{" "}
+                              {formatBRL(itemResult.itemUnitCost)}/un.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {bed.mixedItems.length > 0 && (
+                      <p
+                        className={cn(
+                          "text-[11px]",
+                          Math.round(mixedItemsWeight) === Math.round(bed.weightG)
+                            ? "text-text-muted"
+                            : "text-amber-400"
+                        )}
+                      >
+                        Peso total dos itens: {mixedItemsWeight}g
+                        {Math.round(mixedItemsWeight) !== Math.round(bed.weightG) &&
+                          ` — não bate com o peso da mesa (${bed.weightG}g)`}
+                      </p>
+                    )}
+                    <p className="text-[11px] text-text-muted">
+                      Custo desta mesa ({mixedBreakdown ? formatBRL(mixedBreakdown.totalBedCost) : formatBRL(0)}) é só
+                      rateado por peso entre os itens acima — não entra no custo do produto principal desta
+                      Calculadora. Cadastre cada item separadamente usando o custo unitário dele.
+                    </p>
+                  </div>
+                )}
+
                 {bed.safetyMarginPercent > 0 && (
                   <p className="text-[11px] text-neon-pink">
                     Considerando +{bed.safetyMarginPercent}% de margem no custo: {Math.round(bed.weightG * (1 + bed.safetyMarginPercent / 100))}g e{" "}
@@ -519,7 +674,8 @@ export default function CalculatorPage() {
                   <p className="text-[11px] text-amber-400">Selecione um filamento cadastrado pra calcular o custo desta mesa.</p>
                 )}
               </div>
-            ))}
+              );
+            })}
           </GlassCard>
 
           {/* Costs & extras */}
@@ -749,10 +905,10 @@ export default function CalculatorPage() {
             </div>
 
             <div className="space-y-2">
-              <NeonButton className="w-full" onClick={() => setOrderModalOpen(true)} disabled={missingFilament}>
+              <NeonButton className="w-full" onClick={() => setOrderModalOpen(true)} disabled={actionsDisabled}>
                 <Rocket size={16} /> Criar Pedido
               </NeonButton>
-              <NeonButton variant="outline" className="w-full" onClick={() => setQuoteModalOpen(true)} disabled={missingFilament}>
+              <NeonButton variant="outline" className="w-full" onClick={() => setQuoteModalOpen(true)} disabled={actionsDisabled}>
                 <FileDown size={16} /> Gerar PDF de Orçamento
               </NeonButton>
               <NeonButton variant="outline" className="w-full">
@@ -762,6 +918,12 @@ export default function CalculatorPage() {
             {missingFilament && (
               <p className="text-center text-[11px] text-amber-400">
                 Selecione um filamento cadastrado em cada mesa pra liberar essas ações.
+              </p>
+            )}
+            {!missingFilament && noUnitBeds && (
+              <p className="text-center text-[11px] text-amber-400">
+                Adicione ao menos uma mesa Peça única/Montagem ou Lote — mesas Mix sozinhas não definem o preço do
+                produto principal.
               </p>
             )}
           </GlassCard>
@@ -777,11 +939,14 @@ export default function CalculatorPage() {
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-center gap-1.5 sm:items-end">
-            <NeonButton className="w-full sm:w-auto" onClick={() => setNewProductModalOpen(true)} disabled={missingFilament}>
+            <NeonButton className="w-full sm:w-auto" onClick={() => setNewProductModalOpen(true)} disabled={actionsDisabled}>
               <PackagePlus size={18} /> Cadastrar Produto
             </NeonButton>
             {missingFilament && (
               <p className="text-[11px] text-amber-400">Selecione um filamento em cada mesa pra liberar.</p>
+            )}
+            {!missingFilament && noUnitBeds && (
+              <p className="text-[11px] text-amber-400">Adicione uma mesa Peça única/Montagem ou Lote pra liberar.</p>
             )}
           </div>
         </GlassCard>

@@ -261,8 +261,17 @@ export interface CalcInputs {
     timeM: number;
     watts: number;
     filamentId?: string;
-    /** Só informativo (ex: "≈ Xg por peça") — nunca entra em nenhum cálculo. Default 1. */
+    /**
+     * "A" = lote de peças idênticas nesta mesa (divide o custo por `piecesInBed`);
+     * "B" = peça única/montagem, mesa inteira conta como 1 contribuição (padrão);
+     * "C" = mix de peças diferentes, custo rateado por peso entre `mixedItems`.
+     * Ausente = "B".
+     */
+    modelType?: "A" | "B" | "C";
+    /** Divisor real do custo desta mesa quando `modelType === "A"`; só decorativo (ex: "≈ Xg por peça") nos demais modos. Default 1. */
     piecesInBed?: number;
+    /** Só usado quando `modelType === "C"`. */
+    mixedItems?: { id: string; description: string; weightG: number; quantity: number }[];
     /** % aplicado só no cálculo de custo (filamento/energia) — peso/tempo digitados não mudam. */
     safetyMarginPercent?: number;
     /** @deprecated Modo Item Único/Lote removido — mantido só pra ler registros salvos antes dessa mudança (tratado como "single"). */

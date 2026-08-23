@@ -1,4 +1,14 @@
+export interface CalcMixedItem {
+  id: string;
+  description: string;
+  /** Peso de UMA unidade deste item (g) — multiplica por `quantity` pra ratear o custo da mesa. */
+  weightG: number;
+  quantity: number;
+}
+
 export interface CalcBed {
+  /** Opcional — só pra `calculateCost` devolver o nome da mesa no breakdown do Modelo C. */
+  name?: string;
   weightG: number;
   timeH: number;
   timeM: number;
@@ -7,6 +17,17 @@ export interface CalcBed {
   filamentPricePerKg?: number;
   /** Margem de segurança (%) pra falhas de impressão — infla peso/tempo só no cálculo de filamento/energia desta mesa, sem alterar `weightG`/`timeH`/`timeM` (que continuam representando o valor real digitado). */
   safetyMarginPercent?: number;
+  /**
+   * "A" = lote de peças idênticas nesta mesa (custo dividido por `piecesInBed`);
+   * "B" = peça única/montagem, mesa inteira conta como 1 contribuição (padrão);
+   * "C" = mix de peças diferentes, custo rateado por peso entre `mixedItems`, fora do custo por unidade do produto principal.
+   * Ausente = "B", preservando o comportamento de registros salvos antes desse campo existir.
+   */
+  modelType?: "A" | "B" | "C";
+  /** Só usado quando `modelType === "A"` — divide o custo desta mesa por esse número de peças idênticas. */
+  piecesInBed?: number;
+  /** Só usado quando `modelType === "C"`. */
+  mixedItems?: CalcMixedItem[];
 }
 
 export interface CalcInput {
@@ -28,6 +49,18 @@ export interface CalcInput {
   riskMarginPercent?: number;
   /** Quantidade de Produtos Finais do pedido — multiplica custo/preço por unidade (mesas + insumos), nunca os fixos. */
   quantity: number;
+}
+
+export interface CalcMixedItemResult extends CalcMixedItem {
+  itemTotalCost: number;
+  itemUnitCost: number;
+}
+
+export interface CalcMixedBedBreakdown {
+  bedName?: string;
+  totalBedCost: number;
+  totalItemsWeight: number;
+  items: CalcMixedItemResult[];
 }
 
 export interface CalcResult {
@@ -53,6 +86,8 @@ export interface CalcResult {
   orderCost: number;
   /** Valor Total do Pedido = pricePerUnit × quantity + fixedCosts. */
   orderPrice: number;
+  /** Mesas Modelo C (mix de peças diferentes) — ficam FORA do custo por unidade acima; rateio informativo por item, na mesma ordem das mesas `C` do input. */
+  mixedBreakdowns: CalcMixedBedBreakdown[];
 }
 
 /**
@@ -71,26 +106,62 @@ export function calculateCost(input: CalcInput): CalcResult {
   const riskMarginPercent = Math.max(input.riskMarginPercent ?? 0, 0);
   const defaultFilamentPricePerKg = input.filamentPricePerKg ?? 0;
 
-  // Totais exibidos/salvos continuam com o valor REAL digitado — a margem de
-  // segurança não infla peso/tempo aqui, só entra no cálculo de custo abaixo.
+  // Totais exibidos/salvos continuam com o valor REAL digitado, somando TODAS
+  // as mesas (inclusive Mix) — a margem de segurança não infla peso/tempo
+  // aqui, só entra no cálculo de custo abaixo.
   const totalWeightG = beds.reduce((sum, b) => sum + (b.weightG || 0), 0);
   const totalHours = beds.reduce((sum, b) => sum + (b.timeH || 0) + (b.timeM || 0) / 60, 0);
 
-  const energyCost = beds.reduce((sum, b) => {
+  // Mesas Modelo C (mix de peças diferentes) não representam "1 unidade" do
+  // produto principal — ficam fora do custo por unidade, viram só o rateio
+  // informativo em `mixedBreakdowns` mais abaixo.
+  const unitBeds = beds.filter((b) => b.modelType !== "C");
+  const mixedBeds = beds.filter((b) => b.modelType === "C");
+
+  // Modelo A divide o custo desta mesa pelo nº de peças idênticas; Modelo B
+  // (ou modelType ausente) usa `pieces = 1`, ou seja, comportamento idêntico
+  // ao de antes desse campo existir.
+  function piecesOf(b: CalcBed): number {
+    return b.modelType === "A" ? Math.max(b.piecesInBed || 1, 1) : 1;
+  }
+
+  const energyCost = unitBeds.reduce((sum, b) => {
     const marginMult = 1 + (b.safetyMarginPercent || 0) / 100;
     const hours = ((b.timeH || 0) + (b.timeM || 0) / 60) * marginMult;
-    return sum + (b.watts / 1000) * hours * kwhRate;
+    return sum + ((b.watts / 1000) * hours * kwhRate) / piecesOf(b);
   }, 0);
   // Cada mesa pode ter seu proprio filamento (produtos multicoloridos) — soma
   // o custo mesa a mesa em vez de aplicar um preço/kg único sobre o peso total.
-  const filamentCost = beds.reduce((sum, b) => {
+  const filamentCost = unitBeds.reduce((sum, b) => {
     const marginMult = 1 + (b.safetyMarginPercent || 0) / 100;
     const pricePerKg = b.filamentPricePerKg ?? defaultFilamentPricePerKg;
-    return sum + (((b.weightG || 0) * marginMult) / 1000) * pricePerKg;
+    return sum + ((((b.weightG || 0) * marginMult) / 1000) * pricePerKg) / piecesOf(b);
   }, 0);
 
   const printCost = filamentCost + energyCost;
   const costPerUnit = printCost + suppliesCost;
+
+  // Rateio do custo de cada mesa Mix entre os itens diferentes que ela
+  // imprime junto, proporcional ao peso de cada item — não entra em
+  // costPerUnit/printCost acima, é só referência pra cadastrar cada item.
+  const mixedBreakdowns: CalcMixedBedBreakdown[] = mixedBeds.map((b) => {
+    const marginMult = 1 + (b.safetyMarginPercent || 0) / 100;
+    const pricePerKg = b.filamentPricePerKg ?? defaultFilamentPricePerKg;
+    const bedFilamentCost = (((b.weightG || 0) * marginMult) / 1000) * pricePerKg;
+    const bedHours = ((b.timeH || 0) + (b.timeM || 0) / 60) * marginMult;
+    const bedEnergyCost = (b.watts / 1000) * bedHours * kwhRate;
+    const totalBedCost = bedFilamentCost + bedEnergyCost;
+
+    const items = b.mixedItems ?? [];
+    const totalItemsWeight = items.reduce((s, i) => s + (i.weightG || 0) * (i.quantity || 0), 0);
+    const itemResults: CalcMixedItemResult[] = items.map((i) => {
+      const ratio = totalItemsWeight > 0 ? ((i.weightG || 0) * (i.quantity || 0)) / totalItemsWeight : 0;
+      const itemTotalCost = totalBedCost * ratio;
+      return { ...i, itemTotalCost, itemUnitCost: i.quantity > 0 ? itemTotalCost / i.quantity : 0 };
+    });
+
+    return { bedName: b.name, totalBedCost, totalItemsWeight, items: itemResults };
+  });
 
   const laborCost = laborHours * hourlyRate;
   const paint = paintedByHand ? paintCost : 0;
@@ -124,5 +195,6 @@ export function calculateCost(input: CalcInput): CalcResult {
     pricePerUnit,
     orderCost,
     orderPrice,
+    mixedBreakdowns,
   };
 }
