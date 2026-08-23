@@ -16,8 +16,8 @@ import { ConfigNudgeBanner } from "@/components/dashboard/ConfigNudgeBanner";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import { calculateCost } from "@/lib/costCalculator";
-import { Plus, Trash2, FileDown, Link2, Rocket, Info, Weight, Timer, Zap, TrendingUp } from "lucide-react";
-import type { Product, Supply, Filament, PrinterAsset, RiskTier } from "@/lib/types";
+import { Plus, Trash2, FileDown, Link2, Rocket, Info, Weight, Timer, Zap, TrendingUp, PackagePlus } from "lucide-react";
+import type { Product, Supply, Filament, PrinterAsset, RiskTier, CalcInputs } from "@/lib/types";
 
 interface PrintBed {
   id: string;
@@ -327,6 +327,34 @@ export default function CalculatorPage() {
     ]
   );
 
+  // Snapshot da receita pra "Cadastrar Produto" no fim da tela — igual ao que
+  // o overlay "Calcular Custo Unitário" monta, só que a partir do estado já
+  // preenchido aqui, sem pedir pra digitar tudo de novo.
+  const calcInputsForProduct: CalcInputs = useMemo(
+    () => ({
+      beds: beds.map(({ name, weightG, timeH, timeM, watts, filamentId, piecesInBed, safetyMarginPercent }) => ({
+        name,
+        weightG,
+        timeH,
+        timeM,
+        watts,
+        filamentId: filamentId || undefined,
+        piecesInBed,
+        safetyMarginPercent,
+      })),
+      kwhRate,
+      laborHours,
+      hourlyRate,
+      extras,
+      paintedByHand,
+      paintCost,
+      marketplaceFee,
+      marginPercent,
+      quantity: 1,
+    }),
+    [beds, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, marketplaceFee, marginPercent]
+  );
+
   const missingFilament = beds.some((b) => !b.filamentId);
 
   // Snapshot estável dos insumos selecionados aqui — só muda quando o usuário
@@ -377,22 +405,11 @@ export default function CalculatorPage() {
         <div className="space-y-6">
           <GlassCard padding="lg" className="space-y-3">
             <label className="block text-xs text-text-muted">Nome do produto</label>
-
-            <div className="glass-card flex gap-1 p-1">
-              <button
-                type="button"
-                className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white sm:min-h-0"
-              >
-                Produto já cadastrado
-              </button>
-              <button
-                type="button"
-                onClick={() => setNewProductModalOpen(true)}
-                className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary sm:min-h-0"
-              >
-                Cadastrar Produto
-              </button>
-            </div>
+            <p className="-mt-2 text-[11px] text-text-muted">
+              Selecione um produto já cadastrado pra recarregar a receita (peso/tempo/filamento) e gerar um novo
+              pedido ou recalcular o preço. Pra cadastrar um produto novo, preencha a calculadora abaixo e use o
+              botão &quot;Cadastrar Produto&quot; no resumo, ao final.
+            </p>
 
             <select
               value={selectedProductId}
@@ -809,6 +826,14 @@ export default function CalculatorPage() {
               <NeonButton variant="outline" className="w-full">
                 <Link2 size={16} /> Gerar Link de Cobrança
               </NeonButton>
+              <NeonButton
+                variant="outline"
+                className="w-full"
+                onClick={() => setNewProductModalOpen(true)}
+                disabled={missingFilament}
+              >
+                <PackagePlus size={16} /> Cadastrar Produto
+              </NeonButton>
             </div>
             {missingFilament && (
               <p className="text-center text-[11px] text-amber-400">
@@ -840,6 +865,10 @@ export default function CalculatorPage() {
         open={newProductModalOpen}
         onClose={() => setNewProductModalOpen(false)}
         onCreated={handleNewProductCreated}
+        initialName={projectName}
+        initialCostPrice={calc.costPerUnit}
+        initialSalePrice={calc.pricePerUnit}
+        calcInputs={calcInputsForProduct}
       />
       <FilamentModal
         open={filamentModalBedId !== null}
