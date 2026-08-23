@@ -865,19 +865,6 @@ export default function CalculatorPage() {
               <SummaryRow label="Filamento" value={formatBRL(calc.filamentCost)} />
               <SummaryRow label="Energia" value={formatBRL(calc.energyCost)} />
               {suppliesCost > 0 && <SummaryRow label="Insumos" value={formatBRL(calc.suppliesCost)} />}
-              <div className="my-2 h-px bg-border-glass" />
-              <SummaryRow label="Custo por Unidade" value={formatBRL(calc.costPerUnit)} />
-              {selectedRiskTier ? (
-                <>
-                  <SummaryRow label="Preço com margem" value={formatBRL(calc.pricePerUnitBeforeRisk)} />
-                  <SummaryRow
-                    label={`+${selectedRiskTier.extra_margin_percent}% risco ${selectedRiskTier.name}`}
-                    value={formatBRL(calc.pricePerUnit)}
-                  />
-                </>
-              ) : (
-                <SummaryRow label="Preço de Venda Sugerido" value={formatBRL(calc.pricePerUnit)} />
-              )}
             </div>
 
             <div className="space-y-2 border-t border-border-glass pt-4 text-sm">
