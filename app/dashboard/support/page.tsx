@@ -5,7 +5,7 @@ import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
-import { MessageCircle, HelpCircle, Star } from "lucide-react";
+import { MessageCircle, HelpCircle, Star, Ticket } from "lucide-react";
 
 const SUPPORT_WHATSAPP_NUMBER = "5531971983044";
 
@@ -16,7 +16,8 @@ export default function SupportPage() {
     <>
       <Topbar title="Suporte" />
       <main className="px-6 py-8 md:px-8">
-        <GlassCard padding="lg" className="mx-auto max-w-lg space-y-5 text-center">
+        <div className="mx-auto grid max-w-3xl gap-6 sm:grid-cols-2">
+        <GlassCard padding="lg" className="space-y-5 text-center">
           {paid ? (
             <>
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-green">
@@ -63,6 +64,24 @@ export default function SupportPage() {
             </>
           )}
         </GlassCard>
+
+        <GlassCard padding="lg" className="space-y-5 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">
+            <Ticket size={26} />
+          </div>
+          <div>
+            <h2 className="font-display text-xl">Abrir Chamado</h2>
+            <p className="mt-2 text-sm text-text-secondary">
+              Prefere deixar registrado? Abra um chamado e acompanhe a resposta por aqui, no seu ritmo.
+            </p>
+          </div>
+          <Link href="/dashboard/support/tickets" className="block">
+            <NeonButton className="w-full justify-center">
+              <Ticket size={16} /> Meus Chamados
+            </NeonButton>
+          </Link>
+        </GlassCard>
+        </div>
 
         <GlassCard padding="lg" className="mx-auto mt-6 max-w-lg space-y-3 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">

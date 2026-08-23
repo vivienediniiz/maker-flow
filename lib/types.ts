@@ -40,6 +40,35 @@ export interface Profile {
   store_enabled: boolean;
   store_slug: string | null;
   store_headline: string | null;
+  is_admin: boolean;
+}
+
+export type SupportTicketStatus = "open" | "closed";
+export type SupportSenderType = "customer" | "admin";
+
+export interface SupportTicket {
+  id: string;
+  user_id: string;
+  subject: string;
+  status: SupportTicketStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupportTicketAdminView extends SupportTicket {
+  customer_name: string | null;
+  customer_email: string | null;
+  last_sender_type: SupportSenderType | null;
+  last_message_at: string | null;
+}
+
+export interface SupportTicketMessage {
+  id: string;
+  ticket_id: string;
+  sender_type: SupportSenderType;
+  sender_id: string | null;
+  message: string;
+  created_at: string;
 }
 
 export interface StoreCheckout {
