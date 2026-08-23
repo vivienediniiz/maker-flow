@@ -65,7 +65,6 @@ export default function CalculatorPage() {
   const supabase = createClient();
   const [selectedProductId, setSelectedProductId] = useState("");
   const [projectName, setProjectName] = useState("");
-  const [products, setProducts] = useState<Product[]>([]);
   const [marketplaces, setMarketplaces] = useState<{ name: string; fee: number }[]>([]);
   const [selectedMarketplace, setSelectedMarketplace] = useState("");
   const [beds, setBeds] = useState<PrintBed[]>([newBed(1)]);
@@ -94,7 +93,6 @@ export default function CalculatorPage() {
   const [quoteModalOpen, setQuoteModalOpen] = useState(false);
 
   useEffect(() => {
-    loadProducts();
     loadMarketplaces();
     loadSupplies();
     loadFilaments();
@@ -102,15 +100,6 @@ export default function CalculatorPage() {
     loadCalculatorSettings();
     loadRiskTiers();
   }, []);
-
-  async function loadProducts() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data } = await supabase.from("products").select("*").eq("user_id", user.id).order("name");
-    setProducts((data as Product[]) ?? []);
-  }
 
   async function loadMarketplaces() {
     const {
@@ -214,46 +203,8 @@ export default function CalculatorPage() {
     if (mp) setMarketplaceFee(mp.fee);
   }
 
-  function handleSelectProduct(productId: string) {
-    setSelectedProductId(productId);
-    const product = products.find((p) => p.id === productId);
-    if (!product) return;
-
-    setProjectName(product.name);
-
-    // Não recarrega "Quantidade de Produtos Finais" — isso é uma decisão de
-    // pedido (quantas unidades quero agora), não uma propriedade da receita
-    // do produto, então o que já estiver na tela permanece.
-    const ci = product.calc_inputs;
-    if (ci) {
-      setBeds(
-        ci.beds.map((b) => ({
-          id: crypto.randomUUID(),
-          name: b.name,
-          weightG: b.weightG,
-          timeH: b.timeH,
-          timeM: b.timeM,
-          watts: b.watts,
-          filamentId: b.filamentId ?? "",
-          piecesInBed: b.piecesInBed ?? 1,
-          printerAssetId: "",
-          safetyMarginPercent: b.safetyMarginPercent ?? 0,
-        }))
-      );
-      setKwhRate(ci.kwhRate);
-      setLaborHours(ci.laborHours);
-      setHourlyRate(ci.hourlyRate);
-      setExtras(ci.extras);
-      setPaintedByHand(ci.paintedByHand);
-      setPaintCost(ci.paintCost);
-      setMarketplaceFee(ci.marketplaceFee);
-      setMarginPercent(Math.min(Math.max(ci.marginPercent, 0), 99));
-    }
-  }
-
-  /** Produto criado direto do toggle "Cadastrar Produto" — só entra como referência/vínculo, não mexe no cálculo já feito na tela. */
+  /** Vínculo pro PDF de orçamento saber a qual produto recém-cadastrado se referir. */
   function handleNewProductCreated(product: Product) {
-    setProducts((prev) => [...prev, product].sort((a, b) => a.name.localeCompare(b.name)));
     setSelectedProductId(product.id);
     setProjectName(product.name);
     setNewProductModalOpen(false);
@@ -405,31 +356,12 @@ export default function CalculatorPage() {
         <div className="space-y-6">
           <GlassCard padding="lg" className="space-y-3">
             <label className="block text-xs text-text-muted">Nome do produto</label>
-            <p className="-mt-2 text-[11px] text-text-muted">
-              Selecione um produto já cadastrado pra recarregar a receita (peso/tempo/filamento) e gerar um novo
-              pedido ou recalcular o preço. Pra cadastrar um produto novo, preencha a calculadora abaixo e use o
-              botão &quot;Cadastrar Produto&quot; no resumo, ao final.
-            </p>
-
-            <select
-              value={selectedProductId}
-              onChange={(e) => handleSelectProduct(e.target.value)}
+            <input
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
               className="glass-input w-full text-base"
-            >
-              <option value="" className="bg-bg-raised">
-                {products.length === 0 ? "Nenhum produto cadastrado ainda" : "Selecione..."}
-              </option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id} className="bg-bg-raised">
-                  {p.name} {!p.calc_inputs && "(sem dados de cálculo salvos)"}
-                </option>
-              ))}
-            </select>
-            {projectName && (
-              <p className="text-[11px] text-text-muted">
-                Produto selecionado: <span className="text-text-secondary">{projectName}</span>
-              </p>
-            )}
+              placeholder="Ex: Vaso Geométrico Torcido"
+            />
           </GlassCard>
 
           {/* Print beds */}
@@ -826,14 +758,6 @@ export default function CalculatorPage() {
               <NeonButton variant="outline" className="w-full">
                 <Link2 size={16} /> Gerar Link de Cobrança
               </NeonButton>
-              <NeonButton
-                variant="outline"
-                className="w-full"
-                onClick={() => setNewProductModalOpen(true)}
-                disabled={missingFilament}
-              >
-                <PackagePlus size={16} /> Cadastrar Produto
-              </NeonButton>
             </div>
             {missingFilament && (
               <p className="text-center text-[11px] text-amber-400">
@@ -843,6 +767,25 @@ export default function CalculatorPage() {
           </GlassCard>
         </div>
       </main>
+
+      <div className="px-6 pb-8 md:px-8">
+        <GlassCard padding="lg" className="flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-between sm:text-left">
+          <div>
+            <h3 className="font-display text-lg">Gostou do resultado?</h3>
+            <p className="mt-1 text-sm text-text-secondary">
+              Salve essa receita e o preço calculado como um produto — pra reaproveitar depois, sem refazer a conta.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col items-center gap-1.5 sm:items-end">
+            <NeonButton className="w-full sm:w-auto" onClick={() => setNewProductModalOpen(true)} disabled={missingFilament}>
+              <PackagePlus size={18} /> Cadastrar Produto
+            </NeonButton>
+            {missingFilament && (
+              <p className="text-[11px] text-amber-400">Selecione um filamento em cada mesa pra liberar.</p>
+            )}
+          </div>
+        </GlassCard>
+      </div>
 
       <div className="px-6 pb-8 md:px-8">
         <CalculatorTips />
