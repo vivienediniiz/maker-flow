@@ -4,8 +4,8 @@ import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-const DEFAULT_SPLASH_MS = 3000;
-const LOGOUT_SPLASH_MS = 2000;
+const DEFAULT_SPLASH_MS = 1200;
+const LOGOUT_SPLASH_MS = 800;
 
 // Tela de abertura do app: mostra a logo por alguns segundos e segue pro
 // destino certo — igual a tela de lançamento de qualquer app nativo.

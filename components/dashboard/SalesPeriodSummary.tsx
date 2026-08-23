@@ -8,24 +8,22 @@ import { QUOTE_SOURCE_LABELS, QUOTE_SOURCE_BADGE_STYLES, QUOTE_SOURCE_ICONS } fr
 import { Loader2 } from "lucide-react";
 import type { Quote, QuoteSource } from "@/lib/types";
 
-type PeriodKey = "today" | "7d" | "30d" | "month";
+type PeriodKey = "today" | "7d" | "month";
 
 const PERIOD_OPTIONS: { key: PeriodKey; label: string }[] = [
   { key: "today", label: "Hoje" },
   { key: "7d", label: "7 dias" },
-  { key: "30d", label: "30 dias" },
   { key: "month", label: "Este mês" },
 ];
 
 // Mercado Pago escondido aqui (segue o mesmo tratamento da tela de Integrações),
 // mas os totais acima (Total Vendido/Custos/Lucro Real) continuam somando tudo.
-const SOURCES: QuoteSource[] = ["mercado_livre", "shopee", "tiktok_shop", "manual"];
+const SOURCES: QuoteSource[] = ["mercado_livre", "shopee", "tiktok_shop", "manual", "loja_online"];
 
 function periodStart(period: PeriodKey): Date {
   const now = new Date();
   if (period === "today") return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if (period === "7d") return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  if (period === "30d") return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   return new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
