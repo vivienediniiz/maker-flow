@@ -100,7 +100,9 @@ export function calculateCost(input: CalcInput): CalcResult {
   // já que nesse ponto o preço tenderia ao infinito — a UI restringe a faixa (0-99%) via slider.
   const clampedMargin = Math.min(Math.max(marginPercent, 0), 99);
   const priceWithMargin = costPerUnit / (1 - clampedMargin / 100);
-  const pricePerUnitBeforeRisk = marketplaceFee > 0 ? priceWithMargin / (1 - marketplaceFee / 100) : priceWithMargin;
+  // Mesma proteção da margem: taxa >= 100% faz o preço virar Infinity/negativo.
+  const clampedFee = Math.min(Math.max(marketplaceFee, 0), 99);
+  const pricePerUnitBeforeRisk = clampedFee > 0 ? priceWithMargin / (1 - clampedFee / 100) : priceWithMargin;
   const pricePerUnit = pricePerUnitBeforeRisk * (1 + riskMarginPercent / 100);
 
   const qty = Math.max(quantity, 1);

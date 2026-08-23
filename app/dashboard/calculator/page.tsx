@@ -700,11 +700,16 @@ export default function CalculatorPage() {
                 </select>
                 <input
                   type="number"
+                  min={0}
+                  max={99}
                   value={marketplaceFee}
-                  onChange={(e) => setMarketplaceFee(Number(e.target.value))}
+                  onChange={(e) => setMarketplaceFee(Math.min(Math.max(Number(e.target.value), 0), 99))}
                   className="glass-input w-full"
                   placeholder="Ajustar % manualmente"
                 />
+                {marketplaceFee >= 99 && (
+                  <p className="text-[11px] text-amber-400">Taxa limitada a 99% — acima disso o preço não faz sentido matematicamente.</p>
+                )}
               </div>
             </Field>
 
