@@ -6,7 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
-import { PRINTER_ASSET_STATUS_LABELS, PRINTER_MODEL_OPTIONS } from "@/lib/printerAssets";
+import { PRINTER_ASSET_STATUS_LABELS, PRINTER_MODEL_OPTIONS, PRINTER_MODEL_POWER_W } from "@/lib/printerAssets";
 import type { PrinterAsset, PrinterAssetStatus, Branch } from "@/lib/types";
 
 const MODEL_OPTION_SET: readonly string[] = PRINTER_MODEL_OPTIONS;
@@ -66,7 +66,14 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
     setWarrantyExpiryDate(asset?.warranty_expiry_date ?? "");
     setStatus(asset?.status ?? "active");
     setEstimatedUsageHours(asset ? String(asset.estimated_usage_hours) : "0");
-    setPowerConsumptionW(asset?.power_consumption_w != null ? String(asset.power_consumption_w) : "");
+    if (asset?.power_consumption_w != null) {
+      setPowerConsumptionW(String(asset.power_consumption_w));
+    } else if (!asset) {
+      const suggested = PRINTER_MODEL_POWER_W[PRINTER_MODEL_OPTIONS[0] as keyof typeof PRINTER_MODEL_POWER_W];
+      setPowerConsumptionW(suggested != null ? String(suggested) : "");
+    } else {
+      setPowerConsumptionW("");
+    }
     setNotes(asset?.notes ?? "");
     setError(null);
     loadBranches();
@@ -189,7 +196,17 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
           <label className="mb-1.5 block text-xs text-text-muted">Modelo</label>
           <select
             value={modelOption}
-            onChange={(e) => setModelOption(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setModelOption(next);
+              // Só sugere o consumo se o campo ainda estiver vazio -- nunca
+              // sobrescreve um valor que o usuário já digitou (à mão ou de
+              // uma edição anterior).
+              if (!powerConsumptionW) {
+                const suggested = PRINTER_MODEL_POWER_W[next as keyof typeof PRINTER_MODEL_POWER_W];
+                if (suggested != null) setPowerConsumptionW(String(suggested));
+              }
+            }}
             className="glass-input w-full"
           >
             {PRINTER_MODEL_OPTIONS.map((m) => (
@@ -329,8 +346,13 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
               value={powerConsumptionW}
               onChange={(e) => setPowerConsumptionW(e.target.value)}
               className="glass-input w-full"
-              placeholder="Ex: 350"
+              placeholder="Ex: 120"
             />
+            {PRINTER_MODEL_POWER_W[modelOption as keyof typeof PRINTER_MODEL_POWER_W] != null && (
+              <p className="mt-1 text-[11px] text-text-muted">
+                Sugestão pra esse modelo — ajuste se souber o consumo real da sua máquina.
+              </p>
+            )}
           </div>
         </div>
 

@@ -25,6 +25,30 @@ export const PRINTER_MODEL_OPTIONS = [
   "Outro",
 ] as const;
 
+// Consumo médio estimado (W) durante impressão, não a potência máxima da
+// fonte — é o que entra de fato na conta de energia (W × tempo × tarifa).
+// Só modelos internacionais bem documentados; marcas regionais (Voolt3D,
+// GTMax3D) ficam de fora por falta de dado confiável — usuário preenche à mão.
+export const PRINTER_MODEL_POWER_W: Partial<Record<(typeof PRINTER_MODEL_OPTIONS)[number], number>> = {
+  "Bambu Lab A1 Mini": 90,
+  "Bambu Lab A1": 110,
+  "Bambu Lab P1P": 120,
+  "Bambu Lab P1S": 140,
+  "Bambu Lab X1": 170,
+  "Bambu Lab X1 Carbon": 170,
+  "Creality Ender 3 V3": 120,
+  "Creality Ender 3 S1": 130,
+  "Creality K1": 170,
+  "Creality K1 Max": 180,
+  "Creality CR-10": 170,
+  "Elegoo Neptune 4": 120,
+  "Elegoo Neptune 4 Pro": 130,
+  "Anycubic Kobra 2": 120,
+  "Anycubic Kobra 3": 130,
+  "Prusa MK4": 110,
+  "Prusa Mini+": 80,
+};
+
 export const PRINTER_ASSET_STATUS_LABELS: Record<PrinterAssetStatus, string> = {
   active: "Ativa",
   maintenance: "Em Manutenção",
