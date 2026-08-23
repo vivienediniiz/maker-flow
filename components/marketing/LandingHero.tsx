@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, DollarSign, Printer, Package, Rocket, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BrowserFrame } from "./BrowserFrame";
 
 const PHRASES: { title: string; subtitle: string; icon: LucideIcon }[] = [
   {
@@ -136,18 +135,6 @@ export function LandingHero() {
         <p className="mt-3 text-xs text-text-muted">
           Sem cartão de crédito · 14 dias de acesso completo
         </p>
-
-        {/* Prova visual: dashboard real dentro de um mockup de navegador */}
-        <div className="mx-auto mt-16 max-w-4xl text-left">
-          <BrowserFrame
-            src="/landing/dashboard.png"
-            alt="Dashboard do StudioMaker com resumo de vendas, metas e evolução financeira"
-            width={1895}
-            height={905}
-            sizes="(max-width: 896px) 100vw, 896px"
-            priority
-          />
-        </div>
       </main>
     </div>
   );

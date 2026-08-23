@@ -21,6 +21,7 @@ import { GlassAccordion } from "@/components/ui/GlassAccordion";
 import { AppLogo } from "@/components/ui/AppLogo";
 import { BrowserFrame } from "@/components/marketing/BrowserFrame";
 import { LandingHero } from "@/components/marketing/LandingHero";
+import { HowItWorksSection } from "@/components/marketing/HowItWorksSection";
 import { PLANS } from "@/lib/plans";
 
 const PROBLEMS = [
@@ -51,13 +52,6 @@ const PROBLEMS = [
 ];
 
 const FEATURES = [
-  {
-    icon: Calculator,
-    title: "Calculadora Inteligente",
-    description:
-      "Some peso, tempo, energia e insumos de várias mesas de impressão de uma vez, defina sua margem e o StudioMaker calcula o custo por unidade e o preço de venda sugerido na hora. Gere o orçamento em PDF e mande o link de cobrança direto pro cliente.",
-    image: { src: "/landing/calculadora.jpg", alt: "Tela da Calculadora Inteligente com mesas de impressão e resumo de custo por unidade", width: 1887, height: 902 },
-  },
   {
     icon: ShoppingBag,
     title: "Vendas Multicanal",
@@ -196,6 +190,8 @@ export default function HomePage() {
       </header>
 
       <LandingHero />
+
+      <HowItWorksSection />
 
       {/* O Problema */}
       <section className="mx-auto mt-28 max-w-5xl px-6 md:px-12">
