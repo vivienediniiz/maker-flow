@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Save, Plus, Trash2, Loader2 } from "lucide-react";
 import { RiskTiersManager } from "@/components/dashboard/RiskTiersManager";
 import { PdfAppearanceSettings } from "@/components/dashboard/PdfAppearanceSettings";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 
 const SECTIONS = [
   { id: "energy", label: "Tarifa de Luz" },
@@ -155,15 +156,12 @@ export default function SettingsPage() {
             <h3 className="font-display text-lg">Tarifa de Luz</h3>
             <label className="block max-w-xs">
               <span className="mb-1.5 block text-xs text-text-muted">Tarifa (R$/kWh)</span>
-              <input
-                type="number"
-                step="0.01"
-                value={electricityKwhRate || ""}
-                onChange={(e) => {
-                  setElectricityKwhRate(Number(e.target.value));
+              <CurrencyInput
+                value={String(electricityKwhRate)}
+                onChange={(v) => {
+                  setElectricityKwhRate(v === "" ? 0 : Number(v));
                   markDirty();
                 }}
-                className="glass-input w-full"
               />
             </label>
             <p className="max-w-md text-[11px] leading-relaxed text-text-muted">
@@ -238,14 +236,12 @@ export default function SettingsPage() {
             <h3 className="font-display text-lg">Mão de Obra</h3>
             <label className="block max-w-xs">
               <span className="mb-1.5 block text-xs text-text-muted">Valor hora padrão (R$)</span>
-              <input
-                type="number"
-                value={hourlyWorkRate || ""}
-                onChange={(e) => {
-                  setHourlyWorkRate(Number(e.target.value));
+              <CurrencyInput
+                value={String(hourlyWorkRate)}
+                onChange={(v) => {
+                  setHourlyWorkRate(v === "" ? 0 : Number(v));
                   markDirty();
                 }}
-                className="glass-input w-full"
               />
             </label>
             <p className="max-w-md text-[11px] leading-relaxed text-text-muted">
