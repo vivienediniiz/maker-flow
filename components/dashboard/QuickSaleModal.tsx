@@ -150,7 +150,7 @@ export function QuickSaleModal({
               type="number"
               min={1}
               max={maxQuantity}
-              value={quantity}
+              value={quantity || ""}
               onChange={(e) => setQuantity(Number(e.target.value))}
               className="glass-input w-full"
             />

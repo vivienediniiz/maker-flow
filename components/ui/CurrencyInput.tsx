@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface CurrencyInputProps {
@@ -38,8 +38,15 @@ export function CurrencyInput({
     const cents = parseValueToCents(value);
     return cents != null ? centsToDisplay(cents) : "";
   });
+  // Enquanto o campo está focado, quem manda no texto exibido é o próprio
+  // usuário digitando — não o valor vindo de fora. Sem isso, apagar o campo
+  // (que normalmente dispara onChange("") e o pai converte pra 0) fazia o
+  // "0,00" reaparecer sozinho no meio do apagar, obrigando a selecionar tudo
+  // e sobrescrever em vez de só apagar e digitar de novo.
+  const focused = useRef(false);
 
   useEffect(() => {
+    if (focused.current) return;
     const cents = parseValueToCents(value);
     setDisplay(cents != null ? centsToDisplay(cents) : "");
   }, [value]);
@@ -65,6 +72,14 @@ export function CurrencyInput({
       disabled={disabled}
       value={display}
       onChange={handleChange}
+      onFocus={() => {
+        focused.current = true;
+      }}
+      onBlur={() => {
+        focused.current = false;
+        const cents = parseValueToCents(value);
+        setDisplay(cents != null ? centsToDisplay(cents) : "");
+      }}
       className={cn("glass-input w-full", className)}
       placeholder={placeholder}
     />

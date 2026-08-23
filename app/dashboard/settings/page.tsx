@@ -158,7 +158,7 @@ export default function SettingsPage() {
               <input
                 type="number"
                 step="0.01"
-                value={electricityKwhRate}
+                value={electricityKwhRate || ""}
                 onChange={(e) => {
                   setElectricityKwhRate(Number(e.target.value));
                   markDirty();
@@ -191,7 +191,7 @@ export default function SettingsPage() {
                         <div className="flex items-center gap-1">
                           <input
                             type="number"
-                            value={mp.fee}
+                            value={mp.fee || ""}
                             onChange={(e) => updateFee(i, Number(e.target.value))}
                             className="glass-input w-20"
                           />
@@ -240,7 +240,7 @@ export default function SettingsPage() {
               <span className="mb-1.5 block text-xs text-text-muted">Valor hora padrão (R$)</span>
               <input
                 type="number"
-                value={hourlyWorkRate}
+                value={hourlyWorkRate || ""}
                 onChange={(e) => {
                   setHourlyWorkRate(Number(e.target.value));
                   markDirty();

@@ -515,7 +515,7 @@ export default function CalculatorPage() {
                       type="number"
                       min={1}
                       value={bed.piecesInBed || ""}
-                      onChange={(e) => updateBed(bed.id, { piecesInBed: Math.max(1, Number(e.target.value)) })}
+                      onChange={(e) => updateBed(bed.id, { piecesInBed: Number(e.target.value) })}
                       className="glass-input w-full"
                     />
                   </Field>
@@ -586,7 +586,7 @@ export default function CalculatorPage() {
                 <CurrencyInput value={String(kwhRate)} onChange={(v) => setKwhRate(v === "" ? 0 : Number(v))} />
               </Field>
               <Field label="Mão de obra (h)">
-                <input type="number" step="0.1" value={laborHours} onChange={(e) => setLaborHours(Number(e.target.value))} className="glass-input w-full" />
+                <input type="number" step="0.1" min={0} value={laborHours || ""} onChange={(e) => setLaborHours(Number(e.target.value))} className="glass-input w-full" />
               </Field>
               <Field label="Valor hora (R$)">
                 <CurrencyInput value={String(hourlyRate)} onChange={(v) => setHourlyRate(v === "" ? 0 : Number(v))} />
@@ -702,7 +702,7 @@ export default function CalculatorPage() {
                   type="number"
                   min={0}
                   max={99}
-                  value={marketplaceFee}
+                  value={marketplaceFee || ""}
                   onChange={(e) => setMarketplaceFee(Math.min(Math.max(Number(e.target.value), 0), 99))}
                   className="glass-input w-full"
                   placeholder="Ajustar % manualmente"
@@ -747,8 +747,8 @@ export default function CalculatorPage() {
               <input
                 type="number"
                 min={1}
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                value={quantity || ""}
+                onChange={(e) => setQuantity(Number(e.target.value))}
                 className="glass-input w-full"
               />
             </Field>

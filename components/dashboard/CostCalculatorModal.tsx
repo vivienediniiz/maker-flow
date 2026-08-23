@@ -363,7 +363,7 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
                 type="number"
                 step="0.1"
                 min={0}
-                value={laborHours}
+                value={laborHours || ""}
                 onChange={(e) => setLaborHours(Number(e.target.value))}
                 className="glass-input w-full"
               />
@@ -478,7 +478,7 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
                 type="number"
                 min={0}
                 max={99}
-                value={marketplaceFee}
+                value={marketplaceFee || ""}
                 onChange={(e) => setMarketplaceFee(Math.min(Math.max(Number(e.target.value), 0), 99))}
                 className="glass-input w-full"
                 placeholder="Ajustar % manualmente"
