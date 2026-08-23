@@ -25,6 +25,7 @@ import {
   Headset,
   Gift,
   Store,
+  ShieldCheck,
 } from "lucide-react";
 
 const NAV = [
@@ -51,12 +52,16 @@ interface SidebarProps {
   studioName?: string;
   avatarUrl?: string | null;
   tier: SubscriptionTier;
+  isAdmin?: boolean;
 }
 
-export function Sidebar({ studioName, avatarUrl, tier }: SidebarProps) {
+export function Sidebar({ studioName, avatarUrl, tier, isAdmin }: SidebarProps) {
   const pathname = usePathname();
   const planLabel = planDisplayLabel(tier);
   const { open, close } = useMobileSidebar();
+  // Só existe pra quem tem profiles.is_admin = true — em qualquer outra
+  // conta este item nem chega a renderizar.
+  const navItems = isAdmin ? [...NAV, { href: "/admin/support", label: "Painel Admin", icon: ShieldCheck }] : NAV;
 
   return (
     <>
@@ -70,7 +75,7 @@ export function Sidebar({ studioName, avatarUrl, tier }: SidebarProps) {
       <AppLogo wrapperClassName="flex items-center gap-2 px-6 py-6" />
 
       <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-glass px-3">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {navItems.map(({ href, label, icon: Icon }) => {
           const active = href === "/dashboard" ? pathname === href : pathname?.startsWith(href);
           return (
             <Link

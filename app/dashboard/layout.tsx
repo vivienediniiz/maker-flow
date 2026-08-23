@@ -16,7 +16,7 @@ async function getCurrentProfile() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "full_name, avatar_url, subscription_tier, subscription_status, billing_cycle, trial_ends_at, payment_method, paid_until"
+      "full_name, avatar_url, subscription_tier, subscription_status, billing_cycle, trial_ends_at, payment_method, paid_until, is_admin"
     )
     .eq("id", user.id)
     .single();
@@ -63,7 +63,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <SubscriptionProvider tier={tier}>
       <MobileSidebarProvider>
         <div className="min-h-screen">
-          <Sidebar studioName={profile?.full_name} avatarUrl={profile?.avatar_url} tier={tier} />
+          <Sidebar
+            studioName={profile?.full_name}
+            avatarUrl={profile?.avatar_url}
+            tier={tier}
+            isAdmin={profile?.is_admin ?? false}
+          />
           <div className="md:pl-72">
             {isPix && pixState === "grace" ? (
               <PixRenewalBanner paidUntil={profile!.paid_until} />
