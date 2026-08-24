@@ -22,6 +22,7 @@ import { AppLogo } from "@/components/ui/AppLogo";
 import { BrowserFrame } from "@/components/marketing/BrowserFrame";
 import { LandingHero } from "@/components/marketing/LandingHero";
 import { HowItWorksSection } from "@/components/marketing/HowItWorksSection";
+import { StoreShowcaseSection } from "@/components/marketing/StoreShowcaseSection";
 import { PLANS } from "@/lib/plans";
 
 const PROBLEMS = [
@@ -192,6 +193,8 @@ export default function HomePage() {
       <LandingHero />
 
       <HowItWorksSection />
+
+      <StoreShowcaseSection />
 
       {/* O Problema */}
       <section className="mx-auto mt-28 max-w-5xl px-6 md:px-12">
