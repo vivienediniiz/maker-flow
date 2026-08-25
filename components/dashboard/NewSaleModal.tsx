@@ -582,21 +582,26 @@ export function NewSaleModal({
       <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto scrollbar-glass pr-1">
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Produto</label>
-          <div className="glass-card mb-2 flex gap-1 p-1">
-            <button
-              type="button"
-              className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white sm:min-h-0"
-            >
-              Produto já cadastrado
-            </button>
-            <button
-              type="button"
-              onClick={() => setProductModalOpen(true)}
-              className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary sm:min-h-0"
-            >
-              Cadastrar Produto
-            </button>
-          </div>
+          {/* Vindo da Calculadora, o produto já é obrigatório e vem pré-vinculado
+              (initialProductId) — cadastrar um outro aqui dentro não faz sentido
+              nesse fluxo. Fica só em Vendas > Nova Venda Manual (entrada direta). */}
+          {initialProductId === undefined && (
+            <div className="glass-card mb-2 flex gap-1 p-1">
+              <button
+                type="button"
+                className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white sm:min-h-0"
+              >
+                Produto já cadastrado
+              </button>
+              <button
+                type="button"
+                onClick={() => setProductModalOpen(true)}
+                className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary sm:min-h-0"
+              >
+                Cadastrar Produto
+              </button>
+            </div>
+          )}
 
           <select
             value={selectedProductId}
