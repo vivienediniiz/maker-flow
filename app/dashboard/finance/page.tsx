@@ -19,12 +19,11 @@ import { QUOTE_SOURCE_LABELS } from "@/lib/quotes";
 import { DollarSign, TrendingDown, TrendingUp, XCircle, Download, FileText, Loader2, Plus, Pencil, Trash2, Repeat } from "lucide-react";
 import type { Quote, ExtraPurchase, FixedExpense, QuoteSource } from "@/lib/types";
 
-type PeriodKey = "today" | "7d" | "30d" | "month";
+type PeriodKey = "today" | "7d" | "month";
 
 const PERIOD_OPTIONS: { key: PeriodKey; label: string }[] = [
   { key: "today", label: "Hoje" },
   { key: "7d", label: "7 dias" },
-  { key: "30d", label: "Últimos 30 Dias" },
   { key: "month", label: "Este mês" },
 ];
 
@@ -41,7 +40,6 @@ function periodStart(period: PeriodKey): Date {
   const now = new Date();
   if (period === "today") return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if (period === "7d") return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  if (period === "30d") return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   return new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
@@ -71,7 +69,7 @@ function FinancePageContent() {
   const [expenses, setExpenses] = useState<ExtraPurchase[]>([]);
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<PeriodKey>("30d");
+  const [period, setPeriod] = useState<PeriodKey>("month");
   const [source, setSource] = useState<"all" | QuoteSource>("all");
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [fixedExpenseModalOpen, setFixedExpenseModalOpen] = useState(false);
@@ -137,7 +135,7 @@ function FinancePageContent() {
   const custosDespesas = periodExpenses.reduce((s, e) => s + e.amount, 0);
   // Despesa fixa é recorrente mensal — só entra no cálculo quando o filtro é
   // "Este mês" (conta uma vez, o valor cheio); nos outros períodos (Hoje/7
-  // dias/30 dias) não representa fielmente uma fração do mês, então não conta.
+  // dias) não representa fielmente uma fração do mês, então não conta.
   const custosFixos = period === "month" ? fixedExpenses.filter((e) => e.active).reduce((s, e) => s + e.amount, 0) : 0;
   const custosTotais = custosVendas + custosDespesas + custosFixos;
   const lucroLiquidoReal = receitaBruta - custosTotais;
