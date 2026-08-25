@@ -122,6 +122,11 @@ export default function CalculatorPage() {
   const [draftJustSaved, setDraftJustSaved] = useState(false);
   const [draftsListOpen, setDraftsListOpen] = useState(false);
 
+  /** Vincula/atualiza automaticamente o produto calculado ao criar o pedido — desliga pra encomendas avulsas que não devem virar catálogo. */
+  const [saveAsProduct, setSaveAsProduct] = useState(true);
+  const [creatingOrder, setCreatingOrder] = useState(false);
+  const [orderProductError, setOrderProductError] = useState<string | null>(null);
+
   useEffect(() => {
     loadMarketplaces();
     loadSupplies();
@@ -252,6 +257,70 @@ export default function CalculatorPage() {
     setSelectedProductId(product.id);
     setProjectName(product.name);
     setNewProductModalOpen(false);
+  }
+
+  /**
+   * Cadastra (ou, se já existe um produto desta sessão, atualiza) o produto
+   * calculado antes de abrir "Criar Pedido" — assim a venda já nasce vinculada
+   * ao catálogo, sem pedir pra buscar/cadastrar de novo dentro do modal de
+   * venda. Reaproveita o mesmo `selectedProductId` em cliques repetidos na
+   * mesma sessão, em vez de criar um produto duplicado a cada pedido.
+   */
+  async function ensureProductForOrder(): Promise<string | null> {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    if (selectedProductId) {
+      const { data, error } = await supabase
+        .from("products")
+        .update({
+          name: projectName || "Produto sem nome",
+          cost_price: calc.costPerUnit,
+          sale_price: calc.pricePerUnit,
+          calc_inputs: calcInputsForProduct,
+        })
+        .eq("id", selectedProductId)
+        .select()
+        .single();
+      if (error) return null;
+      return data.id as string;
+    }
+
+    const { data, error } = await supabase
+      .from("products")
+      .insert({
+        name: projectName || "Produto sem nome",
+        category: null,
+        description: null,
+        image_url: null,
+        cost_price: calc.costPerUnit,
+        sale_price: calc.pricePerUnit,
+        price_tiers: [],
+        user_id: user.id,
+        stock_quantity: 0,
+        calc_inputs: calcInputsForProduct,
+      })
+      .select()
+      .single();
+    if (error) return null;
+    setSelectedProductId(data.id);
+    return data.id as string;
+  }
+
+  async function handleCreateOrderClick() {
+    setOrderProductError(null);
+    if (saveAsProduct) {
+      setCreatingOrder(true);
+      const productId = await ensureProductForOrder();
+      setCreatingOrder(false);
+      if (!productId) {
+        setOrderProductError("Não foi possível salvar o produto — tente novamente.");
+        return;
+      }
+    }
+    setOrderModalOpen(true);
   }
 
   function addBed() {
@@ -1120,9 +1189,18 @@ export default function CalculatorPage() {
               )}
             </div>
 
+            <div className="flex items-center justify-between gap-2">
+              <Toggle checked={saveAsProduct} onChange={setSaveAsProduct} label="Salvar como produto reutilizável" />
+            </div>
+            {orderProductError && <p className="text-[11px] text-red-400">{orderProductError}</p>}
+
             <div className="space-y-2">
-              <NeonButton className="w-full" onClick={() => setOrderModalOpen(true)} disabled={actionsDisabled}>
-                <Rocket size={16} /> Criar Pedido
+              <NeonButton
+                className="w-full"
+                onClick={handleCreateOrderClick}
+                disabled={actionsDisabled || creatingOrder}
+              >
+                <Rocket size={16} /> {creatingOrder ? "Salvando produto..." : "Criar Pedido"}
               </NeonButton>
               <NeonButton variant="outline" className="w-full" onClick={() => setQuoteModalOpen(true)} disabled={actionsDisabled}>
                 <FileDown size={16} /> Gerar PDF de Orçamento
@@ -1184,6 +1262,7 @@ export default function CalculatorPage() {
         marginPercent={marginPercent}
         initialUsedFilaments={usedFilamentsForSale}
         initialUsedSupplies={usedSuppliesForSale}
+        initialProductId={saveAsProduct ? selectedProductId || undefined : undefined}
       />
       <NewProductModal
         open={newProductModalOpen}
