@@ -262,13 +262,13 @@ export interface CalcInputs {
     watts: number;
     filamentId?: string;
     /**
-     * "A" = lote de peças idênticas nesta mesa (divide o custo por `piecesInBed`);
+     * "A" = lote de peças idênticas nesta mesa (peso/tempo = total real da mesa, sem divisão);
      * "B" = peça única/montagem, mesa inteira conta como 1 contribuição (padrão);
      * "C" = mix de peças diferentes, custo rateado por peso entre `mixedItems`.
      * Ausente = "B".
      */
     modelType?: "A" | "B" | "C";
-    /** Divisor real do custo desta mesa quando `modelType === "A"`; só decorativo (ex: "≈ Xg por peça") nos demais modos. Default 1. */
+    /** Legado — não afeta mais o cálculo em nenhum modo. */
     piecesInBed?: number;
     /** Só usado quando `modelType === "C"`. */
     mixedItems?: { id: string; description: string; weightG: number; quantity: number }[];
@@ -290,6 +290,14 @@ export interface CalcInputs {
   marketplaceFee: number;
   marginPercent: number;
   quantity: number;
+}
+
+export interface CalculatorDraft {
+  id: string;
+  user_id: string;
+  name: string;
+  calc_inputs: CalcInputs;
+  updated_at: string;
 }
 
 export interface Product {

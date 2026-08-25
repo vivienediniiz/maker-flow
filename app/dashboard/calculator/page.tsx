@@ -17,8 +17,8 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { calculateCost, bedCostBreakdown, type CalcMixedItem } from "@/lib/costCalculator";
-import { Plus, Trash2, FileDown, Link2, Rocket, Info, Weight, Timer, Zap, TrendingUp, PackagePlus } from "lucide-react";
-import type { Product, Supply, Filament, PrinterAsset, RiskTier, CalcInputs } from "@/lib/types";
+import { Plus, Trash2, FileDown, Link2, Rocket, Info, Weight, Timer, Zap, TrendingUp, PackagePlus, Save, FolderOpen } from "lucide-react";
+import type { Product, Supply, Filament, PrinterAsset, RiskTier, CalcInputs, CalculatorDraft } from "@/lib/types";
 
 type BedModelType = "A" | "B" | "C";
 
@@ -115,6 +115,13 @@ export default function CalculatorPage() {
   const [newProductModalOpen, setNewProductModalOpen] = useState(false);
   const [quoteModalOpen, setQuoteModalOpen] = useState(false);
 
+  const [drafts, setDrafts] = useState<CalculatorDraft[]>([]);
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const [draftJustSaved, setDraftJustSaved] = useState(false);
+  const [draftsListOpen, setDraftsListOpen] = useState(false);
+
   useEffect(() => {
     loadMarketplaces();
     loadSupplies();
@@ -122,6 +129,7 @@ export default function CalculatorPage() {
     loadPrinterAssets();
     loadCalculatorSettings();
     loadRiskTiers();
+    loadDrafts();
   }, []);
 
   async function loadMarketplaces() {
@@ -194,6 +202,19 @@ export default function CalculatorPage() {
       .eq("user_id", user.id)
       .order("extra_margin_percent");
     setRiskTiers((data as RiskTier[]) ?? []);
+  }
+
+  async function loadDrafts() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from("calculator_drafts")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false });
+    setDrafts((data as CalculatorDraft[]) ?? []);
   }
 
   function handleSelectPrinterAsset(bedId: string, printerAssetId: string) {
@@ -352,6 +373,93 @@ export default function CalculatorPage() {
     [beds, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, marketplaceFee, marginPercent]
   );
 
+  // Igual ao snapshot de cima, mas preservando a Quantidade de Produtos Finais
+  // real — o rascunho é a sessão inteira da Calculadora, não uma receita de 1
+  // unidade só (esse forçar quantity:1 é específico do cadastro de produto).
+  const draftCalcInputs: CalcInputs = useMemo(
+    () => ({ ...calcInputsForProduct, quantity }),
+    [calcInputsForProduct, quantity]
+  );
+
+  async function handleSaveDraft() {
+    setSavingDraft(true);
+    setDraftError(null);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setSavingDraft(false);
+      setDraftError("Não foi possível identificar seu usuário.");
+      return;
+    }
+
+    if (currentDraftId) {
+      const { error } = await supabase
+        .from("calculator_drafts")
+        .update({ name: projectName, calc_inputs: draftCalcInputs, updated_at: new Date().toISOString() })
+        .eq("id", currentDraftId);
+      if (error) setDraftError("Não foi possível salvar o rascunho.");
+    } else {
+      const { data, error } = await supabase
+        .from("calculator_drafts")
+        .insert({ user_id: user.id, name: projectName, calc_inputs: draftCalcInputs })
+        .select()
+        .single();
+      if (error) setDraftError("Não foi possível salvar o rascunho.");
+      else setCurrentDraftId(data.id);
+    }
+
+    setSavingDraft(false);
+    await loadDrafts();
+    setDraftJustSaved(true);
+    setTimeout(() => setDraftJustSaved(false), 2500);
+  }
+
+  function handleLoadDraft(draft: CalculatorDraft) {
+    const inputs = draft.calc_inputs;
+    setProjectName(draft.name);
+    setBeds(
+      inputs.beds.length > 0
+        ? inputs.beds.map((b, i) => ({
+            id: crypto.randomUUID(),
+            name: b.name || `Mesa ${i + 1}`,
+            weightG: b.weightG,
+            timeH: b.timeH,
+            timeM: b.timeM,
+            watts: b.watts,
+            filamentId: b.filamentId ?? "",
+            modelType: b.modelType ?? "B",
+            piecesInBed: b.piecesInBed ?? 1,
+            mixedItems: b.mixedItems ?? [],
+            printerAssetId: "",
+            safetyMarginPercent: b.safetyMarginPercent ?? 0,
+          }))
+        : [newBed(1)]
+    );
+    setKwhRate(inputs.kwhRate);
+    setLaborHours(inputs.laborHours);
+    setHourlyRate(inputs.hourlyRate);
+    setExtras(inputs.extras);
+    setPaintedByHand(inputs.paintedByHand);
+    setPaintCost(inputs.paintCost);
+    setMarketplaceFee(inputs.marketplaceFee);
+    setMarginPercent(inputs.marginPercent);
+    setQuantity(inputs.quantity || 1);
+    setCurrentDraftId(draft.id);
+    setDraftsListOpen(false);
+  }
+
+  async function handleDeleteDraft(id: string) {
+    if (!confirm("Excluir este rascunho? Essa ação não pode ser desfeita.")) return;
+    setDrafts((prev) => prev.filter((d) => d.id !== id));
+    if (currentDraftId === id) setCurrentDraftId(null);
+    await supabase.from("calculator_drafts").delete().eq("id", id);
+  }
+
+  function handleNewDraft() {
+    setCurrentDraftId(null);
+  }
+
   const missingFilament = beds.some((b) => !b.filamentId);
   // Mesas Mix (Modelo C) não contribuem pro custo do produto principal — sem
   // ao menos uma mesa Peça única/Montagem ou Lote, costPerUnit fica 0.
@@ -417,6 +525,74 @@ export default function CalculatorPage() {
               className="glass-input w-full text-base"
               placeholder="Ex: Vaso Geométrico Torcido"
             />
+
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <NeonButton type="button" variant="outline" size="sm" onClick={handleSaveDraft} disabled={savingDraft}>
+                <Save size={14} /> {currentDraftId ? "Salvar Rascunho" : "Salvar como Rascunho"}
+              </NeonButton>
+              {currentDraftId && (
+                <button
+                  type="button"
+                  onClick={handleNewDraft}
+                  className="text-[11px] text-text-muted hover:text-text-primary"
+                >
+                  Começar novo rascunho
+                </button>
+              )}
+              {drafts.length > 0 && (
+                <NeonButton type="button" variant="outline" size="sm" onClick={() => setDraftsListOpen((v) => !v)}>
+                  <FolderOpen size={14} /> Meus Rascunhos ({drafts.length})
+                </NeonButton>
+              )}
+              {draftJustSaved && <span className="text-[11px] text-neon-green">Rascunho salvo ✓</span>}
+            </div>
+            {draftError && <p className="text-[11px] text-red-400">{draftError}</p>}
+
+            {draftsListOpen && (
+              <div className="space-y-2 rounded-xl border border-border-glass bg-white/[0.02] p-3">
+                {drafts.length === 0 ? (
+                  <p className="text-[11px] text-text-muted">Nenhum rascunho salvo ainda.</p>
+                ) : (
+                  drafts.map((d) => (
+                    <div key={d.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.02] px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-text-primary">
+                          {d.name || "(sem nome)"}
+                          {currentDraftId === d.id && (
+                            <span className="ml-2 text-[10px] text-neon-pink">editando</span>
+                          )}
+                        </p>
+                        <p className="text-[10px] text-text-muted">
+                          {new Date(d.updated_at).toLocaleString("pt-BR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleLoadDraft(d)}
+                          className="text-xs text-neon-pink hover:underline"
+                        >
+                          Carregar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDraft(d.id)}
+                          className="text-text-muted hover:text-red-400"
+                          aria-label="Excluir rascunho"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </GlassCard>
 
           {/* Print beds */}
