@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, Truck } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
@@ -105,10 +105,11 @@ export function NewSaleModal({
   const [tierPriceOverridden, setTierPriceOverridden] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<QuotePaymentMethod>("pix");
   const [channel, setChannel] = useState<QuoteChannel>("whatsapp");
-  const [shippingQuoteOpen, setShippingQuoteOpen] = useState(false);
   const [shippingValue, setShippingValue] = useState<number | null>(null);
   const [shippingSummary, setShippingSummary] = useState<string | null>(null);
   const [shippingDestinationCep, setShippingDestinationCep] = useState<string | null>(null);
+  /** CEP digitado/pré-preenchido no widget de frete inline — controlado aqui pra poder auto-preencher do cliente selecionado e persistir no cadastro dele quando faltava. */
+  const [destinationCep, setDestinationCep] = useState("");
   const [discountType, setDiscountType] = useState<QuoteDiscountType>("fixed");
   const [discount, setDiscount] = useState("0");
   const [discountWarning, setDiscountWarning] = useState<string | null>(null);
@@ -147,7 +148,6 @@ export function NewSaleModal({
     );
     setClientModalOpen(false);
     setProductModalOpen(false);
-    setShippingQuoteOpen(false);
     setError(null);
     setCouponError(null);
 
@@ -169,6 +169,7 @@ export function NewSaleModal({
       setShippingValue(quote.shipping_cost ?? null);
       setShippingSummary(null);
       setShippingDestinationCep(quote.destination_cep ?? null);
+      setDestinationCep(quote.destination_cep ?? "");
       setDiscountType(quote.discount_type ?? "fixed");
       setDiscount(quote.discount_amount != null ? String(quote.discount_amount.toFixed(2)) : "0");
       setDiscountWarning(null);
@@ -194,6 +195,7 @@ export function NewSaleModal({
       setShippingValue(null);
       setShippingSummary(null);
       setShippingDestinationCep(null);
+      setDestinationCep("");
       setDiscountType("fixed");
       setDiscount("0");
       setDiscountWarning(null);
@@ -284,6 +286,7 @@ export function NewSaleModal({
   function handleClientCreated(client: Client) {
     setClients((prev) => [...prev, client].sort((a, b) => a.name.localeCompare(b.name)));
     setSelectedClientId(client.id);
+    setDestinationCep(client.cep ?? "");
     setClientModalOpen(false);
   }
 
@@ -311,10 +314,23 @@ export function NewSaleModal({
     if (tier) setUnitPrice(tier.price.toFixed(2));
   }
 
-  function handleShippingSelected(sel: ShippingQuoteSelection) {
+  async function handleShippingSelected(sel: ShippingQuoteSelection) {
     setShippingValue(sel.price);
     setShippingSummary(`${sel.company} · ${sel.service}`);
     setShippingDestinationCep(sel.destinationCep);
+    setDestinationCep(sel.destinationCep);
+
+    // Cliente sem CEP cadastrado: aproveita o CEP usado nessa cotação pra
+    // completar o cadastro dele, sem precisar editar em Clientes depois.
+    if (selectedClient && !selectedClient.cep && sel.destinationCep) {
+      const { error: cepError } = await supabase
+        .from("clients")
+        .update({ cep: sel.destinationCep })
+        .eq("id", selectedClient.id);
+      if (!cepError) {
+        setClients((prev) => prev.map((c) => (c.id === selectedClient.id ? { ...c, cep: sel.destinationCep } : c)));
+      }
+    }
   }
 
   /**
@@ -743,28 +759,17 @@ export function NewSaleModal({
         */}
 
         <div>
-          <label className="mb-1.5 block text-xs text-text-muted">
-            Valor Frete (R$) {!selectedClient?.cep && selectedClientId && <span className="text-neon-pink">*</span>}
-          </label>
-          <div className="relative">
-            <input
-              readOnly
-              value={shippingValue != null ? formatBRL(shippingValue) : ""}
-              className="glass-input w-full cursor-not-allowed py-2.5 pr-28 opacity-80"
-              placeholder="Nenhum frete calculado"
-            />
-            <button
-              type="button"
-              onClick={() => setShippingQuoteOpen(true)}
-              className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-1 rounded-lg bg-neon-gradient px-3 py-1.5 text-[11px] font-medium text-white hover:opacity-90"
-            >
-              <Truck size={11} /> {shippingValue != null ? "Recalcular" : "Calcular"}
-            </button>
-          </div>
-          {shippingSummary && <p className="mt-1 text-[11px] text-text-muted">{shippingSummary}</p>}
-          {!selectedClient?.cep && selectedClientId && shippingValue == null && (
-            <p className="mt-1 text-[11px] text-amber-400">
-              Esse cliente não tem CEP cadastrado — calcule o frete manualmente pra continuar.
+          <label className="mb-1.5 block text-xs text-text-muted">Frete</label>
+          <ShippingQuoteWidget
+            destinationCep={destinationCep}
+            onDestinationCepChange={setDestinationCep}
+            onSelect={handleShippingSelected}
+            required={!selectedClient?.cep && !!selectedClientId}
+          />
+          {shippingValue != null && (
+            <p className="mt-2 text-[11px] text-neon-green">
+              Frete selecionado: {formatBRL(shippingValue)}
+              {shippingSummary ? ` — ${shippingSummary}` : ""}
             </p>
           )}
         </div>
@@ -897,7 +902,11 @@ export function NewSaleModal({
 
         <select
           value={selectedClientId}
-          onChange={(e) => setSelectedClientId(e.target.value)}
+          onChange={(e) => {
+            const id = e.target.value;
+            setSelectedClientId(id);
+            setDestinationCep(clients.find((c) => c.id === id)?.cep ?? "");
+          }}
           className="glass-input w-full"
         >
           <option value="" className="bg-bg-raised">
@@ -937,13 +946,6 @@ export function NewSaleModal({
         open={clientModalOpen}
         onClose={() => setClientModalOpen(false)}
         onCreated={handleClientCreated}
-        zIndexClass="z-[60]"
-      />
-      <ShippingQuoteWidget
-        open={shippingQuoteOpen}
-        onClose={() => setShippingQuoteOpen(false)}
-        initialDestinationCep={selectedClient?.cep ?? ""}
-        onSelect={handleShippingSelected}
         zIndexClass="z-[60]"
       />
     </Modal>
