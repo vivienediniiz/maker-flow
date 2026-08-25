@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Pencil } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { Toggle } from "@/components/ui/Toggle";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { NewClientModal } from "@/components/dashboard/NewClientModal";
 import { ShippingQuoteWidget, type ShippingQuoteSelection } from "@/components/dashboard/ShippingQuoteWidget";
@@ -117,7 +118,9 @@ export function NewSaleModal({
   const [discount, setDiscount] = useState("0");
   const [discountWarning, setDiscountWarning] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState("0");
-  const [productionDeadline, setProductionDeadline] = useState("");
+  const [productionDeadlineDate, setProductionDeadlineDate] = useState("");
+  const [isCustom, setIsCustom] = useState(false);
+  const [customizationNotes, setCustomizationNotes] = useState("");
   const [filaments, setFilaments] = useState<Filament[]>([]);
   const [usedFilaments, setUsedFilaments] = useState<UsedFilamentRow[]>([]);
   const [supplies, setSupplies] = useState<Supply[]>([]);
@@ -179,7 +182,9 @@ export function NewSaleModal({
       setDiscountWarning(null);
       setDiscountPercent(quote.discount_percent != null ? String(quote.discount_percent) : "0");
       setSelectedCouponId(quote.coupon_id ?? "");
-      setProductionDeadline(quote.production_deadline ?? "");
+      setProductionDeadlineDate(quote.production_deadline_date ?? "");
+      setIsCustom(quote.is_custom);
+      setCustomizationNotes(quote.customization_notes ?? "");
     } else {
       setSelectedClientId("");
       setSelectedProductId(initialProductId ?? "");
@@ -206,7 +211,9 @@ export function NewSaleModal({
       setDiscountWarning(null);
       setDiscountPercent("0");
       setSelectedCouponId("");
-      setProductionDeadline("");
+      setProductionDeadlineDate("");
+      setIsCustom(false);
+      setCustomizationNotes("");
     }
   }, [
     open,
@@ -532,7 +539,9 @@ export function NewSaleModal({
       discount_percent: discountType === "percentage" ? Number(discountPercent) || null : null,
       coupon_id: discountType === "coupon" ? selectedCoupon?.id ?? null : null,
       coupon_code: discountType === "coupon" ? selectedCoupon?.code ?? null : null,
-      production_deadline: productionDeadline.trim() || null,
+      production_deadline_date: productionDeadlineDate || null,
+      is_custom: isCustom,
+      customization_notes: isCustom ? customizationNotes.trim() || null : null,
     };
 
     let quoteError: { message: string } | null = null;
@@ -989,12 +998,29 @@ export function NewSaleModal({
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Prazo de Produção (opcional)</label>
           <input
-            type="text"
-            value={productionDeadline}
-            onChange={(e) => setProductionDeadline(e.target.value)}
+            type="date"
+            value={productionDeadlineDate}
+            onChange={(e) => setProductionDeadlineDate(e.target.value)}
             className="glass-input w-full"
-            placeholder="Ex: 3 dias úteis, até 20/08..."
           />
+          {quote?.production_deadline && !productionDeadlineDate && (
+            <p className="mt-1.5 text-[11px] text-text-muted">
+              Prazo anterior (texto livre): {quote.production_deadline}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <Toggle checked={isCustom} onChange={setIsCustom} label="Produto Personalizado" />
+          {isCustom && (
+            <textarea
+              value={customizationNotes}
+              onChange={(e) => setCustomizationNotes(e.target.value)}
+              className="glass-input mt-2 w-full resize-none"
+              rows={2}
+              placeholder="Descreva a personalização — ex: gravar nome “Maria”, cor roxa fosca..."
+            />
+          )}
         </div>
 
         {!isEditing && <p className="text-[11px] text-text-muted">Entra em Vendas já como Pago.</p>}

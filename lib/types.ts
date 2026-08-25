@@ -219,12 +219,18 @@ export interface Quote {
   coupon_code: string | null;
   discount_type: QuoteDiscountType | null;
   discount_percent: number | null;
+  /** @deprecated Texto livre ("3 dias úteis, até 20/08...") — substituído por `production_deadline_date`. Mantido só pra exibir registros salvos antes dessa mudança. */
   production_deadline: string | null;
+  /** Data real do prazo de produção (yyyy-mm-dd) — usada pro destaque/alerta de prazo vencendo. */
+  production_deadline_date: string | null;
   /** Agrupa quotes criadas a partir do mesmo checkout da Loja Online (uma linha por produto do carrinho). */
   storefront_checkout_id: string | null;
   /** URL de Checkout Pro gerada por "Gerar Link de Cobrança" — ao criar, o status volta pra "sent" até o webhook confirmar o pagamento (external_reference = id desta quote). */
   payment_link_url: string | null;
   mp_preference_id: string | null;
+  /** Produto com personalização a pedido do cliente (gravação, cor específica etc.). */
+  is_custom: boolean;
+  customization_notes: string | null;
 }
 
 export type QuoteDiscountType = "fixed" | "percentage" | "coupon";

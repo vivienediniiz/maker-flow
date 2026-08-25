@@ -194,6 +194,15 @@ export function QuoteDetailModal({
           <p className="text-sm text-text-secondary">{quote.project_name}</p>
         )}
 
+        {quote.is_custom && (
+          <div className="rounded-xl border border-neon-pink/30 bg-neon-gradient-soft px-3 py-2.5">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-neon-pink">Produto Personalizado</p>
+            {quote.customization_notes && (
+              <p className="mt-1 text-sm text-text-secondary">{quote.customization_notes}</p>
+            )}
+          </div>
+        )}
+
         {/* Detalhamento de custo: do próprio pedido, ou do produto vinculado como referência */}
         {hasOwnCalcDetails ? (
           <div className="space-y-2 text-sm">

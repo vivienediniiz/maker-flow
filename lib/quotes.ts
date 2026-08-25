@@ -117,3 +117,21 @@ export function quoteDaysUntilExpiry(sentAt: string): number {
   const expiresAt = new Date(sentAt).getTime() + QUOTE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
   return Math.max(0, Math.ceil((expiresAt - Date.now()) / (1000 * 60 * 60 * 24)));
 }
+
+/** A partir de quantos dias de antecedência o prazo de produção conta como "vencendo" (inclui já vencido, dias negativos). */
+export const PRODUCTION_DEADLINE_WARNING_DAYS = 2;
+
+/** Dias até `production_deadline_date` — negativo se já passou. Parseia como data local (evita o off-by-one de `new Date("yyyy-mm-dd")`, que o JS lê como UTC). */
+export function daysUntilProductionDeadline(deadlineDate: string): number {
+  const deadline = new Date(`${deadlineDate}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+/** true quando a venda tem prazo de produção cadastrado, ainda não foi enviada/cancelada/expirada, e o prazo está a poucos dias (ou já vencido). */
+export function isProductionDeadlineDue(status: QuoteStatus, deadlineDate: string | null): boolean {
+  if (!deadlineDate) return false;
+  if (status === "shipped" || status === "cancelled" || status === "expired") return false;
+  return daysUntilProductionDeadline(deadlineDate) <= PRODUCTION_DEADLINE_WARNING_DAYS;
+}

@@ -268,11 +268,17 @@ function buildReceiptContainer(quote: QuoteWithClient, profile: ReceiptProfile |
          </div>`
       : "";
 
+  // production_deadline_date (novo, campo de data real) tem prioridade —
+  // production_deadline (texto livre) só entra pra vendas antigas, salvas
+  // antes dessa mudança, que não têm a data estruturada.
+  const deadlineText = quote.production_deadline_date
+    ? new Date(`${quote.production_deadline_date}T00:00:00`).toLocaleDateString("pt-BR")
+    : quote.production_deadline;
   const deadlineLine =
-    quote.production_deadline && appearance.showProductionDeadline
+    deadlineText && appearance.showProductionDeadline
       ? `<div style="display:flex; justify-content:space-between; font-size:24px; color:#B4AFC4; margin-top:10px;">
          <span>Prazo de Produção</span>
-         <span style="color:#F5F3FA; font-weight:600;">${quote.production_deadline}</span>
+         <span style="color:#F5F3FA; font-weight:600;">${deadlineText}</span>
        </div>`
       : "";
 

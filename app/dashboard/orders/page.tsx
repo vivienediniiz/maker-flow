@@ -19,9 +19,19 @@ import {
   formatOrderNumber,
   isQuoteSentExpired,
   nextQuoteAction,
+  isProductionDeadlineDue,
+  daysUntilProductionDeadline,
 } from "@/lib/quotes";
-import { Loader2, Plus, RefreshCw, Trash2, Pencil } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Trash2, Pencil, Clock } from "lucide-react";
 import type { QuoteWithClient, QuoteStatus, QuoteSource, Integration } from "@/lib/types";
+
+function deadlineBadgeLabel(deadlineDate: string): string {
+  const days = daysUntilProductionDeadline(deadlineDate);
+  if (days < 0) return `Atrasado ${Math.abs(days)}d`;
+  if (days === 0) return "Vence hoje";
+  if (days === 1) return "Vence amanhã";
+  return `Vence em ${days}d`;
+}
 
 const STATUS_FILTERS: { key: "all" | QuoteStatus | "awaiting_shipment"; label: string }[] = [
   { key: "all", label: "Todos" },
@@ -297,14 +307,28 @@ export default function OrdersPage() {
                             {new Date(q.sent_at).toLocaleString("pt-BR")}
                           </td>
                           <td className="px-6 py-4">
-                            <span
-                              className={cn(
-                                "rounded-pill border px-2.5 py-1 text-[11px] font-medium",
-                                QUOTE_STATUS_PILL_STYLES[q.status]
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span
+                                className={cn(
+                                  "rounded-pill border px-2.5 py-1 text-[11px] font-medium",
+                                  QUOTE_STATUS_PILL_STYLES[q.status]
+                                )}
+                              >
+                                {QUOTE_STATUS_LABELS[q.status]}
+                              </span>
+                              {isProductionDeadlineDue(q.status, q.production_deadline_date) && (
+                                <span
+                                  className={cn(
+                                    "flex items-center gap-1 rounded-pill border px-2 py-1 text-[11px] font-medium",
+                                    daysUntilProductionDeadline(q.production_deadline_date!) < 0
+                                      ? "border-red-500/30 bg-red-500/15 text-red-400"
+                                      : "border-amber-400/30 bg-amber-400/15 text-amber-400"
+                                  )}
+                                >
+                                  <Clock size={11} /> {deadlineBadgeLabel(q.production_deadline_date!)}
+                                </span>
                               )}
-                            >
-                              {QUOTE_STATUS_LABELS[q.status]}
-                            </span>
+                            </div>
                           </td>
                           <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(q.final_price)}</td>
                           <td className="px-6 py-4 font-numeric text-red-400">{formatBRL(costs)}</td>
@@ -382,6 +406,18 @@ export default function OrdersPage() {
                           >
                             {QUOTE_STATUS_LABELS[q.status]}
                           </span>
+                          {isProductionDeadlineDue(q.status, q.production_deadline_date) && (
+                            <span
+                              className={cn(
+                                "flex items-center gap-1 rounded-pill border px-2 py-1 text-[11px] font-medium",
+                                daysUntilProductionDeadline(q.production_deadline_date!) < 0
+                                  ? "border-red-500/30 bg-red-500/15 text-red-400"
+                                  : "border-amber-400/30 bg-amber-400/15 text-amber-400"
+                              )}
+                            >
+                              <Clock size={11} /> {deadlineBadgeLabel(q.production_deadline_date!)}
+                            </span>
+                          )}
                         </div>
                         <p className="truncate text-base font-semibold text-text-primary">{buyerName}</p>
                         <p className="truncate text-xs text-text-secondary">{q.project_name}</p>

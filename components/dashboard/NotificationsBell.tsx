@@ -3,10 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Bell, AlertTriangle, Clock3, type LucideIcon } from "lucide-react";
+import { Bell, AlertTriangle, Clock3, Clock, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { trialDaysRemaining } from "@/lib/trial";
-import { QUOTE_SOURCE_LABELS, QUOTE_SOURCE_ICONS, formatOrderNumber } from "@/lib/quotes";
+import {
+  QUOTE_SOURCE_LABELS,
+  QUOTE_SOURCE_ICONS,
+  formatOrderNumber,
+  isProductionDeadlineDue,
+  daysUntilProductionDeadline,
+  PRODUCTION_DEADLINE_WARNING_DAYS,
+} from "@/lib/quotes";
 import { isFilamentLow } from "@/lib/filaments";
 import type { QuoteSource } from "@/lib/types";
 
@@ -58,7 +65,11 @@ export function NotificationsBell() {
     const lookbackCutoff = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
     const lastSeen = lastSeenRaw ? new Date(lastSeenRaw) : lookbackCutoff;
 
-    const [{ data: profile }, { data: filaments }, { data: quotes }] = await Promise.all([
+    const deadlineCutoff = new Date();
+    deadlineCutoff.setDate(deadlineCutoff.getDate() + PRODUCTION_DEADLINE_WARNING_DAYS);
+    const deadlineCutoffStr = deadlineCutoff.toISOString().slice(0, 10);
+
+    const [{ data: profile }, { data: filaments }, { data: quotes }, { data: deadlineQuotes }] = await Promise.all([
       supabase
         .from("profiles")
         .select("subscription_tier, subscription_status, trial_ends_at")
@@ -76,6 +87,15 @@ export function NotificationsBell() {
         .gte("created_at", lookbackCutoff.toISOString())
         .order("created_at", { ascending: false })
         .limit(8),
+      supabase
+        .from("quotes")
+        .select("id, project_name, production_deadline_date, status")
+        .eq("user_id", user.id)
+        .not("production_deadline_date", "is", null)
+        .in("status", ["sent", "paid", "in_production"])
+        .lte("production_deadline_date", deadlineCutoffStr)
+        .order("production_deadline_date", { ascending: true })
+        .limit(5),
     ]);
 
     const list: Alert[] = [];
@@ -108,6 +128,24 @@ export function NotificationsBell() {
             : `${lowFilaments.length} filamentos com estoque baixo.`,
         isNew: true,
         href: "/dashboard/filaments",
+      });
+      unseen = true;
+    }
+
+    for (const q of deadlineQuotes ?? []) {
+      if (!q.production_deadline_date || !isProductionDeadlineDue(q.status, q.production_deadline_date)) continue;
+      const days = daysUntilProductionDeadline(q.production_deadline_date);
+      list.push({
+        id: `deadline-${q.id}`,
+        icon: Clock,
+        text:
+          days < 0
+            ? `${q.project_name} — prazo de produção atrasado (${Math.abs(days)} ${Math.abs(days) === 1 ? "dia" : "dias"}).`
+            : days === 0
+              ? `${q.project_name} — prazo de produção vence hoje.`
+              : `${q.project_name} — prazo de produção vence em ${days} ${days === 1 ? "dia" : "dias"}.`,
+        isNew: true,
+        href: "/dashboard/orders",
       });
       unseen = true;
     }
