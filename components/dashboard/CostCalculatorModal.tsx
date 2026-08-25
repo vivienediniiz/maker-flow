@@ -343,7 +343,7 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
               )}
 
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <MiniField label="Peso (g)">
+                <MiniField label={`Peso (g) por ${bed.modelType === "B" ? "peça" : "mesa"}`}>
                   <input
                     type="number"
                     min={0}
@@ -352,7 +352,7 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
                     className="glass-input w-full"
                   />
                 </MiniField>
-                <MiniField label="Tempo (h)">
+                <MiniField label={`Tempo (h) por ${bed.modelType === "B" ? "peça" : "mesa"}`}>
                   <input
                     type="number"
                     min={0}
@@ -361,7 +361,7 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
                     className="glass-input w-full"
                   />
                 </MiniField>
-                <MiniField label="Tempo (min)">
+                <MiniField label={`Tempo (min) por ${bed.modelType === "B" ? "peça" : "mesa"}`}>
                   <input
                     type="number"
                     min={0}

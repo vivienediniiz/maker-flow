@@ -498,7 +498,7 @@ export default function CalculatorPage() {
                 )}
 
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <Field label="Peso (g)">
+                  <Field label={`Peso (g) por ${bed.modelType === "B" ? "peça" : "mesa"}`}>
                     <input
                       type="number"
                       min={0}
@@ -507,7 +507,7 @@ export default function CalculatorPage() {
                       className="glass-input w-full"
                     />
                   </Field>
-                  <Field label="Tempo (h)">
+                  <Field label={`Tempo (h) por ${bed.modelType === "B" ? "peça" : "mesa"}`}>
                     <input
                       type="number"
                       min={0}
@@ -516,7 +516,7 @@ export default function CalculatorPage() {
                       className="glass-input w-full"
                     />
                   </Field>
-                  <Field label="Tempo (min)">
+                  <Field label={`Tempo (min) por ${bed.modelType === "B" ? "peça" : "mesa"}`}>
                     <input
                       type="number"
                       min={0}
