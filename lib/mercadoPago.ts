@@ -347,9 +347,11 @@ export async function upsertQuoteFromMercadoPagoOrder(admin: SupabaseClient, use
  * e-mail. `external_order_id` combina o id do pagamento com o id do produto
  * pra manter unicidade (o unique index é por user_id+source+external_order_id,
  * e aqui um mesmo pagamento gera N linhas). O rateio de `platform_fee` entre
- * os itens é proporcional ao valor de cada um.
+ * os itens é proporcional ao valor de cada um. Exportada porque também é
+ * reaproveitada pelo webhook da InfinitePay (`/api/webhooks/infinitepay`) —
+ * agnóstica de provedor de pagamento, só depende do `StoreCheckout`.
  */
-async function upsertQuotesFromStorefrontCheckout(
+export async function upsertQuotesFromStorefrontCheckout(
   admin: SupabaseClient,
   checkout: StoreCheckout,
   paymentId: string,
