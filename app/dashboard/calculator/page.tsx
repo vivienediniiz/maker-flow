@@ -122,10 +122,8 @@ export default function CalculatorPage() {
   const [draftJustSaved, setDraftJustSaved] = useState(false);
   const [draftsListOpen, setDraftsListOpen] = useState(false);
 
-  /** Vincula/atualiza automaticamente o produto calculado ao criar o pedido — desliga pra encomendas avulsas que não devem virar catálogo. */
-  const [saveAsProduct, setSaveAsProduct] = useState(true);
-  const [creatingOrder, setCreatingOrder] = useState(false);
-  const [orderProductError, setOrderProductError] = useState<string | null>(null);
+  /** "Criar Pedido" exige produto cadastrado — sem isso, abre o popup de cadastro em vez do pedido, e volta sozinho pro pedido assim que o produto for salvo. */
+  const [orderPendingProductRegistration, setOrderPendingProductRegistration] = useState(false);
 
   useEffect(() => {
     loadMarketplaces();
@@ -252,73 +250,27 @@ export default function CalculatorPage() {
     if (mp) setMarketplaceFee(mp.fee);
   }
 
-  /** Vínculo pro PDF de orçamento saber a qual produto recém-cadastrado se referir. */
+  /**
+   * Vínculo pro PDF de orçamento saber a qual produto recém-cadastrado se
+   * referir. Se o cadastro foi disparado por "Criar Pedido" sem produto
+   * ainda existente, encadeia direto pro pedido assim que o produto é salvo.
+   */
   function handleNewProductCreated(product: Product) {
     setSelectedProductId(product.id);
     setProjectName(product.name);
     setNewProductModalOpen(false);
-  }
-
-  /**
-   * Cadastra (ou, se já existe um produto desta sessão, atualiza) o produto
-   * calculado antes de abrir "Criar Pedido" — assim a venda já nasce vinculada
-   * ao catálogo, sem pedir pra buscar/cadastrar de novo dentro do modal de
-   * venda. Reaproveita o mesmo `selectedProductId` em cliques repetidos na
-   * mesma sessão, em vez de criar um produto duplicado a cada pedido.
-   */
-  async function ensureProductForOrder(): Promise<string | null> {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    if (selectedProductId) {
-      const { data, error } = await supabase
-        .from("products")
-        .update({
-          name: projectName || "Produto sem nome",
-          cost_price: calc.costPerUnit,
-          sale_price: calc.pricePerUnit,
-          calc_inputs: calcInputsForProduct,
-        })
-        .eq("id", selectedProductId)
-        .select()
-        .single();
-      if (error) return null;
-      return data.id as string;
+    if (orderPendingProductRegistration) {
+      setOrderPendingProductRegistration(false);
+      setOrderModalOpen(true);
     }
-
-    const { data, error } = await supabase
-      .from("products")
-      .insert({
-        name: projectName || "Produto sem nome",
-        category: null,
-        description: null,
-        image_url: null,
-        cost_price: calc.costPerUnit,
-        sale_price: calc.pricePerUnit,
-        price_tiers: [],
-        user_id: user.id,
-        stock_quantity: 0,
-        calc_inputs: calcInputsForProduct,
-      })
-      .select()
-      .single();
-    if (error) return null;
-    setSelectedProductId(data.id);
-    return data.id as string;
   }
 
-  async function handleCreateOrderClick() {
-    setOrderProductError(null);
-    if (saveAsProduct) {
-      setCreatingOrder(true);
-      const productId = await ensureProductForOrder();
-      setCreatingOrder(false);
-      if (!productId) {
-        setOrderProductError("Não foi possível salvar o produto — tente novamente.");
-        return;
-      }
+  /** "Criar Pedido" exige um produto cadastrado — sem um ainda vinculado nesta sessão, abre o popup de cadastro em vez do pedido (handleNewProductCreated encadeia de volta pro pedido depois de salvar). */
+  function handleCreateOrderClick() {
+    if (!selectedProductId) {
+      setOrderPendingProductRegistration(true);
+      setNewProductModalOpen(true);
+      return;
     }
     setOrderModalOpen(true);
   }
@@ -533,7 +485,10 @@ export default function CalculatorPage() {
   // Mesas Mix (Modelo C) não contribuem pro custo do produto principal — sem
   // ao menos uma mesa Peça única/Montagem ou Lote, costPerUnit fica 0.
   const noUnitBeds = beds.every((b) => b.modelType === "C");
-  const actionsDisabled = missingFilament || noUnitBeds;
+  // Nome é obrigatório: é ele que identifica o produto cadastrado depois — e
+  // "Criar Pedido"/"Cadastrar Produto" dependem de existir um produto certo.
+  const missingName = !projectName.trim();
+  const actionsDisabled = missingFilament || noUnitBeds || missingName;
   // Só quando TODAS as mesas que contam pro custo são Lote o valor abaixo
   // representa a mesa inteira (batch) — com Peça única/Montagem no meio,
   // volta a ser "por unidade" (peça/montagem ou soma delas).
@@ -1189,18 +1144,16 @@ export default function CalculatorPage() {
               )}
             </div>
 
-            <div className="flex items-center justify-between gap-2">
-              <Toggle checked={saveAsProduct} onChange={setSaveAsProduct} label="Salvar como produto reutilizável" />
-            </div>
-            {orderProductError && <p className="text-[11px] text-red-400">{orderProductError}</p>}
+            {!selectedProductId && !actionsDisabled && (
+              <p className="text-center text-[11px] text-text-muted">
+                "Criar Pedido" vai pedir pra cadastrar o produto primeiro — é o cadastro que fornece custo e valor de
+                venda pro pedido.
+              </p>
+            )}
 
             <div className="space-y-2">
-              <NeonButton
-                className="w-full"
-                onClick={handleCreateOrderClick}
-                disabled={actionsDisabled || creatingOrder}
-              >
-                <Rocket size={16} /> {creatingOrder ? "Salvando produto..." : "Criar Pedido"}
+              <NeonButton className="w-full" onClick={handleCreateOrderClick} disabled={actionsDisabled}>
+                <Rocket size={16} /> Criar Pedido
               </NeonButton>
               <NeonButton variant="outline" className="w-full" onClick={() => setQuoteModalOpen(true)} disabled={actionsDisabled}>
                 <FileDown size={16} /> Gerar PDF de Orçamento
@@ -1220,6 +1173,9 @@ export default function CalculatorPage() {
                 produto principal.
               </p>
             )}
+            {!missingFilament && !noUnitBeds && missingName && (
+              <p className="text-center text-[11px] text-amber-400">Informe o nome do produto pra liberar essas ações.</p>
+            )}
           </GlassCard>
         </div>
       </main>
@@ -1227,9 +1183,11 @@ export default function CalculatorPage() {
       <div className="px-3 pb-8 md:px-8">
         <GlassCard padding="lg" className="flex flex-col items-center gap-4 p-4 text-center sm:flex-row sm:justify-between sm:p-8 sm:text-left">
           <div>
-            <h3 className="font-display text-lg">Gostou do resultado?</h3>
+            <h3 className="font-display text-lg">{selectedProductId ? "Produto cadastrado" : "Cadastre o produto"}</h3>
             <p className="mt-1 text-sm text-text-secondary">
-              Salve essa receita e o preço calculado como um produto — pra reaproveitar depois, sem refazer a conta.
+              {selectedProductId
+                ? "Já vinculado a esta sessão — recalcule e cadastre de novo se os valores mudarem."
+                : "Obrigatório pra criar um pedido: salva essa receita e o preço calculado como um produto no catálogo."}
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-center gap-1.5 sm:items-end">
@@ -1241,6 +1199,9 @@ export default function CalculatorPage() {
             )}
             {!missingFilament && noUnitBeds && (
               <p className="text-[11px] text-amber-400">Adicione uma mesa Peça única/Montagem ou Lote pra liberar.</p>
+            )}
+            {!missingFilament && !noUnitBeds && missingName && (
+              <p className="text-[11px] text-amber-400">Informe o nome do produto pra liberar.</p>
             )}
           </div>
         </GlassCard>
@@ -1262,11 +1223,16 @@ export default function CalculatorPage() {
         marginPercent={marginPercent}
         initialUsedFilaments={usedFilamentsForSale}
         initialUsedSupplies={usedSuppliesForSale}
-        initialProductId={saveAsProduct ? selectedProductId || undefined : undefined}
+        initialProductId={selectedProductId || undefined}
+        initialUnitPrice={calc.pricePerUnit}
+        initialQuantity={quantity}
       />
       <NewProductModal
         open={newProductModalOpen}
-        onClose={() => setNewProductModalOpen(false)}
+        onClose={() => {
+          setNewProductModalOpen(false);
+          setOrderPendingProductRegistration(false);
+        }}
         onCreated={handleNewProductCreated}
         initialName={projectName}
         initialCostPrice={calc.costPerUnit}

@@ -43,14 +43,16 @@ interface NewSaleModalProps {
   /** Quando vem da Calculadora com insumos já selecionados lá, chegam pré-preenchidos (ainda editáveis). */
   initialUsedSupplies?: UsedSupplyRow[];
   /**
-   * Produto já cadastrado/atualizado automaticamente pela Calculadora a partir
-   * do cálculo — só vincula (`product_id`, pra aparecer no catálogo e nos
-   * relatórios de produtos mais vendidos), sem entrar no modo de preço por
-   * unidade/faixa: o valor total já calculado (`initialFinalPrice`) continua
-   * sendo o preço da venda. Diferente de escolher um produto manualmente no
-   * dropdown abaixo, que aciona esse modo (preço vem do cadastro do produto).
+   * Produto que a Calculadora exige estar cadastrado antes de abrir esse
+   * modal — pré-seleciona o dropdown "Produto" abaixo e liga o modo de preço
+   * por unidade, igual a escolher esse mesmo produto manualmente. Use com
+   * `initialUnitPrice`/`initialQuantity` pra também pré-preencher o valor e a
+   * quantidade com o que já foi calculado (evita esperar o fetch de produtos
+   * resolver pra mostrar o preço certo).
    */
   initialProductId?: string;
+  initialUnitPrice?: number;
+  initialQuantity?: number;
   /** Quando presente, o modal edita essa venda em vez de criar uma nova. */
   quote?: QuoteWithClient | null;
   /** Na criação, recebe a venda recém-criada (com joins) — usado pra abrir a tela de sucesso/comprovante. Na edição, é chamado sem argumento. */
@@ -79,6 +81,8 @@ export function NewSaleModal({
   initialUsedFilaments,
   initialUsedSupplies,
   initialProductId,
+  initialUnitPrice,
+  initialQuantity,
   quote = null,
   onCreated,
 }: NewSaleModalProps) {
@@ -89,8 +93,6 @@ export function NewSaleModal({
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState("");
-  /** Só true quando o produto foi escolhido explicitamente (dropdown ou "Cadastrar Produto" aqui dentro) — liga o modo de preço por unidade/faixa. Um `initialProductId` vindo da Calculadora só vincula, não liga esse modo. */
-  const [useProductPricing, setUseProductPricing] = useState(false);
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [projectName, setProjectName] = useState(initialProjectName);
   const [finalPrice, setFinalPrice] = useState(initialFinalPrice != null ? String(initialFinalPrice.toFixed(2)) : "");
@@ -153,10 +155,6 @@ export function NewSaleModal({
     if (quote) {
       setSelectedClientId(quote.client_id ?? "");
       setSelectedProductId(quote.product_id ?? "");
-      // Só reabre no modo preço-por-unidade se a venda salva de fato foi
-      // criada assim — uma venda com produto vinculado mas preço final livre
-      // (ex: veio da Calculadora) deve continuar mostrando o Valor Total.
-      setUseProductPricing(!!quote.product_id && quote.unit_price != null);
       setProjectName(quote.project_name);
       setFinalPrice(String(quote.final_price.toFixed(2)));
       // Sempre recarrega em modo "unitário" com o valor exato salvo, sem
@@ -181,11 +179,14 @@ export function NewSaleModal({
     } else {
       setSelectedClientId("");
       setSelectedProductId(initialProductId ?? "");
-      setUseProductPricing(false);
       setProjectName(initialProjectName);
       setFinalPrice(initialFinalPrice != null ? String(initialFinalPrice.toFixed(2)) : "");
-      setQuantity("1");
-      setUnitPrice("");
+      // Com produto vindo da Calculadora, preenche direto do que já foi
+      // calculado — não depende do fetch de produtos resolver primeiro pra
+      // mostrar o preço certo (o dropdown abaixo só precisa do fetch pra
+      // exibir o nome/faixas, o preço já chega pronto).
+      setQuantity(initialProductId && initialQuantity ? String(initialQuantity) : "1");
+      setUnitPrice(initialProductId && initialUnitPrice != null ? String(initialUnitPrice.toFixed(2)) : "");
       setPriceMode("unit");
       setSelectedTierIndex(null);
       setTierPriceOverridden(false);
@@ -201,7 +202,17 @@ export function NewSaleModal({
       setSelectedCouponId("");
       setProductionDeadline("");
     }
-  }, [open, quote, initialProjectName, initialFinalPrice, initialUsedFilaments, initialUsedSupplies, initialProductId]);
+  }, [
+    open,
+    quote,
+    initialProjectName,
+    initialFinalPrice,
+    initialUsedFilaments,
+    initialUsedSupplies,
+    initialProductId,
+    initialUnitPrice,
+    initialQuantity,
+  ]);
 
   async function loadCoupons() {
     const {
@@ -275,7 +286,6 @@ export function NewSaleModal({
   /** Aplica um produto (já cadastrado ou recém-criado) aos campos de preço da venda. */
   function applyProduct(product: Product) {
     setSelectedProductId(product.id);
-    setUseProductPricing(true);
     setProjectName(product.name);
     setUnitPrice(String(product.sale_price.toFixed(2)));
     setQuantity("1");
@@ -287,10 +297,7 @@ export function NewSaleModal({
   function handleSelectProduct(productId: string) {
     const product = products.find((p) => p.id === productId);
     if (product) applyProduct(product);
-    else {
-      setSelectedProductId(productId);
-      setUseProductPricing(false);
-    }
+    else setSelectedProductId(productId);
   }
 
   function handleProductCreated(product: Product) {
@@ -398,7 +405,7 @@ export function NewSaleModal({
 
   const selectedProduct = products.find((p) => p.id === selectedProductId) ?? null;
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
-  const showUnitPricing = useProductPricing && !!selectedProduct;
+  const showUnitPricing = !!selectedProduct;
   const tierRanges = selectedProduct ? buildPriceTierRanges(selectedProduct.price_tiers) : [];
   const hasTiers = tierRanges.length > 0;
   const unitPriceLocked = priceMode === "tier" && !tierPriceOverridden;
@@ -630,12 +637,6 @@ export function NewSaleModal({
               </option>
             ))}
           </select>
-          {selectedProductId && !useProductPricing && (
-            <p className="mt-1.5 text-[11px] text-neon-green">
-              Vinculado ao catálogo — o Valor Total abaixo continua sendo o calculado, não o preço de cadastro do
-              produto.
-            </p>
-          )}
         </div>
 
         {showUnitPricing ? (
