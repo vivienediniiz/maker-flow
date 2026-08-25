@@ -22,7 +22,7 @@ import {
   isProductionDeadlineDue,
   daysUntilProductionDeadline,
 } from "@/lib/quotes";
-import { Loader2, Plus, RefreshCw, Trash2, Pencil, Clock } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Trash2, Pencil } from "lucide-react";
 import type { QuoteWithClient, QuoteStatus, QuoteSource, Integration } from "@/lib/types";
 
 function deadlineBadgeLabel(deadlineDate: string): string {
@@ -204,9 +204,8 @@ export default function OrdersPage() {
         searchPlaceholder="Buscar vendas por nº, cliente, ID externo..."
       />
       <main className="space-y-6 px-6 py-8 md:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm text-text-secondary">{filtered.length} vendas</span>
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="glass-card flex flex-wrap gap-1 p-1">
               {STATUS_FILTERS.map((f) => (
                 <button
@@ -221,28 +220,29 @@ export default function OrdersPage() {
                 </button>
               ))}
             </div>
-            <select
-              value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value as (typeof SOURCE_FILTERS)[number]["key"])}
-              className="glass-input"
-            >
-              {SOURCE_FILTERS.map((f) => (
-                <option key={f.key} value={f.key} className="bg-bg-raised">
-                  {f.label}
-                </option>
-              ))}
-            </select>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <NeonButton variant="outline" onClick={handleSync} disabled={syncing} className="whitespace-nowrap">
+                {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                Sincronizar Pedidos
+              </NeonButton>
+              <NeonButton onClick={() => setNewSaleModalOpen(true)} className="whitespace-nowrap">
+                <Plus size={16} /> Nova Venda
+              </NeonButton>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <NeonButton variant="outline" onClick={handleSync} disabled={syncing} className="whitespace-nowrap">
-              {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-              Sincronizar Pedidos
-            </NeonButton>
-            <NeonButton onClick={() => setNewSaleModalOpen(true)} className="whitespace-nowrap">
-              <Plus size={16} /> Nova Venda Manual
-            </NeonButton>
-          </div>
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value as (typeof SOURCE_FILTERS)[number]["key"])}
+            className="glass-input"
+          >
+            {SOURCE_FILTERS.map((f) => (
+              <option key={f.key} value={f.key} className="bg-bg-raised">
+                {f.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {lastSync && (
@@ -270,6 +270,7 @@ export default function OrdersPage() {
                       <th className="px-6 py-4 font-medium">Cliente</th>
                       <th className="px-6 py-4 font-medium">Data</th>
                       <th className="px-6 py-4 font-medium">Status</th>
+                      <th className="px-6 py-4 font-medium">Prazo</th>
                       <th className="px-6 py-4 font-medium">Bruto</th>
                       <th className="px-6 py-4 font-medium">Custos</th>
                       <th className="px-6 py-4 font-medium">Líquido</th>
@@ -308,28 +309,31 @@ export default function OrdersPage() {
                             {new Date(q.sent_at).toLocaleString("pt-BR")}
                           </td>
                           <td className="px-6 py-4">
-                            <div className="flex flex-wrap items-center gap-1.5">
+                            <span
+                              className={cn(
+                                "rounded-pill border px-2.5 py-1 text-[11px] font-medium",
+                                QUOTE_STATUS_PILL_STYLES[q.status]
+                              )}
+                            >
+                              {QUOTE_STATUS_LABELS[q.status]}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {q.production_deadline_date ? (
                               <span
+                                title={deadlineBadgeLabel(q.production_deadline_date)}
                                 className={cn(
-                                  "rounded-pill border px-2.5 py-1 text-[11px] font-medium",
-                                  QUOTE_STATUS_PILL_STYLES[q.status]
+                                  "font-numeric text-xs",
+                                  isProductionDeadlineDue(q.status, q.production_deadline_date)
+                                    ? "font-semibold text-red-400"
+                                    : "text-text-muted"
                                 )}
                               >
-                                {QUOTE_STATUS_LABELS[q.status]}
+                                {new Date(`${q.production_deadline_date}T00:00:00`).toLocaleDateString("pt-BR")}
                               </span>
-                              {isProductionDeadlineDue(q.status, q.production_deadline_date) && (
-                                <span
-                                  className={cn(
-                                    "flex items-center gap-1 rounded-pill border px-2 py-1 text-[11px] font-medium",
-                                    daysUntilProductionDeadline(q.production_deadline_date!) < 0
-                                      ? "border-red-500/30 bg-red-500/15 text-red-400"
-                                      : "border-amber-400/30 bg-amber-400/15 text-amber-400"
-                                  )}
-                                >
-                                  <Clock size={11} /> {deadlineBadgeLabel(q.production_deadline_date!)}
-                                </span>
-                              )}
-                            </div>
+                            ) : (
+                              <span className="text-xs text-text-muted/40">—</span>
+                            )}
                           </td>
                           <td className="px-6 py-4 font-numeric text-text-secondary">{formatBRL(q.final_price)}</td>
                           <td className="px-6 py-4 font-numeric text-red-400">{formatBRL(costs)}</td>
@@ -407,18 +411,6 @@ export default function OrdersPage() {
                           >
                             {QUOTE_STATUS_LABELS[q.status]}
                           </span>
-                          {isProductionDeadlineDue(q.status, q.production_deadline_date) && (
-                            <span
-                              className={cn(
-                                "flex items-center gap-1 rounded-pill border px-2 py-1 text-[11px] font-medium",
-                                daysUntilProductionDeadline(q.production_deadline_date!) < 0
-                                  ? "border-red-500/30 bg-red-500/15 text-red-400"
-                                  : "border-amber-400/30 bg-amber-400/15 text-amber-400"
-                              )}
-                            >
-                              <Clock size={11} /> {deadlineBadgeLabel(q.production_deadline_date!)}
-                            </span>
-                          )}
                         </div>
                         <p className="truncate text-base font-semibold text-text-primary">{buyerName}</p>
                         <p className="truncate text-xs text-text-secondary">{q.project_name}</p>
@@ -447,6 +439,20 @@ export default function OrdersPage() {
                     }
                   >
                     <CardRow label="Data">{new Date(q.sent_at).toLocaleString("pt-BR")}</CardRow>
+                    {q.production_deadline_date && (
+                      <CardRow label="Prazo">
+                        <span
+                          title={deadlineBadgeLabel(q.production_deadline_date)}
+                          className={cn(
+                            isProductionDeadlineDue(q.status, q.production_deadline_date)
+                              ? "font-semibold text-red-400"
+                              : undefined
+                          )}
+                        >
+                          {new Date(`${q.production_deadline_date}T00:00:00`).toLocaleDateString("pt-BR")}
+                        </span>
+                      </CardRow>
+                    )}
                     <CardRow label="Bruto">{formatBRL(q.final_price)}</CardRow>
                     <CardRow label="Custos">
                       <span className="text-red-400">{formatBRL(costs)}</span>
