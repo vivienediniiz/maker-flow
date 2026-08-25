@@ -524,11 +524,22 @@ export default function CalculatorPage() {
                 <div
                   className={cn(
                     "grid grid-cols-2 gap-3 sm:items-end",
-                    bed.modelType === "A" ? "sm:grid-cols-[140px_160px_1fr]" : "sm:grid-cols-[160px_1fr]"
+                    bed.modelType === "A" || bed.modelType === "B" ? "sm:grid-cols-[140px_160px_1fr]" : "sm:grid-cols-[160px_1fr]"
                   )}
                 >
                   {bed.modelType === "A" && (
                     <Field label="Peças idênticas nesta mesa">
+                      <input
+                        type="number"
+                        min={1}
+                        value={bed.piecesInBed || ""}
+                        onChange={(e) => updateBed(bed.id, { piecesInBed: Number(e.target.value) })}
+                        className="glass-input w-full"
+                      />
+                    </Field>
+                  )}
+                  {bed.modelType === "B" && (
+                    <Field label="Peças nesta mesa (opcional, referência)">
                       <input
                         type="number"
                         min={1}
@@ -578,6 +589,13 @@ export default function CalculatorPage() {
                     ≈ {Math.round(bed.weightG / bed.piecesInBed)}g e{" "}
                     {Math.round((bed.timeH * 60 + bed.timeM) / bed.piecesInBed)}min por peça — custo desta mesa
                     dividido por {bed.piecesInBed}
+                  </p>
+                )}
+
+                {bed.modelType === "B" && bed.piecesInBed > 1 && (
+                  <p className="text-[11px] text-text-muted">
+                    {bed.piecesInBed} peças nesta mesa — não divide o custo, é só referência (o valor calculado acima
+                    já é o total desta mesa).
                   </p>
                 )}
 
