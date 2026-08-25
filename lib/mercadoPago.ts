@@ -277,6 +277,28 @@ export async function upsertQuoteFromMercadoPagoOrder(admin: SupabaseClient, use
         platformFee
       );
     }
+
+    // "Gerar Link de Cobrança" de uma venda manual carrega o id da própria
+    // quote em external_reference — só confirma pagamento (sent -> paid) de
+    // uma venda que já existe, nunca cria uma nova nem mexe em vendas já
+    // pagas/canceladas por outro caminho.
+    const { data: pendingQuote } = await admin
+      .from("quotes")
+      .select("id, status")
+      .eq("id", order.external_reference)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (pendingQuote) {
+      if (pendingQuote.status !== "sent") return pendingQuote;
+      const { data: updated, error: updateError } = await admin
+        .from("quotes")
+        .update({ status: "paid" })
+        .eq("id", pendingQuote.id)
+        .select()
+        .single();
+      if (updateError) throw new Error(updateError.message);
+      return updated;
+    }
   }
 
   const platformFee = (payment?.fee_details ?? []).reduce((sum, f) => sum + (Number(f.amount) || 0), 0);

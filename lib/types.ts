@@ -222,6 +222,9 @@ export interface Quote {
   production_deadline: string | null;
   /** Agrupa quotes criadas a partir do mesmo checkout da Loja Online (uma linha por produto do carrinho). */
   storefront_checkout_id: string | null;
+  /** URL de Checkout Pro gerada por "Gerar Link de Cobrança" — ao criar, o status volta pra "sent" até o webhook confirmar o pagamento (external_reference = id desta quote). */
+  payment_link_url: string | null;
+  mp_preference_id: string | null;
 }
 
 export type QuoteDiscountType = "fixed" | "percentage" | "coupon";
