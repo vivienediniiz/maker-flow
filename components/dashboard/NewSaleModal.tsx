@@ -745,7 +745,11 @@ export function NewSaleModal({
           </div>
         )}
 
-        {!isEditing && (
+        {/* Vindo da Calculadora, filamento/mesa já foi decidido lá — mostrar de
+            novo aqui seria pedir a mesma escolha duas vezes. A dedução de
+            estoque continua acontecendo normal no submit, só com o estado já
+            pré-preenchido (usedFilaments), sem UI pra editar de novo. */}
+        {!isEditing && initialUsedFilaments === undefined && (
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <label className="text-xs text-text-muted">Filamento(s) Utilizados</label>
@@ -812,7 +816,8 @@ export function NewSaleModal({
           </div>
         )}
 
-        {!isEditing && (
+        {/* Mesma lógica do filamento: insumos já foram escolhidos na Calculadora. */}
+        {!isEditing && initialUsedSupplies === undefined && (
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <label className="text-xs text-text-muted">Insumo(s) Utilizados</label>
