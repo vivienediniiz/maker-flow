@@ -316,11 +316,24 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
                 )}
               </div>
 
-              <SegmentedControl
-                options={BED_MODEL_OPTIONS}
+              <select
                 value={bed.modelType}
-                onChange={(v) => updateBed(bed.id, { modelType: v })}
-              />
+                onChange={(e) => updateBed(bed.id, { modelType: e.target.value as BedModelType })}
+                className="glass-input w-full sm:hidden"
+              >
+                {BED_MODEL_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-bg-raised">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <div className="hidden sm:block">
+                <SegmentedControl
+                  options={BED_MODEL_OPTIONS}
+                  value={bed.modelType}
+                  onChange={(v) => updateBed(bed.id, { modelType: v })}
+                />
+              </div>
 
               {printerAssets.length > 0 && (
                 <MiniField label="Impressora utilizada (opcional, preenche a potência)">

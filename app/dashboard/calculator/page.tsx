@@ -401,10 +401,10 @@ export default function CalculatorPage() {
         />
       )}
 
-      <main className="grid grid-cols-1 gap-6 px-6 py-8 md:px-8 xl:grid-cols-[1fr_360px]">
+      <main className="grid grid-cols-1 gap-6 px-3 py-8 md:px-8 xl:grid-cols-[1fr_360px]">
         {/* Left column: inputs */}
         <div className="space-y-6">
-          <GlassCard padding="lg" className="space-y-3">
+          <GlassCard padding="lg" className="space-y-3 p-4 sm:p-8">
             <label className="block text-xs text-text-muted">Nome do produto</label>
             <input
               value={projectName}
@@ -415,7 +415,7 @@ export default function CalculatorPage() {
           </GlassCard>
 
           {/* Print beds */}
-          <GlassCard padding="lg" className="space-y-5">
+          <GlassCard padding="lg" className="space-y-5 p-4 sm:p-8">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
                 Mesas de Impressão
@@ -471,11 +471,24 @@ export default function CalculatorPage() {
                   )}
                 </div>
 
-                <SegmentedControl
-                  options={BED_MODEL_OPTIONS}
+                <select
                   value={bed.modelType}
-                  onChange={(v) => updateBed(bed.id, { modelType: v })}
-                />
+                  onChange={(e) => updateBed(bed.id, { modelType: e.target.value as BedModelType })}
+                  className="glass-input w-full sm:hidden"
+                >
+                  {BED_MODEL_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value} className="bg-bg-raised">
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="hidden sm:block">
+                  <SegmentedControl
+                    options={BED_MODEL_OPTIONS}
+                    value={bed.modelType}
+                    onChange={(v) => updateBed(bed.id, { modelType: v })}
+                  />
+                </div>
 
                 {printerAssets.length > 0 && (
                   <Field label="Impressora utilizada (opcional, preenche a potência)">
@@ -701,7 +714,7 @@ export default function CalculatorPage() {
           </GlassCard>
 
           {/* Costs & extras */}
-          <GlassCard padding="lg" className="space-y-5">
+          <GlassCard padding="lg" className="space-y-5 p-4 sm:p-8">
             <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
               Custos e Consumíveis
             </h3>
@@ -738,7 +751,7 @@ export default function CalculatorPage() {
           </GlassCard>
 
           {/* Insumos */}
-          <GlassCard padding="lg" className="space-y-3">
+          <GlassCard padding="lg" className="space-y-3 p-4 sm:p-8">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">Insumos Utilizados</h3>
               <NeonButton variant="outline" size="sm" onClick={addSupplyLine} disabled={supplies.length === 0} className="whitespace-nowrap">
@@ -803,7 +816,7 @@ export default function CalculatorPage() {
           </GlassCard>
 
           {/* Pricing */}
-          <GlassCard padding="lg" className="space-y-5">
+          <GlassCard padding="lg" className="space-y-5 p-4 sm:p-8">
             <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">
               Precificação
             </h3>
@@ -867,7 +880,7 @@ export default function CalculatorPage() {
 
         {/* Right column: summary + actions */}
         <div className="space-y-6">
-          <GlassCard padding="lg" className="space-y-5 xl:sticky xl:top-[80px]">
+          <GlassCard padding="lg" className="space-y-5 p-4 sm:p-8 xl:sticky xl:top-[80px]">
             <h3 className="neon-text text-2xl font-bold uppercase tracking-wider">Resumo</h3>
 
             <Field label="Quantidade de Produtos Finais">
@@ -952,8 +965,8 @@ export default function CalculatorPage() {
         </div>
       </main>
 
-      <div className="px-6 pb-8 md:px-8">
-        <GlassCard padding="lg" className="flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-between sm:text-left">
+      <div className="px-3 pb-8 md:px-8">
+        <GlassCard padding="lg" className="flex flex-col items-center gap-4 p-4 text-center sm:flex-row sm:justify-between sm:p-8 sm:text-left">
           <div>
             <h3 className="font-display text-lg">Gostou do resultado?</h3>
             <p className="mt-1 text-sm text-text-secondary">
@@ -974,7 +987,7 @@ export default function CalculatorPage() {
         </GlassCard>
       </div>
 
-      <div className="px-6 pb-8 md:px-8">
+      <div className="px-3 pb-8 md:px-8">
         <CalculatorTips />
       </div>
 
@@ -1083,7 +1096,7 @@ const TIP_COLUMNS: { icon: typeof Weight; title: string; items: string[] }[] = [
 
 function CalculatorTips() {
   return (
-    <GlassCard padding="lg" className="space-y-4">
+    <GlassCard padding="lg" className="space-y-4 p-4 sm:p-8">
       <div className="flex items-center gap-2">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">
           <Info size={14} />
