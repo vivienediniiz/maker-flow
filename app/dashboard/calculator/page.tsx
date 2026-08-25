@@ -357,6 +357,11 @@ export default function CalculatorPage() {
   // ao menos uma mesa Peça única/Montagem ou Lote, costPerUnit fica 0.
   const noUnitBeds = beds.every((b) => b.modelType === "C");
   const actionsDisabled = missingFilament || noUnitBeds;
+  // Só quando TODAS as mesas que contam pro custo são Lote o valor abaixo
+  // representa a mesa inteira (batch) — com Peça única/Montagem no meio,
+  // volta a ser "por unidade" (peça/montagem ou soma delas).
+  const unitBeds = beds.filter((b) => b.modelType !== "C");
+  const isLoteOnly = unitBeds.length > 0 && unitBeds.every((b) => b.modelType === "A");
 
   // Snapshot estável dos insumos selecionados aqui — só muda quando o usuário
   // de fato edita a lista, pra não resetar a seção "Insumo(s) Utilizados" da
@@ -901,7 +906,7 @@ export default function CalculatorPage() {
               <SummaryRow label="Energia" value={formatBRL(calc.energyCost)} />
               {suppliesCost > 0 && <SummaryRow label="Insumos" value={formatBRL(calc.suppliesCost)} />}
               <div className="my-2 h-px bg-border-glass" />
-              <SummaryRow label="Custo por Unidade" value={formatBRL(calc.costPerUnit)} />
+              <SummaryRow label={isLoteOnly ? "Custo Total da Mesa" : "Custo por Unidade"} value={formatBRL(calc.costPerUnit)} />
               {selectedRiskTier ? (
                 <>
                   <SummaryRow label="Preço com margem" value={formatBRL(calc.pricePerUnitBeforeRisk)} />

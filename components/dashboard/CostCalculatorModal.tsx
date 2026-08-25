@@ -208,6 +208,11 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
   );
 
   const noUnitBeds = beds.every((b) => b.modelType === "C");
+  // Só quando TODAS as mesas que contam pro custo são Lote o valor abaixo
+  // representa a mesa inteira (batch) — com Peça única/Montagem no meio,
+  // volta a ser "unitário" (peça/montagem ou soma delas).
+  const unitBeds = beds.filter((b) => b.modelType !== "C");
+  const isLoteOnly = unitBeds.length > 0 && unitBeds.every((b) => b.modelType === "A");
 
   const selectedRiskTier = riskTiers.find((r) => r.id === selectedRiskTierId) ?? null;
 
@@ -685,7 +690,11 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
           <SummaryRow label="Custo de Energia" value={formatBRL(calc.energyCost)} />
           {suppliesCost > 0 && <SummaryRow label="Insumos" value={formatBRL(calc.suppliesCost)} />}
           <div className="my-1 h-px bg-border-glass" />
-          <SummaryRow label="Custo Total Unitário" value={formatBRL(calc.costPerUnit)} strong />
+          <SummaryRow
+            label={isLoteOnly ? "Custo Total da Mesa" : "Custo Total Unitário"}
+            value={formatBRL(calc.costPerUnit)}
+            strong
+          />
           {(laborHours > 0 || extras > 0 || (paintedByHand && paintCost > 0)) && (
             <SummaryRow label="+ Fixos (mão de obra/pintura/extras)" value={formatBRL(calc.fixedCosts)} />
           )}
