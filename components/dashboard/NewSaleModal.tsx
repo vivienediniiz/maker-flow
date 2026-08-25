@@ -69,6 +69,11 @@ const PAYMENT_METHODS: { value: QuotePaymentMethod; label: string }[] = [
   { value: "payment_link", label: "Link de Pagamento" },
 ];
 
+// InfinitePay não é multi-tenant (um handle só, sem OAuth por maker) —
+// diferente do Mercado Pago acima, essa opção só pode aparecer pra conta
+// dona do handle configurado (ver /api/quotes/[id]/infinitepay-link).
+const INFINITEPAY_STORE_SLUG = process.env.NEXT_PUBLIC_INFINITEPAY_STORE_SLUG;
+
 export function NewSaleModal({
   open,
   onClose,
@@ -136,6 +141,7 @@ export function NewSaleModal({
   const [couponBusy, setCouponBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showInfinitePayOption, setShowInfinitePayOption] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -144,6 +150,7 @@ export function NewSaleModal({
     loadCoupons();
     loadFilaments();
     loadSupplies();
+    loadInfinitePayAvailability();
     setUsedFilaments(
       !quote && initialUsedFilaments && initialUsedFilaments.length > 0
         ? initialUsedFilaments
@@ -230,6 +237,16 @@ export function NewSaleModal({
     initialUnitPrice,
     initialQuantity,
   ]);
+
+  async function loadInfinitePayAvailability() {
+    if (!INFINITEPAY_STORE_SLUG) return;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from("profiles").select("store_slug").eq("id", user.id).maybeSingle();
+    setShowInfinitePayOption(data?.store_slug === INFINITEPAY_STORE_SLUG);
+  }
 
   async function loadCoupons() {
     const {
@@ -418,8 +435,12 @@ export function NewSaleModal({
   // mexer nisso numa edição regrida uma venda já em produção/enviada.
   const statusEditable =
     !quote || quote.status === "sent" || quote.status === "awaiting_payment" || quote.status === "paid";
-  const showPaidToggle = statusEditable && paymentMethod !== "payment_link";
   const isPaymentLink = paymentMethod === "payment_link";
+  const isInfinitePay = paymentMethod === "infinitepay";
+  // Ambas as formas geram um link e resolvem o status sozinhas via webhook —
+  // não faz sentido o toggle manual "Já pago/Aguardando" nesses dois casos.
+  const isLinkBasedPayment = isPaymentLink || isInfinitePay;
+  const showPaidToggle = statusEditable && !isLinkBasedPayment;
   const showUnitPricing = !!selectedProduct;
   const tierRanges = selectedProduct ? buildPriceTierRanges(selectedProduct.price_tiers) : [];
   const hasTiers = tierRanges.length > 0;
@@ -520,7 +541,7 @@ export function NewSaleModal({
     // prospect, essa venda já está confirmada, só falta o pagamento.
     const resolvedStatus: QuoteStatus | undefined = !statusEditable
       ? undefined
-      : isPaymentLink
+      : isLinkBasedPayment
         ? "awaiting_payment"
         : alreadyPaid
           ? "paid"
@@ -640,12 +661,16 @@ export function NewSaleModal({
       }
     }
 
-    // Forma de pagamento "Link de Pagamento": gera a preferência real no MP
-    // já aqui, sem precisar de um segundo clique em "Gerar Link de Cobrança"
-    // na tela de sucesso — só na criação (editar não abre essa tela).
-    if (!isEditing && isPaymentLink && createdQuoteId && createdQuote) {
+    // Forma de pagamento "Link de Pagamento" (Mercado Pago) ou "InfinitePay":
+    // gera o link real já aqui, sem precisar de um segundo clique em "Gerar
+    // Link de Cobrança" na tela de sucesso — só na criação (editar não abre
+    // essa tela).
+    if (!isEditing && isLinkBasedPayment && createdQuoteId && createdQuote) {
       try {
-        const linkRes = await fetch(`/api/quotes/${createdQuoteId}/payment-link`, { method: "POST" });
+        const endpoint = isInfinitePay
+          ? `/api/quotes/${createdQuoteId}/infinitepay-link`
+          : `/api/quotes/${createdQuoteId}/payment-link`;
+        const linkRes = await fetch(endpoint, { method: "POST" });
         const linkData = await linkRes.json();
         if (linkRes.ok && linkData.url) {
           createdQuote = { ...createdQuote, payment_link_url: linkData.url };
@@ -949,6 +974,11 @@ export function NewSaleModal({
                 {pm.label}
               </option>
             ))}
+            {showInfinitePayOption && (
+              <option value="infinitepay" className="bg-bg-raised">
+                InfinitePay
+              </option>
+            )}
           </select>
 
           {showPaidToggle && (
@@ -976,10 +1006,10 @@ export function NewSaleModal({
             </div>
           )}
 
-          {isPaymentLink && statusEditable && (
+          {isLinkBasedPayment && statusEditable && (
             <p className="mt-1.5 text-[11px] text-text-muted">
-              Ao salvar, um link de pagamento real do Mercado Pago é gerado automaticamente — a venda entra como
-              "aguardando pagamento" até o cliente pagar.
+              Ao salvar, um link de pagamento real do {isInfinitePay ? "InfinitePay" : "Mercado Pago"} é gerado
+              automaticamente — a venda entra como "aguardando pagamento" até o cliente pagar.
             </p>
           )}
         </div>

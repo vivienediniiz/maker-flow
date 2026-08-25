@@ -187,7 +187,15 @@ export type QuoteSource = "mercado_pago" | "mercado_livre" | "shopee" | "tiktok_
 
 export type QuoteStatus = "sent" | "awaiting_payment" | "paid" | "in_production" | "shipped" | "expired" | "cancelled";
 
-export type QuotePaymentMethod = "pix" | "credit_card" | "debit_card" | "cash" | "transfer" | "other" | "payment_link";
+export type QuotePaymentMethod =
+  | "pix"
+  | "credit_card"
+  | "debit_card"
+  | "cash"
+  | "transfer"
+  | "other"
+  | "payment_link"
+  | "infinitepay";
 
 export interface Quote {
   id: string;
@@ -236,6 +244,8 @@ export interface Quote {
   /** URL de Checkout Pro gerada por "Gerar Link de Cobrança" — ao criar, o status volta pra "sent" até o webhook confirmar o pagamento (external_reference = id desta quote). */
   payment_link_url: string | null;
   mp_preference_id: string | null;
+  infinitepay_order_nsu: string | null;
+  infinitepay_transaction_nsu: string | null;
   /** Produto com personalização a pedido do cliente (gravação, cor específica etc.). */
   is_custom: boolean;
   customization_notes: string | null;

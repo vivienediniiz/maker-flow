@@ -12,9 +12,11 @@ function adminClient() {
 /**
  * Gera (ou devolve a já existente) uma URL de Checkout Pro pra uma venda já
  * criada — na conta Mercado Pago do próprio maker (mesma integração usada
- * pela Loja Online). Ao gerar, a venda volta pro status "sent" (aguardando
- * pagamento); o webhook /api/webhooks/mercado-pago confirma sozinho quando o
- * cliente pagar (external_reference = id desta quote), avançando pra "paid".
+ * pela Loja Online). Ao gerar, a venda volta pro status "awaiting_payment"
+ * (venda confirmada, só falta o pagamento — diferente de "sent", que é
+ * orçamento enviado a um prospect); o webhook /api/webhooks/mercado-pago
+ * confirma sozinho quando o cliente pagar (external_reference = id desta
+ * quote), avançando pra "paid".
  */
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createServerClient();
@@ -86,7 +88,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       .update({
         payment_link_url: preference.init_point,
         mp_preference_id: preference.id,
-        status: "sent",
+        status: "awaiting_payment",
       })
       .eq("id", quote.id);
 

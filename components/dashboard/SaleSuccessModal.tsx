@@ -30,7 +30,11 @@ export function SaleSuccessModal({ quote, onClose }: { quote: QuoteWithClient | 
     setGeneratingLink(true);
     setLinkError(null);
     try {
-      const res = await fetch(`/api/quotes/${quote!.id}/payment-link`, { method: "POST" });
+      const endpoint =
+        quote!.payment_method === "infinitepay"
+          ? `/api/quotes/${quote!.id}/infinitepay-link`
+          : `/api/quotes/${quote!.id}/payment-link`;
+      const res = await fetch(endpoint, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
         setLinkError(data.error ?? "Não foi possível gerar o link.");

@@ -48,6 +48,7 @@ export const QUOTE_PAYMENT_METHOD_LABELS: Record<QuotePaymentMethod, string> = {
   transfer: "Transferência",
   other: "Outro",
   payment_link: "Link de Pagamento",
+  infinitepay: "InfinitePay",
 };
 
 export const QUOTE_CHANNEL_LABELS: Record<string, string> = {

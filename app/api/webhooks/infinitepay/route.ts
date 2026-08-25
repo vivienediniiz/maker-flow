@@ -49,8 +49,64 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (!checkout) {
-    console.log(`[webhook] infinitepay: nenhum checkout InfinitePay encontrado pro order_nsu ${orderNsu}`);
-    return NextResponse.json({ ok: true, skipped: "unknown order_nsu" });
+    // Não é um checkout da Loja Online — pode ser um link gerado a partir de
+    // uma Venda Manual (NewSaleModal → InfinitePay), que carrega o id da
+    // própria quote em order_nsu. Mesmo padrão de upsertQuoteFromMercadoPagoOrder:
+    // só confirma pagamento (awaiting_payment -> paid) de uma venda que já existe.
+    const { data: pendingQuote } = await admin
+      .from("quotes")
+      .select("id, status, final_price")
+      .eq("id", orderNsu)
+      .eq("payment_method", "infinitepay")
+      .maybeSingle();
+
+    if (!pendingQuote) {
+      console.log(`[webhook] infinitepay: nenhum checkout ou venda encontrado pro order_nsu ${orderNsu}`);
+      return NextResponse.json({ ok: true, skipped: "unknown order_nsu" });
+    }
+
+    if (pendingQuote.status !== "awaiting_payment") {
+      return NextResponse.json({ ok: true, skipped: "already resolved" });
+    }
+
+    let quoteCheck;
+    try {
+      quoteCheck = await checkInfinitePayPayment({
+        handle: INFINITEPAY_HANDLE,
+        order_nsu: orderNsu,
+        transaction_nsu: transactionNsu,
+        slug,
+      });
+    } catch (err) {
+      console.log("[webhook] infinitepay: falha ao chamar payment_check (quote) —", (err as Error).message);
+      return NextResponse.json({ error: "Falha ao confirmar pagamento" }, { status: 502 });
+    }
+
+    if (!quoteCheck.success || !quoteCheck.paid) {
+      console.log("[webhook] infinitepay: payment_check não confirmou pagamento aprovado (quote)", quoteCheck);
+      return NextResponse.json({ ok: true, skipped: "not paid" });
+    }
+
+    const paidCentavos = quoteCheck.paid_amount ?? quoteCheck.amount;
+    const expectedCentavos = Math.round(Number(pendingQuote.final_price) * 100);
+    if (paidCentavos != null && Math.abs(paidCentavos - expectedCentavos) > 1) {
+      console.log(
+        `[webhook] infinitepay: valor pago (${paidCentavos}) diverge do esperado (${expectedCentavos}) pra venda ${pendingQuote.id} — NÃO marcado como pago, precisa de revisão manual`
+      );
+      return NextResponse.json({ ok: true, skipped: "amount mismatch, needs manual review" });
+    }
+
+    const { error: updateError } = await admin
+      .from("quotes")
+      .update({ status: "paid", infinitepay_transaction_nsu: transactionNsu })
+      .eq("id", pendingQuote.id);
+
+    if (updateError) {
+      console.log(`[webhook] infinitepay: falha ao marcar venda ${pendingQuote.id} como paga —`, updateError.message);
+      return NextResponse.json({ error: "Pagamento confirmado, mas falhou ao atualizar a venda" }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
   }
 
   if (checkout.status === "paid") {
