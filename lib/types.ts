@@ -76,6 +76,12 @@ export interface StoreCheckout {
   seller_user_id: string;
   mp_preference_id: string | null;
   status: "pending" | "paid" | "expired";
+  /** "infinitepay" só é usado pela loja em NEXT_PUBLIC_INFINITEPAY_STORE_SLUG — não é multi-tenant como o Mercado Pago. */
+  payment_provider: "mercado_pago" | "infinitepay";
+  infinitepay_order_nsu: string | null;
+  infinitepay_transaction_nsu: string | null;
+  infinitepay_slug: string | null;
+  infinitepay_receipt_url: string | null;
   buyer_name: string;
   buyer_email: string;
   buyer_phone: string | null;

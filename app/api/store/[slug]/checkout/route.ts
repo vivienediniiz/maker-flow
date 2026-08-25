@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createMercadoPagoPreferenceForIntegration } from "@/lib/mercadoPago";
+import { createInfinitePayCheckoutLink } from "@/lib/infinitePay";
 import type { StoreProfilePublic } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://maker-flow.netlify.app";
+// Único vendedor autorizado a usar InfinitePay — handle não é secreto (a
+// própria InfinitePay trata como público), mas o botão só aparece/funciona
+// pra essa loja específica, pra não desviar pagamento de outro vendedor pra
+// essa conta (a Loja Online é multi-tenant, InfinitePay hoje não é).
+const INFINITEPAY_STORE_SLUG = process.env.NEXT_PUBLIC_INFINITEPAY_STORE_SLUG;
+const INFINITEPAY_HANDLE = process.env.INFINITEPAY_HANDLE;
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -44,6 +51,11 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
   const body = await req.json().catch(() => null);
   const items: CheckoutItemInput[] = Array.isArray(body?.items) ? body.items : [];
   const buyer: CheckoutBuyerInput | null = body?.buyer ?? null;
+  const paymentMethod: "mercado_pago" | "infinitepay" = body?.paymentMethod === "infinitepay" ? "infinitepay" : "mercado_pago";
+
+  if (paymentMethod === "infinitepay" && (!INFINITEPAY_HANDLE || slug !== INFINITEPAY_STORE_SLUG)) {
+    return NextResponse.json({ error: "InfinitePay não está disponível pra essa loja." }, { status: 400 });
+  }
 
   if (items.length === 0) {
     return NextResponse.json({ error: "Carrinho vazio." }, { status: 400 });
@@ -93,6 +105,7 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
     .insert({
       seller_user_id: sellerProfile.user_id,
       status: "pending",
+      payment_provider: paymentMethod,
       buyer_name: buyer.name.trim(),
       buyer_email: buyer.email.trim(),
       buyer_phone: buyer.phone || null,
@@ -111,6 +124,29 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
 
   if (checkoutError || !checkout) {
     return NextResponse.json({ error: checkoutError?.message ?? "Falha ao iniciar o checkout." }, { status: 500 });
+  }
+
+  if (paymentMethod === "infinitepay") {
+    try {
+      const link = await createInfinitePayCheckoutLink({
+        handle: INFINITEPAY_HANDLE!,
+        items: checkoutItems.map((i) => ({
+          quantity: i.quantity,
+          price: Math.round(i.unit_price * 100),
+          description: i.name,
+        })),
+        order_nsu: checkout.id,
+        redirect_url: `${SITE_URL}/loja/${slug}?pedido=sucesso`,
+        webhook_url: `${SITE_URL}/api/webhooks/infinitepay`,
+        customer: { name: buyer.name.trim(), email: buyer.email.trim(), phone_number: buyer.phone || undefined },
+      });
+
+      await admin.from("store_checkouts").update({ infinitepay_order_nsu: checkout.id }).eq("id", checkout.id);
+
+      return NextResponse.json({ init_point: link.url });
+    } catch (err) {
+      return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+    }
   }
 
   const { data: integration } = await admin

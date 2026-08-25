@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { NeonButton } from "@/components/ui/NeonButton";
-import { formatBRL } from "@/lib/utils";
+import { formatBRL, cn } from "@/lib/utils";
 import { formatCep, cepDigits, fetchAddressByCep } from "@/lib/viaCep";
 import { Loader2, ArrowLeft } from "lucide-react";
 import type { CartLine } from "./page";
@@ -15,7 +15,11 @@ interface CheckoutFormProps {
   onSuccess: () => void;
 }
 
+const INFINITEPAY_AVAILABLE = process.env.NEXT_PUBLIC_INFINITEPAY_STORE_SLUG;
+
 export function CheckoutForm({ slug, cart, total, onBack, onSuccess }: CheckoutFormProps) {
+  const showPaymentChoice = !!INFINITEPAY_AVAILABLE && slug === INFINITEPAY_AVAILABLE;
+  const [paymentMethod, setPaymentMethod] = useState<"mercado_pago" | "infinitepay">("mercado_pago");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -65,6 +69,7 @@ export function CheckoutForm({ slug, cart, total, onBack, onSuccess }: CheckoutF
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           items: cart.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+          paymentMethod,
           buyer: {
             name,
             email,
@@ -166,6 +171,32 @@ export function CheckoutForm({ slug, cart, total, onBack, onSuccess }: CheckoutF
           </div>
         </div>
       </div>
+
+      {showPaymentChoice && (
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">Forma de pagamento</label>
+          <div className="glass-card flex gap-1 p-1">
+            {(
+              [
+                { value: "mercado_pago", label: "Mercado Pago" },
+                { value: "infinitepay", label: "InfinitePay" },
+              ] as { value: "mercado_pago" | "infinitepay"; label: string }[]
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setPaymentMethod(opt.value)}
+                className={cn(
+                  "flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium transition-colors sm:min-h-0",
+                  paymentMethod === opt.value ? "bg-neon-gradient text-white" : "text-text-secondary hover:text-text-primary"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {error && <p className="text-xs text-red-400">{error}</p>}
 
