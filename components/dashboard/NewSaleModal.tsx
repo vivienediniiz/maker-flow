@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, Truck, Plus, Trash2, AlertTriangle } from "lucide-react";
+import { Pencil, Truck } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { NewClientModal } from "@/components/dashboard/NewClientModal";
 import { ShippingQuoteWidget, type ShippingQuoteSelection } from "@/components/dashboard/ShippingQuoteWidget";
-import { FilamentPickerDropdown } from "@/components/dashboard/FilamentPickerDropdown";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
@@ -232,18 +231,6 @@ export function NewSaleModal({
     setFilaments((data as Filament[]) ?? []);
   }
 
-  function addUsedFilamentRow() {
-    setUsedFilaments((prev) => [...prev, { filamentId: "", quantityG: "" }]);
-  }
-
-  function updateUsedFilamentRow(index: number, patch: Partial<UsedFilamentRow>) {
-    setUsedFilaments((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
-  }
-
-  function removeUsedFilamentRow(index: number) {
-    setUsedFilaments((prev) => prev.filter((_, i) => i !== index));
-  }
-
   async function loadSupplies() {
     const {
       data: { user },
@@ -251,18 +238,6 @@ export function NewSaleModal({
     if (!user) return;
     const { data } = await supabase.from("supplies").select("*").eq("user_id", user.id).order("name");
     setSupplies((data as Supply[]) ?? []);
-  }
-
-  function addUsedSupplyRow() {
-    setUsedSupplies((prev) => [...prev, { supplyId: "", quantity: "" }]);
-  }
-
-  function updateUsedSupplyRow(index: number, patch: Partial<UsedSupplyRow>) {
-    setUsedSupplies((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
-  }
-
-  function removeUsedSupplyRow(index: number) {
-    setUsedSupplies((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function loadProducts() {
@@ -746,151 +721,14 @@ export function NewSaleModal({
           </div>
         )}
 
-        {/* Vindo da Calculadora, filamento/mesa já foi decidido lá — mostrar de
-            novo aqui seria pedir a mesma escolha duas vezes. A dedução de
-            estoque continua acontecendo normal no submit, só com o estado já
-            pré-preenchido (usedFilaments), sem UI pra editar de novo. */}
-        {!isEditing && initialUsedFilaments === undefined && (
-          <div>
-            <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-xs text-text-muted">Filamento(s) Utilizados</label>
-              <button
-                type="button"
-                onClick={addUsedFilamentRow}
-                className="flex items-center gap-1 text-[11px] text-neon-pink hover:underline"
-              >
-                <Plus size={11} /> Adicionar filamento
-              </button>
-            </div>
-
-            {usedFilaments.length === 0 ? (
-              <p className="text-[11px] text-text-muted">
-                {filaments.length === 0
-                  ? "Nenhum filamento cadastrado — cadastre em Filamentos pra vincular a uma venda."
-                  : "Nenhum filamento vinculado a esta venda (opcional)."}
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {usedFilaments.map((row, i) => {
-                  const f = filaments.find((x) => x.id === row.filamentId);
-                  const qty = Number(row.quantityG) || 0;
-                  const overLimit = !!f && qty > f.remaining_weight_g;
-                  return (
-                    <div key={i} className="glass-card space-y-1.5 p-3">
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <FilamentPickerDropdown
-                            filaments={filaments}
-                            value={row.filamentId}
-                            onChange={(id) => updateUsedFilamentRow(i, { filamentId: id })}
-                          />
-                        </div>
-                        <input
-                          type="number"
-                          step="1"
-                          min="0"
-                          value={row.quantityG}
-                          onChange={(e) => updateUsedFilamentRow(i, { quantityG: e.target.value })}
-                          placeholder="Qtd (g)"
-                          className="glass-input w-24"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeUsedFilamentRow(i)}
-                          className="shrink-0 text-text-muted hover:text-red-400"
-                          aria-label="Remover filamento"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                      {overLimit && (
-                        <p className="flex items-center gap-1 text-[11px] text-amber-400">
-                          <AlertTriangle size={11} /> Quantidade maior que o disponível ({f!.remaining_weight_g}g) — a
-                          venda não será bloqueada, mas o estoque ficará negativo.
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Mesma lógica do filamento: insumos já foram escolhidos na Calculadora. */}
-        {!isEditing && initialUsedSupplies === undefined && (
-          <div>
-            <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-xs text-text-muted">Insumo(s) Utilizados</label>
-              <button
-                type="button"
-                onClick={addUsedSupplyRow}
-                className="flex items-center gap-1 text-[11px] text-neon-pink hover:underline"
-              >
-                <Plus size={11} /> Adicionar insumo
-              </button>
-            </div>
-
-            {usedSupplies.length === 0 ? (
-              <p className="text-[11px] text-text-muted">
-                {supplies.length === 0
-                  ? "Nenhum insumo cadastrado — cadastre em Cadastros > Insumos pra vincular a uma venda."
-                  : "Nenhum insumo vinculado a esta venda (opcional)."}
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {usedSupplies.map((row, i) => {
-                  const s = supplies.find((x) => x.id === row.supplyId);
-                  const qty = Number(row.quantity) || 0;
-                  const overLimit = !!s && qty > s.stock_quantity;
-                  return (
-                    <div key={i} className="glass-card space-y-1.5 p-3">
-                      <div className="flex gap-2">
-                        <select
-                          value={row.supplyId}
-                          onChange={(e) => updateUsedSupplyRow(i, { supplyId: e.target.value })}
-                          className="glass-input flex-1"
-                        >
-                          <option value="" className="bg-bg-raised">
-                            {supplies.length === 0 ? "Nenhum insumo cadastrado" : "Selecione..."}
-                          </option>
-                          {supplies.map((sup) => (
-                            <option key={sup.id} value={sup.id} className="bg-bg-raised">
-                              {sup.name} ({sup.stock_quantity}{sup.unit} disponíveis)
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={row.quantity}
-                          onChange={(e) => updateUsedSupplyRow(i, { quantity: e.target.value })}
-                          placeholder={`Qtd${s ? ` (${s.unit})` : ""}`}
-                          className="glass-input w-24"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeUsedSupplyRow(i)}
-                          className="shrink-0 text-text-muted hover:text-red-400"
-                          aria-label="Remover insumo"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                      {overLimit && (
-                        <p className="flex items-center gap-1 text-[11px] text-amber-400">
-                          <AlertTriangle size={11} /> Quantidade maior que o disponível ({s!.stock_quantity}{s!.unit}) — a
-                          venda não será bloqueada, mas o estoque ficará negativo.
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+        {/*
+          Filamento(s)/Insumo(s) Utilizados: removido da UI (não faz mais
+          sentido pedir manualmente aqui). O consumo continua sendo deduzido
+          no submit a partir de usedFilaments/usedSupplies — que só chegam
+          preenchidos quando a venda vem da Calculadora (initialUsedFilaments/
+          initialUsedSupplies); vinda direto de Vendas > Nova Venda, esses
+          arrays ficam vazios e nenhum estoque é descontado.
+        */}
 
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Valor Frete (R$)</label>

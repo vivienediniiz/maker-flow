@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Link2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { SaleReceiptModal } from "@/components/dashboard/SaleReceiptModal";
@@ -27,12 +27,17 @@ export function SaleSuccessModal({ quote, onClose }: { quote: QuoteWithClient | 
             </p>
             <p className="neon-text font-numeric text-2xl font-semibold">{formatBRL(quote.final_price)}</p>
           </div>
-          <div className="flex w-full gap-3 pt-2">
-            <NeonButton variant="ghost" className="flex-1" onClick={onClose}>
-              Fechar
-            </NeonButton>
-            <NeonButton className="flex-1" onClick={() => setReceiptOpen(true)}>
-              Gerar Comprovante
+          <div className="flex w-full flex-col gap-2 pt-2">
+            <div className="flex w-full gap-3">
+              <NeonButton variant="ghost" className="flex-1" onClick={onClose}>
+                Fechar
+              </NeonButton>
+              <NeonButton className="flex-1" onClick={() => setReceiptOpen(true)}>
+                Gerar Comprovante
+              </NeonButton>
+            </div>
+            <NeonButton variant="outline" className="w-full">
+              <Link2 size={16} /> Gerar Link de Cobrança
             </NeonButton>
           </div>
         </div>

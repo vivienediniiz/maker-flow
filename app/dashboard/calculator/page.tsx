@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { Toggle } from "@/components/ui/Toggle";
 import { MarginSlider } from "@/components/ui/MarginSlider";
 import { NewSaleModal } from "@/components/dashboard/NewSaleModal";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
+import { SaleSuccessModal } from "@/components/dashboard/SaleSuccessModal";
 import { GenerateQuoteModal } from "@/components/dashboard/GenerateQuoteModal";
 import { FilamentModal } from "@/components/dashboard/FilamentModal";
 import { FilamentPickerDropdown } from "@/components/dashboard/FilamentPickerDropdown";
@@ -17,8 +19,22 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { calculateCost, bedCostBreakdown, type CalcMixedItem } from "@/lib/costCalculator";
-import { Plus, Trash2, FileDown, Link2, Rocket, Info, Weight, Timer, Zap, TrendingUp, PackagePlus, Save, FolderOpen } from "lucide-react";
-import type { Product, Supply, Filament, PrinterAsset, RiskTier, CalcInputs, CalculatorDraft } from "@/lib/types";
+import {
+  Plus,
+  Trash2,
+  FileDown,
+  Rocket,
+  Info,
+  Weight,
+  Timer,
+  Zap,
+  TrendingUp,
+  PackagePlus,
+  Save,
+  FolderOpen,
+  AlertTriangle,
+} from "lucide-react";
+import type { Product, Supply, Filament, PrinterAsset, RiskTier, CalcInputs, CalculatorDraft, QuoteWithClient } from "@/lib/types";
 
 type BedModelType = "A" | "B" | "C";
 
@@ -114,6 +130,7 @@ export default function CalculatorPage() {
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [newProductModalOpen, setNewProductModalOpen] = useState(false);
   const [quoteModalOpen, setQuoteModalOpen] = useState(false);
+  const [successQuote, setSuccessQuote] = useState<QuoteWithClient | null>(null);
 
   const [drafts, setDrafts] = useState<CalculatorDraft[]>([]);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
@@ -122,8 +139,8 @@ export default function CalculatorPage() {
   const [draftJustSaved, setDraftJustSaved] = useState(false);
   const [draftsListOpen, setDraftsListOpen] = useState(false);
 
-  /** "Criar Pedido" exige produto cadastrado — sem isso, abre o popup de cadastro em vez do pedido, e volta sozinho pro pedido assim que o produto for salvo. */
-  const [orderPendingProductRegistration, setOrderPendingProductRegistration] = useState(false);
+  /** "Criar Pedido" exige produto cadastrado — sem isso, mostra um popup de erro em vez de abrir o pedido. */
+  const [orderBlockedOpen, setOrderBlockedOpen] = useState(false);
 
   useEffect(() => {
     loadMarketplaces();
@@ -250,26 +267,17 @@ export default function CalculatorPage() {
     if (mp) setMarketplaceFee(mp.fee);
   }
 
-  /**
-   * Vínculo pro PDF de orçamento saber a qual produto recém-cadastrado se
-   * referir. Se o cadastro foi disparado por "Criar Pedido" sem produto
-   * ainda existente, encadeia direto pro pedido assim que o produto é salvo.
-   */
+  /** Vínculo pro PDF de orçamento saber a qual produto recém-cadastrado se referir. */
   function handleNewProductCreated(product: Product) {
     setSelectedProductId(product.id);
     setProjectName(product.name);
     setNewProductModalOpen(false);
-    if (orderPendingProductRegistration) {
-      setOrderPendingProductRegistration(false);
-      setOrderModalOpen(true);
-    }
   }
 
-  /** "Criar Pedido" exige um produto cadastrado — sem um ainda vinculado nesta sessão, abre o popup de cadastro em vez do pedido (handleNewProductCreated encadeia de volta pro pedido depois de salvar). */
+  /** "Criar Pedido" exige um produto cadastrado — sem um ainda vinculado nesta sessão, mostra um popup de erro em vez do pedido. */
   function handleCreateOrderClick() {
     if (!selectedProductId) {
-      setOrderPendingProductRegistration(true);
-      setNewProductModalOpen(true);
+      setOrderBlockedOpen(true);
       return;
     }
     setOrderModalOpen(true);
@@ -550,7 +558,9 @@ export default function CalculatorPage() {
         {/* Left column: inputs */}
         <div className="space-y-6">
           <GlassCard padding="lg" className="space-y-3 p-4 sm:p-8">
-            <label className="block text-xs text-text-muted">Nome do produto</label>
+            <label className="block text-xs text-text-muted">
+              Nome do produto <span className="text-neon-pink">*</span>
+            </label>
             <input
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
@@ -1152,22 +1162,26 @@ export default function CalculatorPage() {
               )}
             </div>
 
-            {!selectedProductId && !actionsDisabled && (
-              <p className="text-center text-[11px] text-text-muted">
-                "Criar Pedido" vai pedir pra cadastrar o produto primeiro — é o cadastro que fornece custo e valor de
-                venda pro pedido.
-              </p>
-            )}
+            <p className="text-center text-[11px] text-text-muted">
+              {selectedProductId
+                ? "Produto vinculado a esta sessão — recalcule e cadastre de novo se os valores mudarem."
+                : `Cadastro obrigatório pra criar pedido: Custo ${formatBRL(fullUnitCost)} · Venda ${formatBRL(fullUnitPrice)} (já com insumos, mão de obra, pintura e extras).`}
+            </p>
 
             <div className="space-y-2">
+              <NeonButton
+                variant="outline"
+                className="w-full border-neon-green bg-neon-green text-bg hover:border-neon-green hover:bg-neon-green/90"
+                onClick={() => setNewProductModalOpen(true)}
+                disabled={actionsDisabled}
+              >
+                <PackagePlus size={18} /> Cadastrar Produto
+              </NeonButton>
               <NeonButton className="w-full" onClick={handleCreateOrderClick} disabled={actionsDisabled}>
                 <Rocket size={16} /> Criar Pedido
               </NeonButton>
               <NeonButton variant="outline" className="w-full" onClick={() => setQuoteModalOpen(true)} disabled={actionsDisabled}>
                 <FileDown size={16} /> Gerar PDF de Orçamento
-              </NeonButton>
-              <NeonButton variant="outline" className="w-full">
-                <Link2 size={16} /> Gerar Link de Cobrança
               </NeonButton>
             </div>
             {missingFilament && (
@@ -1189,39 +1203,39 @@ export default function CalculatorPage() {
       </main>
 
       <div className="px-3 pb-8 md:px-8">
-        <GlassCard padding="lg" className="flex flex-col items-center gap-4 p-4 text-center sm:flex-row sm:justify-between sm:p-8 sm:text-left">
-          <div>
-            <h3 className="font-display text-lg">{selectedProductId ? "Produto cadastrado" : "Cadastre o produto"}</h3>
-            <p className="mt-1 text-sm text-text-secondary">
-              {selectedProductId
-                ? "Já vinculado a esta sessão — recalcule e cadastre de novo se os valores mudarem."
-                : "Obrigatório pra criar um pedido: salva essa receita como um produto no catálogo."}
-            </p>
-            <p className="mt-1 text-[11px] text-text-muted">
-              Custo {formatBRL(fullUnitCost)} · Venda {formatBRL(fullUnitPrice)} — já com insumos, mão de obra,
-              pintura e extras somados (diferente do "Custo por Unidade" do Resumo, que só conta filamento/energia/insumos).
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-col items-center gap-1.5 sm:items-end">
-            <NeonButton className="w-full sm:w-auto" onClick={() => setNewProductModalOpen(true)} disabled={actionsDisabled}>
-              <PackagePlus size={18} /> Cadastrar Produto
-            </NeonButton>
-            {missingFilament && (
-              <p className="text-[11px] text-amber-400">Selecione um filamento em cada mesa pra liberar.</p>
-            )}
-            {!missingFilament && noUnitBeds && (
-              <p className="text-[11px] text-amber-400">Adicione uma mesa Peça única/Montagem ou Lote pra liberar.</p>
-            )}
-            {!missingFilament && !noUnitBeds && missingName && (
-              <p className="text-[11px] text-amber-400">Informe o nome do produto pra liberar.</p>
-            )}
-          </div>
-        </GlassCard>
-      </div>
-
-      <div className="px-3 pb-8 md:px-8">
         <CalculatorTips />
       </div>
+
+      <Modal
+        open={orderBlockedOpen}
+        onClose={() => setOrderBlockedOpen(false)}
+        title="Cadastre o produto primeiro"
+        maxWidthClass="max-w-sm"
+      >
+        <div className="flex flex-col items-center gap-4 py-2 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-500/15 text-red-400">
+            <AlertTriangle size={28} />
+          </div>
+          <p className="text-sm text-text-secondary">
+            Pra criar um pedido, o produto calculado precisa estar cadastrado primeiro. Use o botão{" "}
+            <strong>Cadastrar Produto</strong> no Resumo.
+          </p>
+          <div className="flex w-full gap-3">
+            <NeonButton variant="ghost" className="flex-1" onClick={() => setOrderBlockedOpen(false)}>
+              Fechar
+            </NeonButton>
+            <NeonButton
+              className="flex-1"
+              onClick={() => {
+                setOrderBlockedOpen(false);
+                setNewProductModalOpen(true);
+              }}
+            >
+              Cadastrar Produto
+            </NeonButton>
+          </div>
+        </div>
+      </Modal>
 
       <NewSaleModal
         open={orderModalOpen}
@@ -1238,13 +1252,14 @@ export default function CalculatorPage() {
         initialProductId={selectedProductId || undefined}
         initialUnitPrice={fullUnitPrice}
         initialQuantity={quantity}
+        onCreated={(createdQuote) => {
+          if (createdQuote) setSuccessQuote(createdQuote);
+        }}
       />
+      <SaleSuccessModal quote={successQuote} onClose={() => setSuccessQuote(null)} />
       <NewProductModal
         open={newProductModalOpen}
-        onClose={() => {
-          setNewProductModalOpen(false);
-          setOrderPendingProductRegistration(false);
-        }}
+        onClose={() => setNewProductModalOpen(false)}
         onCreated={handleNewProductCreated}
         initialName={projectName}
         initialCostPrice={fullUnitCost}
