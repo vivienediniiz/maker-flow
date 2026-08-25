@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FileText, Truck, Loader2, Lock, Image as ImageIcon, MessageCircle } from "lucide-react";
+import { FileText, Truck, Loader2, Lock, Image as ImageIcon, MessageCircle, Link2, Copy, Check } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteStatusStepper } from "@/components/dashboard/QuoteStatusStepper";
@@ -36,12 +36,22 @@ export function QuoteDetailModal({
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [trackingCode, setTrackingCode] = useState("");
   const [savingTracking, setSavingTracking] = useState(false);
+  const [paymentLink, setPaymentLink] = useState<string | null>(null);
+  const [generatingLink, setGeneratingLink] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // O modal fica montado entre trocas de venda selecionada — sincroniza o
   // campo local sempre que a venda (ou o código já salvo nela) mudar.
   useEffect(() => {
     setTrackingCode(quote?.shipping_tracking_code ?? "");
   }, [quote?.id, quote?.shipping_tracking_code]);
+
+  useEffect(() => {
+    setPaymentLink(quote?.payment_link_url ?? null);
+    setLinkError(null);
+    setLinkCopied(false);
+  }, [quote?.id, quote?.payment_link_url]);
 
   if (!quote) return null;
 
@@ -59,6 +69,46 @@ export function QuoteDetailModal({
     const text = trackingCode.trim()
       ? `Olá${clientName ? `, ${clientName}` : ""}! Seu pedido ${orderRef} já foi enviado 📦 Código de rastreio: ${trackingCode.trim()}`
       : `Olá${clientName ? `, ${clientName}` : ""}! Seu pedido ${orderRef} já foi enviado 📦`;
+    window.open(`${buildWhatsAppLink(phone)}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  }
+
+  async function handleGeneratePaymentLink() {
+    setGeneratingLink(true);
+    setLinkError(null);
+    try {
+      const endpoint =
+        quote!.payment_method === "infinitepay"
+          ? `/api/quotes/${quote!.id}/infinitepay-link`
+          : `/api/quotes/${quote!.id}/payment-link`;
+      const res = await fetch(endpoint, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setLinkError(data.error ?? "Não foi possível gerar o link.");
+        return;
+      }
+      setPaymentLink(data.url);
+    } catch {
+      setLinkError("Falha ao gerar o link — tente de novo.");
+    } finally {
+      setGeneratingLink(false);
+    }
+  }
+
+  function handleCopyPaymentLink() {
+    if (!paymentLink) return;
+    navigator.clipboard.writeText(paymentLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  }
+
+  function handleSendPaymentLinkWhatsApp() {
+    const phone = quote!.clients?.phone;
+    if (!paymentLink || !phone) return;
+    const clientName = quote!.clients?.name ?? quote!.buyer_name ?? "";
+    const orderRef = formatOrderNumber(quote!.order_number);
+    const text = `Olá${clientName ? `, ${clientName}` : ""}! Segue o link de pagamento da sua compra #${orderRef} (${formatBRL(
+      quote!.final_price
+    )}): ${paymentLink}`;
     window.open(`${buildWhatsAppLink(phone)}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   }
 
@@ -321,6 +371,49 @@ export function QuoteDetailModal({
             onChange={(status) => onStatusChange(quote.id, status)}
           />
         </div>
+
+        {quote.status === "awaiting_payment" && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wider text-text-muted">Cobrança</p>
+            {paymentLink ? (
+              <>
+                <div className="flex items-center gap-2 rounded-xl border border-border-glass bg-white/[0.02] px-3 py-2">
+                  <Link2 size={13} className="shrink-0 text-text-muted" />
+                  <span className="min-w-0 flex-1 truncate text-xs text-text-secondary">{paymentLink}</span>
+                  <button
+                    type="button"
+                    onClick={handleCopyPaymentLink}
+                    className={`flex shrink-0 items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                      linkCopied ? "text-neon-green" : "text-neon-pink hover:bg-white/5"
+                    }`}
+                  >
+                    {linkCopied ? <Check size={12} /> : <Copy size={12} />} {linkCopied ? "Copiado" : "Copiar"}
+                  </button>
+                </div>
+                {quote.clients?.phone ? (
+                  <NeonButton type="button" size="sm" className="w-full" onClick={handleSendPaymentLinkWhatsApp}>
+                    <MessageCircle size={14} /> Enviar Link de Cobrança
+                  </NeonButton>
+                ) : (
+                  <p className="text-[11px] text-text-muted">Cliente sem WhatsApp cadastrado.</p>
+                )}
+              </>
+            ) : (
+              <NeonButton
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={handleGeneratePaymentLink}
+                disabled={generatingLink}
+              >
+                {generatingLink ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
+                {generatingLink ? "Gerando..." : "Gerar Link de Cobrança"}
+              </NeonButton>
+            )}
+            {linkError && <p className="text-[11px] text-red-400">{linkError}</p>}
+          </div>
+        )}
 
         {quote.status === "shipped" && (
           <div className="space-y-2">

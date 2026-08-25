@@ -196,12 +196,12 @@ export function SaleReceiptModal({ quote, open, onClose, zIndexClass }: SaleRece
           </p>
         )}
 
-        <div className="grid w-full grid-cols-2 gap-3">
-          <NeonButton variant="outline" onClick={handleDownload} disabled={!blob || generating}>
+        <div className="grid w-full grid-cols-2 gap-2">
+          <NeonButton variant="outline" size="sm" onClick={handleDownload} disabled={!blob || generating}>
             <Download size={14} /> Salvar
           </NeonButton>
-          <NeonButton onClick={handleShareWhatsApp} disabled={!blob || !clientPhone || generating}>
-            <MessageCircle size={14} /> Compartilhar no WhatsApp
+          <NeonButton size="sm" onClick={handleShareWhatsApp} disabled={!blob || !clientPhone || generating}>
+            <MessageCircle size={14} /> Compartilhar
           </NeonButton>
         </div>
       </div>
