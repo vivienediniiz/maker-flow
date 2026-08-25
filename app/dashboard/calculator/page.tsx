@@ -16,7 +16,7 @@ import { ConfigNudgeBanner } from "@/components/dashboard/ConfigNudgeBanner";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
-import { calculateCost, type CalcMixedItem } from "@/lib/costCalculator";
+import { calculateCost, bedCostBreakdown, type CalcMixedItem } from "@/lib/costCalculator";
 import { Plus, Trash2, FileDown, Link2, Rocket, Info, Weight, Timer, Zap, TrendingUp, PackagePlus } from "lucide-react";
 import type { Product, Supply, Filament, PrinterAsset, RiskTier, CalcInputs } from "@/lib/types";
 
@@ -38,12 +38,12 @@ interface PrintBed {
   watts: number;
   filamentId: string;
   /**
-   * "A" = lote de peças idênticas nesta mesa (divide o custo por `piecesInBed`);
+   * "A" = lote de peças idênticas nesta mesa (peso/tempo = total real da mesa, sem divisão);
    * "B" = peça única/montagem, mesa inteira conta como 1 contribuição (padrão);
    * "C" = mix de peças diferentes, custo rateado por peso entre `mixedItems`, fora do custo do produto principal.
    */
   modelType: BedModelType;
-  /** Divisor real do custo desta mesa quando `modelType === "A"`. */
+  /** Legado — não afeta mais o cálculo em nenhum modo, só exibido como referência opcional no modo "B". */
   piecesInBed: number;
   /** Só usado quando `modelType === "C"`. */
   mixedItems: CalcMixedItem[];
@@ -425,9 +425,9 @@ export default function CalculatorPage() {
               </NeonButton>
             </div>
             <p className="-mt-3 text-[11px] text-text-muted">
-              Peso e tempo são sempre da mesa cheia, direto do fatiador. Escolha o tipo de cada mesa: <strong>Peça
-              única/Montagem</strong> (mesa inteira = 1 contribuição pro custo do produto), <strong>Lote</strong>
-              (várias peças idênticas dividem o custo da mesa) ou <strong>Mix</strong> (peças diferentes, custo
+              Peso e tempo são sempre da mesa cheia, direto do fatiador — nenhum modo divide esse valor. Escolha o
+              tipo de cada mesa: <strong>Peça única/Montagem</strong> ou <strong>Lote</strong> (mesa inteira = 1
+              contribuição pro custo do produto, nos dois casos) ou <strong>Mix</strong> (peças diferentes, custo
               rateado por peso entre elas — não entra no preço do produto principal).
             </p>
 
@@ -435,6 +435,22 @@ export default function CalculatorPage() {
               const cIndex = beds.filter((b) => b.modelType === "C").findIndex((b) => b.id === bed.id);
               const mixedBreakdown = bed.modelType === "C" && cIndex >= 0 ? calc.mixedBreakdowns[cIndex] : undefined;
               const mixedItemsWeight = bed.mixedItems.reduce((s, i) => s + (i.weightG || 0) * (i.quantity || 0), 0);
+              const bedFilamentPricePerKg = filaments.find((f) => f.id === bed.filamentId)?.price_per_kg ?? 0;
+              const bedCost =
+                bed.modelType !== "C" && bed.filamentId
+                  ? bedCostBreakdown(
+                      {
+                        weightG: bed.weightG,
+                        timeH: bed.timeH,
+                        timeM: bed.timeM,
+                        watts: bed.watts,
+                        filamentPricePerKg: bedFilamentPricePerKg,
+                        safetyMarginPercent: bed.safetyMarginPercent,
+                      },
+                      kwhRate,
+                      bedFilamentPricePerKg
+                    )
+                  : null;
 
               return (
               <div key={bed.id} className="glass-card space-y-3 p-4">
@@ -524,20 +540,9 @@ export default function CalculatorPage() {
                 <div
                   className={cn(
                     "grid grid-cols-2 gap-3 sm:items-end",
-                    bed.modelType === "A" || bed.modelType === "B" ? "sm:grid-cols-[140px_160px_1fr]" : "sm:grid-cols-[160px_1fr]"
+                    bed.modelType === "B" ? "sm:grid-cols-[140px_160px_1fr]" : "sm:grid-cols-[160px_1fr]"
                   )}
                 >
-                  {bed.modelType === "A" && (
-                    <Field label="Peças idênticas nesta mesa">
-                      <input
-                        type="number"
-                        min={1}
-                        value={bed.piecesInBed || ""}
-                        onChange={(e) => updateBed(bed.id, { piecesInBed: Number(e.target.value) })}
-                        className="glass-input w-full"
-                      />
-                    </Field>
-                  )}
                   {bed.modelType === "B" && (
                     <Field label="Peças nesta mesa (opcional, referência)">
                       <input
@@ -584,11 +589,10 @@ export default function CalculatorPage() {
                   </div>
                 </div>
 
-                {bed.modelType === "A" && bed.piecesInBed > 1 && (
+                {(bed.modelType === "A" || bed.modelType === "B") && bedCost && (
                   <p className="text-[11px] text-neon-green">
-                    ≈ {Math.round(bed.weightG / bed.piecesInBed)}g e{" "}
-                    {Math.round((bed.timeH * 60 + bed.timeM) / bed.piecesInBed)}min por peça — custo desta mesa
-                    dividido por {bed.piecesInBed}
+                    Custo desta mesa: {formatBRL(bedCost.totalCost)} ({formatBRL(bedCost.filamentCost)} filamento +{" "}
+                    {formatBRL(bedCost.energyCost)} energia)
                   </p>
                 )}
 

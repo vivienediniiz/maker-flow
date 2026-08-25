@@ -18,13 +18,14 @@ export interface CalcBed {
   /** Margem de segurança (%) pra falhas de impressão — infla peso/tempo só no cálculo de filamento/energia desta mesa, sem alterar `weightG`/`timeH`/`timeM` (que continuam representando o valor real digitado). */
   safetyMarginPercent?: number;
   /**
-   * "A" = lote de peças idênticas nesta mesa (custo dividido por `piecesInBed`);
+   * "A" = lote de peças idênticas nesta mesa — peso/tempo digitados são o total real da mesa
+   * (direto do fatiador, já incluindo suporte), sem nenhuma divisão;
    * "B" = peça única/montagem, mesa inteira conta como 1 contribuição (padrão);
    * "C" = mix de peças diferentes, custo rateado por peso entre `mixedItems`, fora do custo por unidade do produto principal.
    * Ausente = "B", preservando o comportamento de registros salvos antes desse campo existir.
    */
   modelType?: "A" | "B" | "C";
-  /** Só usado quando `modelType === "A"` — divide o custo desta mesa por esse número de peças idênticas. */
+  /** Legado — não é mais usado no cálculo (nenhum modelo divide custo por número de peças). Mantido só pra não quebrar `calc_inputs` salvos antes dessa mudança. */
   piecesInBed?: number;
   /** Só usado quando `modelType === "C"`. */
   mixedItems?: CalcMixedItem[];
@@ -91,6 +92,25 @@ export interface CalcResult {
 }
 
 /**
+ * Custo de filamento + energia de UMA mesa isolada — sem nenhum divisor, é o
+ * valor real da mesa inteira (peso/tempo direto do fatiador, já incluindo
+ * suporte quando aplicável). Reaproveitado tanto pelo agregado de
+ * `calculateCost` quanto pela UI, que exibe esse valor por mesa cadastrada.
+ */
+export function bedCostBreakdown(
+  bed: CalcBed,
+  kwhRate: number,
+  defaultFilamentPricePerKg: number
+): { filamentCost: number; energyCost: number; totalCost: number } {
+  const marginMult = 1 + (bed.safetyMarginPercent || 0) / 100;
+  const hours = ((bed.timeH || 0) + (bed.timeM || 0) / 60) * marginMult;
+  const energyCost = (bed.watts / 1000) * hours * kwhRate;
+  const pricePerKg = bed.filamentPricePerKg ?? defaultFilamentPricePerKg;
+  const filamentCost = (((bed.weightG || 0) * marginMult) / 1000) * pricePerKg;
+  return { filamentCost, energyCost, totalCost: filamentCost + energyCost };
+}
+
+/**
  * Fórmula de custo/preço usada pela Calculadora Inteligente — extraída pra cá
  * pra ser a única fonte de verdade, reaproveitada também no cálculo de custo
  * unitário embutido no cadastro de produto (que sempre chama com quantity=1,
@@ -118,25 +138,13 @@ export function calculateCost(input: CalcInput): CalcResult {
   const unitBeds = beds.filter((b) => b.modelType !== "C");
   const mixedBeds = beds.filter((b) => b.modelType === "C");
 
-  // Modelo A divide o custo desta mesa pelo nº de peças idênticas; Modelo B
-  // (ou modelType ausente) usa `pieces = 1`, ou seja, comportamento idêntico
-  // ao de antes desse campo existir.
-  function piecesOf(b: CalcBed): number {
-    return b.modelType === "A" ? Math.max(b.piecesInBed || 1, 1) : 1;
-  }
-
-  const energyCost = unitBeds.reduce((sum, b) => {
-    const marginMult = 1 + (b.safetyMarginPercent || 0) / 100;
-    const hours = ((b.timeH || 0) + (b.timeM || 0) / 60) * marginMult;
-    return sum + ((b.watts / 1000) * hours * kwhRate) / piecesOf(b);
-  }, 0);
   // Cada mesa pode ter seu proprio filamento (produtos multicoloridos) — soma
   // o custo mesa a mesa em vez de aplicar um preço/kg único sobre o peso total.
-  const filamentCost = unitBeds.reduce((sum, b) => {
-    const marginMult = 1 + (b.safetyMarginPercent || 0) / 100;
-    const pricePerKg = b.filamentPricePerKg ?? defaultFilamentPricePerKg;
-    return sum + ((((b.weightG || 0) * marginMult) / 1000) * pricePerKg) / piecesOf(b);
-  }, 0);
+  // Nenhum modelo divide mais o custo por número de peças — peso/tempo
+  // digitados já são o valor real e total da mesa, direto do fatiador.
+  const unitBedCosts = unitBeds.map((b) => bedCostBreakdown(b, kwhRate, defaultFilamentPricePerKg));
+  const energyCost = unitBedCosts.reduce((sum, c) => sum + c.energyCost, 0);
+  const filamentCost = unitBedCosts.reduce((sum, c) => sum + c.filamentCost, 0);
 
   const printCost = filamentCost + energyCost;
   const costPerUnit = printCost + suppliesCost;
@@ -145,12 +153,7 @@ export function calculateCost(input: CalcInput): CalcResult {
   // imprime junto, proporcional ao peso de cada item — não entra em
   // costPerUnit/printCost acima, é só referência pra cadastrar cada item.
   const mixedBreakdowns: CalcMixedBedBreakdown[] = mixedBeds.map((b) => {
-    const marginMult = 1 + (b.safetyMarginPercent || 0) / 100;
-    const pricePerKg = b.filamentPricePerKg ?? defaultFilamentPricePerKg;
-    const bedFilamentCost = (((b.weightG || 0) * marginMult) / 1000) * pricePerKg;
-    const bedHours = ((b.timeH || 0) + (b.timeM || 0) / 60) * marginMult;
-    const bedEnergyCost = (b.watts / 1000) * bedHours * kwhRate;
-    const totalBedCost = bedFilamentCost + bedEnergyCost;
+    const { totalCost: totalBedCost } = bedCostBreakdown(b, kwhRate, defaultFilamentPricePerKg);
 
     const items = b.mixedItems ?? [];
     const totalItemsWeight = items.reduce((s, i) => s + (i.weightG || 0) * (i.quantity || 0), 0);

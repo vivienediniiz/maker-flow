@@ -10,7 +10,7 @@ import { Toggle } from "@/components/ui/Toggle";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
-import { calculateCost, type CalcBed, type CalcMixedItem } from "@/lib/costCalculator";
+import { calculateCost, bedCostBreakdown, type CalcBed, type CalcMixedItem } from "@/lib/costCalculator";
 import type { CalcInputs, Filament, Supply, PrinterAsset, RiskTier } from "@/lib/types";
 
 type BedModelType = "A" | "B" | "C";
@@ -279,6 +279,22 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
             const cIndex = beds.filter((b) => b.modelType === "C").findIndex((b) => b.id === bed.id);
             const mixedBreakdown = bed.modelType === "C" && cIndex >= 0 ? calc.mixedBreakdowns[cIndex] : undefined;
             const mixedItemsWeight = bed.mixedItems.reduce((s, i) => s + (i.weightG || 0) * (i.quantity || 0), 0);
+            const bedFilamentPricePerKg = filaments.find((f) => f.id === bed.filamentId)?.price_per_kg ?? filamentPricePerKg;
+            const bedCost =
+              bed.modelType !== "C"
+                ? bedCostBreakdown(
+                    {
+                      weightG: bed.weightG,
+                      timeH: bed.timeH,
+                      timeM: bed.timeM,
+                      watts: bed.watts,
+                      filamentPricePerKg: bedFilamentPricePerKg,
+                      safetyMarginPercent: bed.safetyMarginPercent,
+                    },
+                    kwhRate,
+                    bedFilamentPricePerKg
+                  )
+                : null;
 
             return (
             <div key={bed.id} className="glass-card space-y-3 p-4">
@@ -366,18 +382,7 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
                 </MiniField>
               </div>
 
-              <div className={cn("grid gap-3", bed.modelType === "A" ? "grid-cols-3" : "grid-cols-2")}>
-                {bed.modelType === "A" && (
-                  <MiniField label="Peças idênticas">
-                    <input
-                      type="number"
-                      min={1}
-                      value={bed.piecesInBed || ""}
-                      onChange={(e) => updateBed(bed.id, { piecesInBed: Number(e.target.value) })}
-                      className="glass-input w-full"
-                    />
-                  </MiniField>
-                )}
+              <div className="grid grid-cols-2 gap-3">
                 <MiniField label="Margem de segurança (%, opcional)">
                   <input
                     type="number"
@@ -415,11 +420,10 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
                 </MiniField>
               )}
 
-              {bed.modelType === "A" && bed.piecesInBed > 1 && (
+              {(bed.modelType === "A" || bed.modelType === "B") && bedCost && (
                 <p className="text-[11px] text-neon-green">
-                  ≈ {Math.round(bed.weightG / bed.piecesInBed)}g e{" "}
-                  {Math.round((bed.timeH * 60 + bed.timeM) / bed.piecesInBed)}min por peça — custo desta mesa
-                  dividido por {bed.piecesInBed}
+                  Custo desta mesa: {formatBRL(bedCost.totalCost)} ({formatBRL(bedCost.filamentCost)} filamento +{" "}
+                  {formatBRL(bedCost.energyCost)} energia)
                 </p>
               )}
 
