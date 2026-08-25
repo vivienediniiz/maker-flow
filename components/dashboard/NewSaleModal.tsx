@@ -604,6 +604,60 @@ export function NewSaleModal({
     <Modal open={open} onClose={handleClose} title={isEditing ? "Editar Venda" : "Nova Venda Manual"}>
       <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto scrollbar-glass pr-1">
         <div>
+          <label className="mb-1.5 block text-xs text-text-muted">Cliente</label>
+          <div className="glass-card mb-2 flex gap-1 p-1">
+            <button
+              type="button"
+              className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white sm:min-h-0"
+            >
+              Cliente existente
+            </button>
+            <button
+              type="button"
+              onClick={() => setClientModalOpen(true)}
+              className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary sm:min-h-0"
+            >
+              Novo cliente
+            </button>
+          </div>
+
+          <select
+            value={selectedClientId}
+            onChange={(e) => {
+              const id = e.target.value;
+              setSelectedClientId(id);
+              setDestinationCep(clients.find((c) => c.id === id)?.cep ?? "");
+            }}
+            className="glass-input w-full"
+          >
+            <option value="" className="bg-bg-raised">
+              {clients.length === 0 ? "Nenhum cliente cadastrado" : "Selecione..."}
+            </option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id} className="bg-bg-raised">
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">Frete</label>
+          <ShippingQuoteWidget
+            destinationCep={destinationCep}
+            onDestinationCepChange={setDestinationCep}
+            onSelect={handleShippingSelected}
+            required={!selectedClient?.cep && !!selectedClientId}
+          />
+          {shippingValue != null && (
+            <p className="mt-2 text-[11px] text-neon-green">
+              Frete selecionado: {formatBRL(shippingValue)}
+              {shippingSummary ? ` — ${shippingSummary}` : ""}
+            </p>
+          )}
+        </div>
+
+        <div>
           <label className="mb-1.5 block text-xs text-text-muted">Produto</label>
           {/* Vindo da Calculadora, o produto já é obrigatório e vem pré-vinculado
               (initialProductId) — cadastrar um outro aqui dentro não faz sentido
@@ -759,22 +813,6 @@ export function NewSaleModal({
         */}
 
         <div>
-          <label className="mb-1.5 block text-xs text-text-muted">Frete</label>
-          <ShippingQuoteWidget
-            destinationCep={destinationCep}
-            onDestinationCepChange={setDestinationCep}
-            onSelect={handleShippingSelected}
-            required={!selectedClient?.cep && !!selectedClientId}
-          />
-          {shippingValue != null && (
-            <p className="mt-2 text-[11px] text-neon-green">
-              Frete selecionado: {formatBRL(shippingValue)}
-              {shippingSummary ? ` — ${shippingSummary}` : ""}
-            </p>
-          )}
-        </div>
-
-        <div>
           <label className="mb-1.5 block text-xs text-text-muted">Desconto</label>
           <div className="glass-card mb-2 flex gap-1 p-1">
             {(
@@ -883,41 +921,6 @@ export function NewSaleModal({
         </div>
 
         {!isEditing && <p className="text-[11px] text-text-muted">Entra em Vendas já como Pago.</p>}
-
-        <div className="glass-card flex gap-1 p-1">
-          <button
-            type="button"
-            className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill bg-neon-gradient py-2 text-xs font-medium text-white sm:min-h-0"
-          >
-            Cliente existente
-          </button>
-          <button
-            type="button"
-            onClick={() => setClientModalOpen(true)}
-            className="flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary sm:min-h-0"
-          >
-            Novo cliente
-          </button>
-        </div>
-
-        <select
-          value={selectedClientId}
-          onChange={(e) => {
-            const id = e.target.value;
-            setSelectedClientId(id);
-            setDestinationCep(clients.find((c) => c.id === id)?.cep ?? "");
-          }}
-          className="glass-input w-full"
-        >
-          <option value="" className="bg-bg-raised">
-            {clients.length === 0 ? "Nenhum cliente cadastrado" : "Selecione..."}
-          </option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id} className="bg-bg-raised">
-              {c.name}
-            </option>
-          ))}
-        </select>
 
         {shippingValue != null && (
           <div className="flex items-center justify-between px-1 text-xs text-text-secondary">
