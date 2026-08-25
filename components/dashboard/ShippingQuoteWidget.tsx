@@ -62,8 +62,7 @@ export function ShippingQuoteWidget({
 
   const expanded = destinationCep.replace(/\D/g, "").length > 0;
 
-  async function handleQuote(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleQuote() {
     setError(null);
     setQuotes(null);
     setUnavailable([]);
@@ -130,7 +129,7 @@ export function ShippingQuoteWidget({
       </div>
 
       {expanded && (
-        <form onSubmit={handleQuote} className="space-y-3">
+        <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div>
               <label htmlFor="shipping-weight-g" className="mb-1.5 block text-xs text-text-muted">
@@ -186,7 +185,7 @@ export function ShippingQuoteWidget({
             </div>
           </div>
 
-          <NeonButton type="submit" variant="outline" className="w-full justify-center" disabled={loading}>
+          <NeonButton type="button" variant="outline" className="w-full justify-center" onClick={handleQuote} disabled={loading}>
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />}
             {loading ? "Cotando..." : "Cotar Frete"}
           </NeonButton>
@@ -231,7 +230,7 @@ export function ShippingQuoteWidget({
               ))}
             </div>
           )}
-        </form>
+        </div>
       )}
     </div>
   );

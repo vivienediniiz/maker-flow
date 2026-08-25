@@ -919,6 +919,12 @@ export function NewSaleModal({
           ))}
         </select>
 
+        {shippingValue != null && (
+          <div className="flex items-center justify-between px-1 text-xs text-text-secondary">
+            <span>Frete</span>
+            <span className="font-numeric">{formatBRL(shippingValue)}</span>
+          </div>
+        )}
         <div className="glass-card flex items-center justify-between px-4 py-3">
           <span className="text-xs text-text-muted">Valor Total</span>
           <span className="neon-text font-numeric text-lg font-semibold">{formatBRL(computedTotal)}</span>
