@@ -364,6 +364,14 @@ export default function CalculatorPage() {
     ]
   );
 
+  // Custo/preço "cheios" de 1 unidade pra cadastrar como produto — diferente
+  // de calc.costPerUnit/pricePerUnit (só filamento+energia+insumos), aqui
+  // soma também mão de obra, pintura e extras (calc.fixedCosts), já que um
+  // produto no catálogo precisa carregar o custo de fabricação inteiro, não
+  // só a fração que multiplica pela Quantidade de Produtos Finais do pedido.
+  const fullUnitCost = calc.costPerUnit + calc.fixedCosts;
+  const fullUnitPrice = calc.pricePerUnit + calc.fixedCosts;
+
   // Snapshot da receita pra "Cadastrar Produto" no fim da tela — igual ao que
   // o overlay "Calcular Custo Unitário" monta, só que a partir do estado já
   // preenchido aqui, sem pedir pra digitar tudo de novo.
@@ -1187,7 +1195,11 @@ export default function CalculatorPage() {
             <p className="mt-1 text-sm text-text-secondary">
               {selectedProductId
                 ? "Já vinculado a esta sessão — recalcule e cadastre de novo se os valores mudarem."
-                : "Obrigatório pra criar um pedido: salva essa receita e o preço calculado como um produto no catálogo."}
+                : "Obrigatório pra criar um pedido: salva essa receita como um produto no catálogo."}
+            </p>
+            <p className="mt-1 text-[11px] text-text-muted">
+              Custo {formatBRL(fullUnitCost)} · Venda {formatBRL(fullUnitPrice)} — já com insumos, mão de obra,
+              pintura e extras somados (diferente do "Custo por Unidade" do Resumo, que só conta filamento/energia/insumos).
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-center gap-1.5 sm:items-end">
@@ -1224,7 +1236,7 @@ export default function CalculatorPage() {
         initialUsedFilaments={usedFilamentsForSale}
         initialUsedSupplies={usedSuppliesForSale}
         initialProductId={selectedProductId || undefined}
-        initialUnitPrice={calc.pricePerUnit}
+        initialUnitPrice={fullUnitPrice}
         initialQuantity={quantity}
       />
       <NewProductModal
@@ -1235,8 +1247,8 @@ export default function CalculatorPage() {
         }}
         onCreated={handleNewProductCreated}
         initialName={projectName}
-        initialCostPrice={calc.costPerUnit}
-        initialSalePrice={calc.pricePerUnit}
+        initialCostPrice={fullUnitCost}
+        initialSalePrice={fullUnitPrice}
         calcInputs={calcInputsForProduct}
       />
       <FilamentModal

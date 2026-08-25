@@ -235,6 +235,13 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
     [calcBeds, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, suppliesCost, marketplaceFee, marginPercent, selectedRiskTier]
   );
 
+  // Custo/preço "cheios" pra aplicar no produto — soma mão de obra, pintura e
+  // extras (calc.fixedCosts) ao que calc.costPerUnit/pricePerUnit já tem
+  // (filamento+energia+insumos), já que aqui quantity é sempre 1 (produto no
+  // catálogo é sempre "por unidade", sem o multiplicador do pedido).
+  const fullUnitCost = calc.costPerUnit + calc.fixedCosts;
+  const fullUnitPrice = calc.pricePerUnit + calc.fixedCosts;
+
   function handleApply() {
     const calcInputs: CalcInputs = {
       beds: beds.map(({ name, weightG, timeH, timeM, watts, filamentId, modelType, piecesInBed, mixedItems, safetyMarginPercent }) => ({
@@ -259,7 +266,7 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
       marginPercent,
       quantity: 1,
     };
-    onApply(calc.costPerUnit, calc.pricePerUnit, calcInputs);
+    onApply(fullUnitCost, fullUnitPrice, calcInputs);
     onClose();
   }
 
@@ -698,21 +705,25 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
           {(laborHours > 0 || extras > 0 || (paintedByHand && paintCost > 0)) && (
             <SummaryRow label="+ Fixos (mão de obra/pintura/extras)" value={formatBRL(calc.fixedCosts)} />
           )}
+          <SummaryRow label="Custo Total (com fixos)" value={formatBRL(fullUnitCost)} strong />
           <div className="my-1 h-px bg-border-glass" />
           {selectedRiskTier ? (
             <>
-              <SummaryRow label="Preço com margem + taxa" value={formatBRL(calc.pricePerUnitBeforeRisk)} />
+              <SummaryRow
+                label="Preço com margem + taxa (com fixos)"
+                value={formatBRL(calc.pricePerUnitBeforeRisk + calc.fixedCosts)}
+              />
               <div className="flex items-center justify-between pt-1">
                 <span className="text-text-secondary">
                   Preço de Venda Sugerido (+{selectedRiskTier.extra_margin_percent}% risco)
                 </span>
-                <span className="neon-text font-numeric text-xl font-semibold">{formatBRL(calc.pricePerUnit)}</span>
+                <span className="neon-text font-numeric text-xl font-semibold">{formatBRL(fullUnitPrice)}</span>
               </div>
             </>
           ) : (
             <div className="flex items-center justify-between pt-1">
               <span className="text-text-secondary">Preço de Venda Sugerido</span>
-              <span className="neon-text font-numeric text-xl font-semibold">{formatBRL(calc.pricePerUnit)}</span>
+              <span className="neon-text font-numeric text-xl font-semibold">{formatBRL(fullUnitPrice)}</span>
             </div>
           )}
         </div>
