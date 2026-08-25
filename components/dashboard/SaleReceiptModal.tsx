@@ -136,9 +136,11 @@ export function SaleReceiptModal({ quote, open, onClose, zIndexClass }: SaleRece
 
   /**
    * WhatsApp não tem API pública pra anexar arquivo via link — só o texto vem
-   * pré-preenchido (`wa.me`). Por isso "Compartilhar no WhatsApp" já baixa a
-   * imagem junto: o estúdio só precisa anexar o arquivo que já caiu nos
-   * downloads na conversa que abriu.
+   * pré-preenchido (`wa.me`). Por isso o estúdio precisa ter salvo a imagem
+   * antes (botão "Salvar") pra anexar na conversa que abre aqui. Esse botão
+   * só abre a conversa — não dispara download nenhum (baixar aqui em cima do
+   * clique de "abrir o WhatsApp" fazia o navegador mostrar a caixa nativa de
+   * "salvar como" no meio do fluxo, o que não é o que o usuário pediu).
    */
   function sendToWhatsApp(phone: string, forQuote: QuoteWithClient) {
     const clientName = forQuote.clients?.name ?? forQuote.buyer_name ?? "";
@@ -153,7 +155,6 @@ export function SaleReceiptModal({ quote, open, onClose, zIndexClass }: SaleRece
 
   function handleShareWhatsApp() {
     if (!clientPhone || !quote) return;
-    if (blob) downloadBlob(blob, quote);
     sendToWhatsApp(clientPhone, quote);
   }
 
@@ -181,7 +182,7 @@ export function SaleReceiptModal({ quote, open, onClose, zIndexClass }: SaleRece
 
         {whatsAppStatus === "opened" && (
           <p className="text-center text-xs text-neon-green">
-            Comprovante baixado e WhatsApp do cliente aberto — é só anexar a imagem na conversa.
+            WhatsApp do cliente aberto — clique em "Salvar" (se ainda não salvou) e anexe a imagem na conversa.
           </p>
         )}
         {whatsAppStatus === "blocked" && (
