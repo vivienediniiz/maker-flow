@@ -114,11 +114,12 @@ export function NewSaleModal({
   const [shippingDestinationCep, setShippingDestinationCep] = useState<string | null>(null);
   /** CEP digitado/pré-preenchido no widget de frete inline — controlado aqui pra poder auto-preencher do cliente selecionado e persistir no cadastro dele quando faltava. */
   const [destinationCep, setDestinationCep] = useState("");
-  const [applyDiscount, setApplyDiscount] = useState(false);
-  const [discountType, setDiscountType] = useState<QuoteDiscountType>("fixed");
+  /** null = nenhum checkbox de desconto marcado (sem desconto nessa venda). */
+  const [discountType, setDiscountType] = useState<QuoteDiscountType | null>(null);
   const [discount, setDiscount] = useState("0");
   const [discountWarning, setDiscountWarning] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState("0");
+  const [productionStartDate, setProductionStartDate] = useState("");
   const [productionDeadlineDate, setProductionDeadlineDate] = useState("");
   const [isCustom, setIsCustom] = useState(false);
   const [customizationNotes, setCustomizationNotes] = useState("");
@@ -178,12 +179,12 @@ export function NewSaleModal({
       setShippingSummary(null);
       setShippingDestinationCep(quote.destination_cep ?? null);
       setDestinationCep(quote.destination_cep ?? "");
-      setApplyDiscount((quote.discount_amount ?? 0) > 0 || !!quote.coupon_id);
-      setDiscountType(quote.discount_type ?? "fixed");
+      setDiscountType((quote.discount_amount ?? 0) > 0 || !!quote.coupon_id ? quote.discount_type ?? "fixed" : null);
       setDiscount(quote.discount_amount != null ? String(quote.discount_amount.toFixed(2)) : "0");
       setDiscountWarning(null);
       setDiscountPercent(quote.discount_percent != null ? String(quote.discount_percent) : "0");
       setSelectedCouponId(quote.coupon_id ?? "");
+      setProductionStartDate(quote.production_start_date ?? "");
       setProductionDeadlineDate(quote.production_deadline_date ?? "");
       setIsCustom(quote.is_custom);
       setCustomizationNotes(quote.customization_notes ?? "");
@@ -208,12 +209,12 @@ export function NewSaleModal({
       setShippingSummary(null);
       setShippingDestinationCep(null);
       setDestinationCep("");
-      setApplyDiscount(false);
-      setDiscountType("fixed");
+      setDiscountType(null);
       setDiscount("0");
       setDiscountWarning(null);
       setDiscountPercent("0");
       setSelectedCouponId("");
+      setProductionStartDate("");
       setProductionDeadlineDate("");
       setIsCustom(false);
       setCustomizationNotes("");
@@ -384,7 +385,8 @@ export function NewSaleModal({
     setCouponBusy(false);
   }
 
-  function handleDiscountTypeChange(nextType: QuoteDiscountType) {
+  /** nextType null = desmarcou o checkbox — zera tudo (e libera cupom reservado, se algum). */
+  function handleDiscountTypeChange(nextType: QuoteDiscountType | null) {
     if (discountType === "coupon" && nextType !== "coupon") {
       switchCouponReservation(null, productValue);
     }
@@ -392,12 +394,6 @@ export function NewSaleModal({
     setDiscount("0");
     setDiscountWarning(null);
     setDiscountPercent("0");
-  }
-
-  /** Desmarcar "Aplicar desconto" zera tudo (e libera cupom reservado, se algum) — não deixa desconto aplicado escondido. */
-  function handleApplyDiscountToggle(checked: boolean) {
-    setApplyDiscount(checked);
-    if (!checked) handleDiscountTypeChange("fixed");
   }
 
   /**
@@ -544,10 +540,11 @@ export function NewSaleModal({
       price_tier_label: appliedTierLabel,
       cost_amount: costAmount,
       discount_amount: discountAmount || null,
-      discount_type: discountType,
+      discount_type: discountType ?? "fixed",
       discount_percent: discountType === "percentage" ? Number(discountPercent) || null : null,
       coupon_id: discountType === "coupon" ? selectedCoupon?.id ?? null : null,
       coupon_code: discountType === "coupon" ? selectedCoupon?.code ?? null : null,
+      production_start_date: productionStartDate || null,
       production_deadline_date: productionDeadlineDate || null,
       is_custom: isCustom,
       customization_notes: isCustom ? customizationNotes.trim() || null : null,
@@ -876,81 +873,66 @@ export function NewSaleModal({
         */}
 
         <div>
-          <label className="flex cursor-pointer items-center gap-2 text-xs text-text-muted">
-            <input
-              type="checkbox"
-              checked={applyDiscount}
-              onChange={(e) => handleApplyDiscountToggle(e.target.checked)}
-              className="h-4 w-4 rounded border-border-glassStrong bg-white/5 accent-neon-pink"
-            />
-            Aplicar desconto
-          </label>
-
-          {applyDiscount && (
-            <>
-              <div className="glass-card mb-2 mt-1.5 flex gap-1 p-1">
-                {(
-                  [
-                    { value: "fixed", label: "Fixo" },
-                    { value: "percentage", label: "Percentual" },
-                    { value: "coupon", label: "Cupom" },
-                  ] as { value: QuoteDiscountType; label: string }[]
-                ).map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => handleDiscountTypeChange(opt.value)}
-                    className={cn(
-                      "flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium transition-colors sm:min-h-0",
-                      discountType === opt.value ? "bg-neon-gradient text-white" : "text-text-secondary hover:text-text-primary"
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-
-              {discountType === "fixed" && (
-                <>
-                  <CurrencyInput value={discount} onChange={handleDiscountChange} />
-                  {discountWarning && <p className="mt-1 text-[11px] text-amber-400">{discountWarning}</p>}
-                </>
-              )}
-
-              {discountType === "percentage" && (
+          <label className="mb-1.5 block text-xs text-text-muted">Desconto</label>
+          <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1.5">
+            {(
+              [
+                { value: "fixed", label: "Fixo" },
+                { value: "percentage", label: "Percentual" },
+                { value: "coupon", label: "Cupom" },
+              ] as { value: QuoteDiscountType; label: string }[]
+            ).map((opt) => (
+              <label key={opt.value} className="flex cursor-pointer items-center gap-2 text-xs text-text-secondary">
                 <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="100"
-                  value={discountPercent}
-                  onChange={(e) => setDiscountPercent(e.target.value)}
-                  className="glass-input w-full"
-                  placeholder="0,0%"
+                  type="checkbox"
+                  checked={discountType === opt.value}
+                  onChange={(e) => handleDiscountTypeChange(e.target.checked ? opt.value : null)}
+                  className="h-4 w-4 rounded border-border-glassStrong bg-white/5 accent-neon-pink"
                 />
-              )}
+                {opt.label}
+              </label>
+            ))}
+          </div>
 
-              {discountType === "coupon" && (
-                <>
-                  <select
-                    value={selectedCouponId}
-                    disabled={couponBusy}
-                    onChange={(e) => switchCouponReservation(e.target.value || null, productValue)}
-                    className={cn("glass-input w-full", couponBusy && "cursor-not-allowed opacity-60")}
-                  >
-                    <option value="" className="bg-bg-raised">
-                      {availableCoupons.length === 0 ? "Nenhum cupom válido pra este pedido" : "Selecione..."}
-                    </option>
-                    {availableCoupons.map((c) => (
-                      <option key={c.id} value={c.id} className="bg-bg-raised">
-                        {c.code} · {c.discount_type === "percentage" ? `${c.discount_value}%` : formatBRL(c.discount_value)}
-                        {c.id === selectedCouponId && getCouponStatusLabel(c) !== "Ativo" ? ` (${getCouponStatusLabel(c)})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                  {couponError && <p className="mt-1 text-[11px] text-red-400">{couponError}</p>}
-                </>
-              )}
+          {discountType === "fixed" && (
+            <>
+              <CurrencyInput value={discount} onChange={handleDiscountChange} />
+              {discountWarning && <p className="mt-1 text-[11px] text-amber-400">{discountWarning}</p>}
+            </>
+          )}
+
+          {discountType === "percentage" && (
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              value={discountPercent}
+              onChange={(e) => setDiscountPercent(e.target.value)}
+              className="glass-input w-full"
+              placeholder="0,0%"
+            />
+          )}
+
+          {discountType === "coupon" && (
+            <>
+              <select
+                value={selectedCouponId}
+                disabled={couponBusy}
+                onChange={(e) => switchCouponReservation(e.target.value || null, productValue)}
+                className={cn("glass-input w-full", couponBusy && "cursor-not-allowed opacity-60")}
+              >
+                <option value="" className="bg-bg-raised">
+                  {availableCoupons.length === 0 ? "Nenhum cupom válido pra este pedido" : "Selecione..."}
+                </option>
+                {availableCoupons.map((c) => (
+                  <option key={c.id} value={c.id} className="bg-bg-raised">
+                    {c.code} · {c.discount_type === "percentage" ? `${c.discount_value}%` : formatBRL(c.discount_value)}
+                    {c.id === selectedCouponId && getCouponStatusLabel(c) !== "Ativo" ? ` (${getCouponStatusLabel(c)})` : ""}
+                  </option>
+                ))}
+              </select>
+              {couponError && <p className="mt-1 text-[11px] text-red-400">{couponError}</p>}
             </>
           )}
         </div>
@@ -1019,12 +1001,33 @@ export function NewSaleModal({
 
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Prazo de Produção (opcional)</label>
-          <input
-            type="date"
-            value={productionDeadlineDate}
-            onChange={(e) => setProductionDeadlineDate(e.target.value)}
-            className="glass-input w-full"
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="production-start-date" className="mb-1 block text-[11px] text-text-muted">
+                Início
+              </label>
+              <input
+                id="production-start-date"
+                type="date"
+                value={productionStartDate}
+                onChange={(e) => setProductionStartDate(e.target.value)}
+                className="glass-input w-full"
+              />
+            </div>
+            <div>
+              <label htmlFor="production-end-date" className="mb-1 block text-[11px] text-text-muted">
+                Prazo final
+              </label>
+              <input
+                id="production-end-date"
+                type="date"
+                min={productionStartDate || undefined}
+                value={productionDeadlineDate}
+                onChange={(e) => setProductionDeadlineDate(e.target.value)}
+                className="glass-input w-full"
+              />
+            </div>
+          </div>
           {quote?.production_deadline && !productionDeadlineDate && (
             <p className="mt-1.5 text-[11px] text-text-muted">
               Prazo anterior (texto livre): {quote.production_deadline}

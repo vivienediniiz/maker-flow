@@ -221,7 +221,9 @@ export interface Quote {
   discount_percent: number | null;
   /** @deprecated Texto livre ("3 dias úteis, até 20/08...") — substituído por `production_deadline_date`. Mantido só pra exibir registros salvos antes dessa mudança. */
   production_deadline: string | null;
-  /** Data real do prazo de produção (yyyy-mm-dd) — usada pro destaque/alerta de prazo vencendo. */
+  /** Início do período de produção (yyyy-mm-dd), opcional — só informativo. */
+  production_start_date: string | null;
+  /** Fim do período/prazo de produção (yyyy-mm-dd) — usado pro destaque/alerta de prazo vencendo. */
   production_deadline_date: string | null;
   /** Agrupa quotes criadas a partir do mesmo checkout da Loja Online (uma linha por produto do carrinho). */
   storefront_checkout_id: string | null;
