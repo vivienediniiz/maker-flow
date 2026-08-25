@@ -106,7 +106,7 @@ export function NewSaleModal({
   // Destrava o campo Valor Unitário dentro do modo "tier" (via "Editar valor").
   const [tierPriceOverridden, setTierPriceOverridden] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<QuotePaymentMethod>("pix");
-  /** Só relevante pra Pix/Dinheiro/Transferência — controla se a venda nasce "paid" ou "sent" (aguardando pagamento). */
+  /** Toda forma de pagamento exceto Link de Pagamento — controla se a venda nasce "paid" ou "awaiting_payment". */
   const [alreadyPaid, setAlreadyPaid] = useState(true);
   const [channel, setChannel] = useState<QuoteChannel>("whatsapp");
   const [shippingValue, setShippingValue] = useState<number | null>(null);
@@ -114,6 +114,7 @@ export function NewSaleModal({
   const [shippingDestinationCep, setShippingDestinationCep] = useState<string | null>(null);
   /** CEP digitado/pré-preenchido no widget de frete inline — controlado aqui pra poder auto-preencher do cliente selecionado e persistir no cadastro dele quando faltava. */
   const [destinationCep, setDestinationCep] = useState("");
+  const [applyDiscount, setApplyDiscount] = useState(false);
   const [discountType, setDiscountType] = useState<QuoteDiscountType>("fixed");
   const [discount, setDiscount] = useState("0");
   const [discountWarning, setDiscountWarning] = useState<string | null>(null);
@@ -171,12 +172,13 @@ export function NewSaleModal({
       setSelectedTierIndex(null);
       setTierPriceOverridden(false);
       setPaymentMethod(quote.payment_method ?? "pix");
-      setAlreadyPaid(quote.status !== "sent");
+      setAlreadyPaid(quote.status !== "sent" && quote.status !== "awaiting_payment");
       setChannel(quote.channel ?? "whatsapp");
       setShippingValue(quote.shipping_cost ?? null);
       setShippingSummary(null);
       setShippingDestinationCep(quote.destination_cep ?? null);
       setDestinationCep(quote.destination_cep ?? "");
+      setApplyDiscount((quote.discount_amount ?? 0) > 0 || !!quote.coupon_id);
       setDiscountType(quote.discount_type ?? "fixed");
       setDiscount(quote.discount_amount != null ? String(quote.discount_amount.toFixed(2)) : "0");
       setDiscountWarning(null);
@@ -206,6 +208,7 @@ export function NewSaleModal({
       setShippingSummary(null);
       setShippingDestinationCep(null);
       setDestinationCep("");
+      setApplyDiscount(false);
       setDiscountType("fixed");
       setDiscount("0");
       setDiscountWarning(null);
@@ -391,6 +394,12 @@ export function NewSaleModal({
     setDiscountPercent("0");
   }
 
+  /** Desmarcar "Aplicar desconto" zera tudo (e libera cupom reservado, se algum) — não deixa desconto aplicado escondido. */
+  function handleApplyDiscountToggle(checked: boolean) {
+    setApplyDiscount(checked);
+    if (!checked) handleDiscountTypeChange("fixed");
+  }
+
   /**
    * Fecha o modal desfazendo qualquer reserva de cupom feita nesta sessão
    * que ainda não foi salva — restaura pro cupom que já estava salvo na
@@ -409,10 +418,11 @@ export function NewSaleModal({
   const selectedProduct = products.find((p) => p.id === selectedProductId) ?? null;
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
   // Só deixa a forma de pagamento decidir o status quando a venda ainda está
-  // numa etapa inicial (nova, ou "sent"/"paid") — evita que mexer nisso numa
-  // edição regrida uma venda já em produção/enviada de volta pra "aguardando".
-  const statusEditable = !quote || quote.status === "sent" || quote.status === "paid";
-  const showPaidToggle = statusEditable && ["pix", "cash", "transfer"].includes(paymentMethod);
+  // numa etapa inicial (nova, "sent"/"awaiting_payment"/"paid") — evita que
+  // mexer nisso numa edição regrida uma venda já em produção/enviada.
+  const statusEditable =
+    !quote || quote.status === "sent" || quote.status === "awaiting_payment" || quote.status === "paid";
+  const showPaidToggle = statusEditable && paymentMethod !== "payment_link";
   const isPaymentLink = paymentMethod === "payment_link";
   const showUnitPricing = !!selectedProduct;
   const tierRanges = selectedProduct ? buildPriceTierRanges(selectedProduct.price_tiers) : [];
@@ -506,20 +516,19 @@ export function NewSaleModal({
         ? tierRanges.find((r) => r.originalIndex === selectedTierIndex)?.label ?? null
         : null;
 
-    // Link de Pagamento e o toggle Já pago/Aguardando (Pix/Dinheiro/Transferência)
-    // decidem o status — mas só quando a venda ainda está numa etapa inicial
-    // (nova, ou já em "sent"/"paid"); em produção/enviada isso não mexe em nada.
+    // Link de Pagamento e o toggle Já pago/Aguardando (qualquer forma de
+    // pagamento) decidem o status — mas só quando a venda ainda está numa
+    // etapa inicial (nova, "sent"/"awaiting_payment"/"paid"); em
+    // produção/enviada isso não mexe em nada. "awaiting_payment" (não
+    // "sent") é o status certo aqui: "sent" é orçamento enviado a um
+    // prospect, essa venda já está confirmada, só falta o pagamento.
     const resolvedStatus: QuoteStatus | undefined = !statusEditable
       ? undefined
       : isPaymentLink
-        ? "sent"
-        : showPaidToggle
-          ? alreadyPaid
-            ? "paid"
-            : "sent"
-          : !isEditing
-            ? "paid"
-            : undefined;
+        ? "awaiting_payment"
+        : alreadyPaid
+          ? "paid"
+          : "awaiting_payment";
 
     const sharedPayload = {
       project_name: projectName || "Projeto sem nome",
@@ -867,68 +876,81 @@ export function NewSaleModal({
         */}
 
         <div>
-          <label className="mb-1.5 block text-xs text-text-muted">Desconto</label>
-          <div className="glass-card mb-2 flex gap-1 p-1">
-            {(
-              [
-                { value: "fixed", label: "Fixo" },
-                { value: "percentage", label: "Percentual" },
-                { value: "coupon", label: "Cupom" },
-              ] as { value: QuoteDiscountType; label: string }[]
-            ).map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => handleDiscountTypeChange(opt.value)}
-                className={cn(
-                  "flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium transition-colors sm:min-h-0",
-                  discountType === opt.value ? "bg-neon-gradient text-white" : "text-text-secondary hover:text-text-primary"
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          {discountType === "fixed" && (
-            <>
-              <CurrencyInput value={discount} onChange={handleDiscountChange} />
-              {discountWarning && <p className="mt-1 text-[11px] text-amber-400">{discountWarning}</p>}
-            </>
-          )}
-
-          {discountType === "percentage" && (
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-text-muted">
             <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="100"
-              value={discountPercent}
-              onChange={(e) => setDiscountPercent(e.target.value)}
-              className="glass-input w-full"
-              placeholder="0,0%"
+              type="checkbox"
+              checked={applyDiscount}
+              onChange={(e) => handleApplyDiscountToggle(e.target.checked)}
+              className="h-4 w-4 rounded border-border-glassStrong bg-white/5 accent-neon-pink"
             />
-          )}
+            Aplicar desconto
+          </label>
 
-          {discountType === "coupon" && (
+          {applyDiscount && (
             <>
-              <select
-                value={selectedCouponId}
-                disabled={couponBusy}
-                onChange={(e) => switchCouponReservation(e.target.value || null, productValue)}
-                className={cn("glass-input w-full", couponBusy && "cursor-not-allowed opacity-60")}
-              >
-                <option value="" className="bg-bg-raised">
-                  {availableCoupons.length === 0 ? "Nenhum cupom válido pra este pedido" : "Selecione..."}
-                </option>
-                {availableCoupons.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-bg-raised">
-                    {c.code} · {c.discount_type === "percentage" ? `${c.discount_value}%` : formatBRL(c.discount_value)}
-                    {c.id === selectedCouponId && getCouponStatusLabel(c) !== "Ativo" ? ` (${getCouponStatusLabel(c)})` : ""}
-                  </option>
+              <div className="glass-card mb-2 mt-1.5 flex gap-1 p-1">
+                {(
+                  [
+                    { value: "fixed", label: "Fixo" },
+                    { value: "percentage", label: "Percentual" },
+                    { value: "coupon", label: "Cupom" },
+                  ] as { value: QuoteDiscountType; label: string }[]
+                ).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => handleDiscountTypeChange(opt.value)}
+                    className={cn(
+                      "flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium transition-colors sm:min-h-0",
+                      discountType === opt.value ? "bg-neon-gradient text-white" : "text-text-secondary hover:text-text-primary"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
                 ))}
-              </select>
-              {couponError && <p className="mt-1 text-[11px] text-red-400">{couponError}</p>}
+              </div>
+
+              {discountType === "fixed" && (
+                <>
+                  <CurrencyInput value={discount} onChange={handleDiscountChange} />
+                  {discountWarning && <p className="mt-1 text-[11px] text-amber-400">{discountWarning}</p>}
+                </>
+              )}
+
+              {discountType === "percentage" && (
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(e.target.value)}
+                  className="glass-input w-full"
+                  placeholder="0,0%"
+                />
+              )}
+
+              {discountType === "coupon" && (
+                <>
+                  <select
+                    value={selectedCouponId}
+                    disabled={couponBusy}
+                    onChange={(e) => switchCouponReservation(e.target.value || null, productValue)}
+                    className={cn("glass-input w-full", couponBusy && "cursor-not-allowed opacity-60")}
+                  >
+                    <option value="" className="bg-bg-raised">
+                      {availableCoupons.length === 0 ? "Nenhum cupom válido pra este pedido" : "Selecione..."}
+                    </option>
+                    {availableCoupons.map((c) => (
+                      <option key={c.id} value={c.id} className="bg-bg-raised">
+                        {c.code} · {c.discount_type === "percentage" ? `${c.discount_value}%` : formatBRL(c.discount_value)}
+                        {c.id === selectedCouponId && getCouponStatusLabel(c) !== "Ativo" ? ` (${getCouponStatusLabel(c)})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {couponError && <p className="mt-1 text-[11px] text-red-400">{couponError}</p>}
+                </>
+              )}
             </>
           )}
         </div>

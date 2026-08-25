@@ -92,7 +92,7 @@ export function NotificationsBell() {
         .select("id, project_name, production_deadline_date, status")
         .eq("user_id", user.id)
         .not("production_deadline_date", "is", null)
-        .in("status", ["sent", "paid", "in_production"])
+        .in("status", ["sent", "awaiting_payment", "paid", "in_production"])
         .lte("production_deadline_date", deadlineCutoffStr)
         .order("production_deadline_date", { ascending: true })
         .limit(5),

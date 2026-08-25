@@ -5,6 +5,7 @@ export const QUOTE_EXPIRY_DAYS = 15;
 
 export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
   sent: "Orçamento Enviado",
+  awaiting_payment: "Aguardando Pagamento",
   paid: "Pago",
   in_production: "Em Produção",
   shipped: "Pedido Enviado",
@@ -15,6 +16,7 @@ export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
 // Rótulos curtos, usados embaixo de cada bolinha da barra de status.
 export const QUOTE_STATUS_SHORT_LABELS: Record<QuoteStatus, string> = {
   sent: "Orçamento",
+  awaiting_payment: "Aguardando",
   paid: "Pago",
   in_production: "Produção",
   shipped: "Enviado",
@@ -26,6 +28,7 @@ export const QUOTE_STATUS_ORDER: QuoteStatus[] = ["sent", "paid", "in_production
 
 export const QUOTE_STATUS_PILL_STYLES: Record<QuoteStatus, string> = {
   sent: "bg-neon-orange/15 text-neon-orange border-neon-orange/30",
+  awaiting_payment: "bg-amber-400/15 text-amber-400 border-amber-400/30",
   paid: "bg-neon-green/15 text-neon-green border-neon-green/30",
   in_production: "bg-neon-pink/15 text-neon-pink border-neon-pink/30",
   shipped: "bg-neon-purple/15 text-neon-purple border-neon-purple/30",
@@ -86,11 +89,17 @@ export const QUOTE_SOURCE_BADGE_STYLES: Record<QuoteSource, string> = {
   loja_online: "bg-neon-pink/15 text-neon-pink border-neon-pink/30",
 };
 
-/** Próximo estágio no fluxo linear (sent → paid → in_production → shipped), com o rótulo do botão de ação rápida. */
+/**
+ * Próximo estágio no fluxo linear (sent → paid → in_production → shipped),
+ * com o rótulo do botão de ação rápida. "awaiting_payment" não entra nesse
+ * array — é uma variante de "sent" pra vendas confirmadas (não orçamentos)
+ * esperando pagamento — mas avança pro mesmo lugar: "paid".
+ */
 export function nextQuoteAction(status: QuoteStatus): { next: QuoteStatus; label: string } | null {
   const order: QuoteStatus[] = ["sent", "paid", "in_production", "shipped"];
   const actionLabels: Record<QuoteStatus, string> = {
     sent: "Marcar como Pago",
+    awaiting_payment: "Marcar como Pago",
     paid: "Iniciar Produção",
     in_production: "Marcar Enviado",
     shipped: "",
@@ -99,6 +108,7 @@ export function nextQuoteAction(status: QuoteStatus): { next: QuoteStatus; label
   };
   if (status === "expired") return { next: "sent", label: actionLabels.expired };
   if (status === "cancelled") return null;
+  if (status === "awaiting_payment") return { next: "paid", label: actionLabels.awaiting_payment };
   const idx = order.indexOf(status);
   if (idx === -1 || idx === order.length - 1) return null;
   const next = order[idx + 1];

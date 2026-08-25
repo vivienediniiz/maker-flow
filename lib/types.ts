@@ -179,7 +179,7 @@ export type QuoteChannel = "whatsapp" | "instagram" | "tiktok" | "presencial" | 
 // (canal de venda escolhido manualmente, usado em cálculo de taxa/margem).
 export type QuoteSource = "mercado_pago" | "mercado_livre" | "shopee" | "tiktok_shop" | "manual" | "loja_online";
 
-export type QuoteStatus = "sent" | "paid" | "in_production" | "shipped" | "expired" | "cancelled";
+export type QuoteStatus = "sent" | "awaiting_payment" | "paid" | "in_production" | "shipped" | "expired" | "cancelled";
 
 export type QuotePaymentMethod = "pix" | "credit_card" | "debit_card" | "cash" | "transfer" | "other" | "payment_link";
 

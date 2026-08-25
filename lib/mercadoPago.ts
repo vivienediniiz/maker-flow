@@ -289,7 +289,7 @@ export async function upsertQuoteFromMercadoPagoOrder(admin: SupabaseClient, use
       .eq("user_id", userId)
       .maybeSingle();
     if (pendingQuote) {
-      if (pendingQuote.status !== "sent") return pendingQuote;
+      if (pendingQuote.status !== "awaiting_payment") return pendingQuote;
       const { data: updated, error: updateError } = await admin
         .from("quotes")
         .update({ status: "paid" })

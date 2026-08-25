@@ -36,6 +36,7 @@ function deadlineBadgeLabel(deadlineDate: string): string {
 const STATUS_FILTERS: { key: "all" | QuoteStatus | "awaiting_shipment"; label: string }[] = [
   { key: "all", label: "Todos" },
   { key: "sent", label: QUOTE_STATUS_LABELS.sent },
+  { key: "awaiting_payment", label: QUOTE_STATUS_LABELS.awaiting_payment },
   { key: "paid", label: QUOTE_STATUS_LABELS.paid },
   { key: "in_production", label: QUOTE_STATUS_LABELS.in_production },
   { key: "awaiting_shipment", label: "Aguardando Envio" },

@@ -41,7 +41,10 @@ export function QuoteStatusStepper({
     );
   }
 
-  const currentIndex = QUOTE_STATUS_ORDER.indexOf(status);
+  // "awaiting_payment" não está em QUOTE_STATUS_ORDER (é uma variante de
+  // "sent" pra vendas confirmadas aguardando pagamento) — ocupa a mesma
+  // posição do primeiro estágio na barra.
+  const currentIndex = status === "awaiting_payment" ? 0 : QUOTE_STATUS_ORDER.indexOf(status);
   const daysLeft = status === "sent" ? quoteDaysUntilExpiry(sentAt) : null;
 
   return (
