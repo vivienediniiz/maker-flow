@@ -39,11 +39,12 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: "Venda não encontrada." }, { status: 404 });
   }
 
-  if (quote.status === "paid" || quote.status === "cancelled") {
-    return NextResponse.json(
-      { error: quote.status === "paid" ? "Essa venda já está paga." : "Essa venda está cancelada." },
-      { status: 400 }
-    );
+  // Toda venda nasce como "paid" (o caso comum é já ter recebido o valor na
+  // hora) — gerar o link é exatamente o que desfaz isso pra quem NÃO
+  // recebeu ainda, então "paid" não pode bloquear aqui. Só "cancelled" não
+  // faz sentido cobrar.
+  if (quote.status === "cancelled") {
+    return NextResponse.json({ error: "Essa venda está cancelada." }, { status: 400 });
   }
 
   // Já tem link gerado pra essa venda — reaproveita em vez de criar outra
