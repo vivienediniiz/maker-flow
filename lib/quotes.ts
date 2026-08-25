@@ -44,6 +44,7 @@ export const QUOTE_PAYMENT_METHOD_LABELS: Record<QuotePaymentMethod, string> = {
   cash: "Dinheiro",
   transfer: "Transferência",
   other: "Outro",
+  payment_link: "Link de Pagamento",
 };
 
 export const QUOTE_CHANNEL_LABELS: Record<string, string> = {

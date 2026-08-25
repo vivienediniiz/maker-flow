@@ -181,7 +181,7 @@ export type QuoteSource = "mercado_pago" | "mercado_livre" | "shopee" | "tiktok_
 
 export type QuoteStatus = "sent" | "paid" | "in_production" | "shipped" | "expired" | "cancelled";
 
-export type QuotePaymentMethod = "pix" | "credit_card" | "debit_card" | "cash" | "transfer" | "other";
+export type QuotePaymentMethod = "pix" | "credit_card" | "debit_card" | "cash" | "transfer" | "other" | "payment_link";
 
 export interface Quote {
   id: string;

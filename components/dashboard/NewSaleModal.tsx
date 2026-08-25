@@ -11,7 +11,7 @@ import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { buildPriceTierRanges } from "@/lib/priceTiers";
-import type { Client, Product, QuoteWithClient, QuotePaymentMethod, QuoteChannel, Coupon, QuoteDiscountType, Filament, Supply } from "@/lib/types";
+import type { Client, Product, QuoteWithClient, QuotePaymentMethod, QuoteStatus, QuoteChannel, Coupon, QuoteDiscountType, Filament, Supply } from "@/lib/types";
 import { QUOTE_CHANNEL_LABELS } from "@/lib/quotes";
 import { isCouponValid, computeCouponDiscount, getCouponStatusLabel } from "@/lib/coupons";
 
@@ -65,6 +65,7 @@ const PAYMENT_METHODS: { value: QuotePaymentMethod; label: string }[] = [
   { value: "cash", label: "Dinheiro" },
   { value: "transfer", label: "Transferência" },
   { value: "other", label: "Outro" },
+  { value: "payment_link", label: "Link de Pagamento" },
 ];
 
 export function NewSaleModal({
@@ -104,6 +105,8 @@ export function NewSaleModal({
   // Destrava o campo Valor Unitário dentro do modo "tier" (via "Editar valor").
   const [tierPriceOverridden, setTierPriceOverridden] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<QuotePaymentMethod>("pix");
+  /** Só relevante pra Pix/Dinheiro/Transferência — controla se a venda nasce "paid" ou "sent" (aguardando pagamento). */
+  const [alreadyPaid, setAlreadyPaid] = useState(true);
   const [channel, setChannel] = useState<QuoteChannel>("whatsapp");
   const [shippingValue, setShippingValue] = useState<number | null>(null);
   const [shippingSummary, setShippingSummary] = useState<string | null>(null);
@@ -165,6 +168,7 @@ export function NewSaleModal({
       setSelectedTierIndex(null);
       setTierPriceOverridden(false);
       setPaymentMethod(quote.payment_method ?? "pix");
+      setAlreadyPaid(quote.status !== "sent");
       setChannel(quote.channel ?? "whatsapp");
       setShippingValue(quote.shipping_cost ?? null);
       setShippingSummary(null);
@@ -191,6 +195,7 @@ export function NewSaleModal({
       setSelectedTierIndex(null);
       setTierPriceOverridden(false);
       setPaymentMethod("pix");
+      setAlreadyPaid(true);
       setChannel("whatsapp");
       setShippingValue(null);
       setShippingSummary(null);
@@ -396,6 +401,12 @@ export function NewSaleModal({
 
   const selectedProduct = products.find((p) => p.id === selectedProductId) ?? null;
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
+  // Só deixa a forma de pagamento decidir o status quando a venda ainda está
+  // numa etapa inicial (nova, ou "sent"/"paid") — evita que mexer nisso numa
+  // edição regrida uma venda já em produção/enviada de volta pra "aguardando".
+  const statusEditable = !quote || quote.status === "sent" || quote.status === "paid";
+  const showPaidToggle = statusEditable && ["pix", "cash", "transfer"].includes(paymentMethod);
+  const isPaymentLink = paymentMethod === "payment_link";
   const showUnitPricing = !!selectedProduct;
   const tierRanges = selectedProduct ? buildPriceTierRanges(selectedProduct.price_tiers) : [];
   const hasTiers = tierRanges.length > 0;
@@ -488,6 +499,21 @@ export function NewSaleModal({
         ? tierRanges.find((r) => r.originalIndex === selectedTierIndex)?.label ?? null
         : null;
 
+    // Link de Pagamento e o toggle Já pago/Aguardando (Pix/Dinheiro/Transferência)
+    // decidem o status — mas só quando a venda ainda está numa etapa inicial
+    // (nova, ou já em "sent"/"paid"); em produção/enviada isso não mexe em nada.
+    const resolvedStatus: QuoteStatus | undefined = !statusEditable
+      ? undefined
+      : isPaymentLink
+        ? "sent"
+        : showPaidToggle
+          ? alreadyPaid
+            ? "paid"
+            : "sent"
+          : !isEditing
+            ? "paid"
+            : undefined;
+
     const sharedPayload = {
       project_name: projectName || "Projeto sem nome",
       final_price: computedTotal,
@@ -514,7 +540,10 @@ export function NewSaleModal({
     let createdQuote: QuoteWithClient | null = null;
 
     if (isEditing) {
-      const { error } = await supabase.from("quotes").update(sharedPayload).eq("id", quote!.id);
+      const { error } = await supabase
+        .from("quotes")
+        .update({ ...sharedPayload, ...(resolvedStatus ? { status: resolvedStatus } : {}) })
+        .eq("id", quote!.id);
       quoteError = error;
     } else {
       const { data, error } = await supabase
@@ -527,7 +556,7 @@ export function NewSaleModal({
           energy_cost: energyCost,
           filament_cost: filamentCost,
           margin_percent: marginPercent,
-          status: "paid",
+          status: resolvedStatus ?? "paid",
           source: "manual",
         })
         .select("*, clients(name, phone, email, address), products(name, image_url, category, description, calc_inputs)")
@@ -593,6 +622,22 @@ export function NewSaleModal({
           unit_cost_at_time: s.cost_per_unit,
           related_quote_id: createdQuoteId,
         });
+      }
+    }
+
+    // Forma de pagamento "Link de Pagamento": gera a preferência real no MP
+    // já aqui, sem precisar de um segundo clique em "Gerar Link de Cobrança"
+    // na tela de sucesso — só na criação (editar não abre essa tela).
+    if (!isEditing && isPaymentLink && createdQuoteId && createdQuote) {
+      try {
+        const linkRes = await fetch(`/api/quotes/${createdQuoteId}/payment-link`, { method: "POST" });
+        const linkData = await linkRes.json();
+        if (linkRes.ok && linkData.url) {
+          createdQuote = { ...createdQuote, payment_link_url: linkData.url };
+        }
+      } catch {
+        // Silencioso — o botão "Gerar Link de Cobrança" na tela de sucesso
+        // continua disponível como retry manual se isso falhar aqui.
       }
     }
 
@@ -892,6 +937,38 @@ export function NewSaleModal({
               </option>
             ))}
           </select>
+
+          {showPaidToggle && (
+            <div className="glass-card mt-2 flex gap-1 p-1">
+              <button
+                type="button"
+                onClick={() => setAlreadyPaid(true)}
+                className={cn(
+                  "flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium transition-colors sm:min-h-0",
+                  alreadyPaid ? "bg-neon-gradient text-white" : "text-text-secondary hover:text-text-primary"
+                )}
+              >
+                Já pago
+              </button>
+              <button
+                type="button"
+                onClick={() => setAlreadyPaid(false)}
+                className={cn(
+                  "flex min-h-[44px] flex-1 items-center justify-center rounded-pill py-2 text-xs font-medium transition-colors sm:min-h-0",
+                  !alreadyPaid ? "bg-neon-gradient text-white" : "text-text-secondary hover:text-text-primary"
+                )}
+              >
+                Aguardando pagamento
+              </button>
+            </div>
+          )}
+
+          {isPaymentLink && statusEditable && (
+            <p className="mt-1.5 text-[11px] text-text-muted">
+              Ao salvar, um link de pagamento real do Mercado Pago é gerado automaticamente — a venda entra como
+              "aguardando pagamento" até o cliente pagar.
+            </p>
+          )}
         </div>
 
         <div>

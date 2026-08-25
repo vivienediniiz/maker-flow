@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, Link2, Copy, Check, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
@@ -15,6 +15,14 @@ export function SaleSuccessModal({ quote, onClose }: { quote: QuoteWithClient | 
   const [generatingLink, setGeneratingLink] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Forma de pagamento "Link de Pagamento" já chega com o link pronto (gerado
+  // no submit do NewSaleModal) — evita um segundo clique só pra ver o que já
+  // foi criado.
+  useEffect(() => {
+    setPaymentLink(quote?.payment_link_url ?? null);
+    setLinkError(null);
+  }, [quote?.id, quote?.payment_link_url]);
 
   if (!quote) return null;
 
