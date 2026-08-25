@@ -448,6 +448,13 @@ export function NewSaleModal({
       return;
     }
 
+    // Sem CEP cadastrado no cliente pra cair no destination_cep automático,
+    // o frete não tem como ser calculado nem estimado — exige valor manual.
+    if (!selectedClient?.cep && shippingValue == null) {
+      setError('Esse cliente não tem CEP cadastrado — calcule e informe o frete em "Valor Frete" pra continuar.');
+      return;
+    }
+
     setSaving(true);
 
     const {
@@ -736,7 +743,9 @@ export function NewSaleModal({
         */}
 
         <div>
-          <label className="mb-1.5 block text-xs text-text-muted">Valor Frete (R$)</label>
+          <label className="mb-1.5 block text-xs text-text-muted">
+            Valor Frete (R$) {!selectedClient?.cep && selectedClientId && <span className="text-neon-pink">*</span>}
+          </label>
           <div className="relative">
             <input
               readOnly
@@ -753,6 +762,11 @@ export function NewSaleModal({
             </button>
           </div>
           {shippingSummary && <p className="mt-1 text-[11px] text-text-muted">{shippingSummary}</p>}
+          {!selectedClient?.cep && selectedClientId && shippingValue == null && (
+            <p className="mt-1 text-[11px] text-amber-400">
+              Esse cliente não tem CEP cadastrado — calcule o frete manualmente pra continuar.
+            </p>
+          )}
         </div>
 
         <div>
