@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 import { setIntegrationCredential } from "@/lib/vault";
 import { exchangeMercadoPagoCode } from "@/lib/mercadoPago";
 
@@ -26,15 +27,28 @@ function adminClient() {
  */
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
-  const userId = req.nextUrl.searchParams.get("state");
+  const state = req.nextUrl.searchParams.get("state");
   const errorParam = req.nextUrl.searchParams.get("error");
 
   if (errorParam) {
     return NextResponse.redirect(`${SITE_URL}/dashboard/integrations?mp_error=${encodeURIComponent(errorParam)}`);
   }
-  if (!code || !userId) {
+  if (!code || !state) {
     return NextResponse.redirect(`${SITE_URL}/dashboard/integrations?mp_error=callback_incompleto`);
   }
+
+  // A identidade de quem está conectando vem da sessão (cookie), nunca do
+  // parâmetro state da URL — sem isso, qualquer pessoa deslogada consegue
+  // trocar o state pelo user_id de outro lojista e sequestrar a integração
+  // de pagamento dele (state aqui só serve como checagem extra de CSRF).
+  const supabase = createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || user.id !== state) {
+    return NextResponse.redirect(`${SITE_URL}/login?mp_error=sessao_invalida`);
+  }
+  const userId = user.id;
 
   const admin = adminClient();
 

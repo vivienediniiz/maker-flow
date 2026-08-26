@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 import { setIntegrationCredential } from "@/lib/vault";
 import { exchangeMelhorEnvioCode } from "@/lib/melhorEnvio";
 
@@ -20,15 +21,26 @@ function adminClient() {
  */
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
-  const userId = req.nextUrl.searchParams.get("state");
+  const state = req.nextUrl.searchParams.get("state");
   const errorParam = req.nextUrl.searchParams.get("error");
 
   if (errorParam) {
     return NextResponse.redirect(`${SITE_URL}/dashboard/integrations?me_error=${encodeURIComponent(errorParam)}`);
   }
-  if (!code || !userId) {
+  if (!code || !state) {
     return NextResponse.redirect(`${SITE_URL}/dashboard/integrations?me_error=callback_incompleto`);
   }
+
+  // Identidade vem da sessão, não da URL — ver mesma nota em
+  // app/api/auth/mercado-pago/callback/route.ts.
+  const supabase = createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || user.id !== state) {
+    return NextResponse.redirect(`${SITE_URL}/login?me_error=sessao_invalida`);
+  }
+  const userId = user.id;
 
   const admin = adminClient();
 

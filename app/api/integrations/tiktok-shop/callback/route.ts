@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 import { setIntegrationCredential } from "@/lib/vault";
 
 function adminClient() {
@@ -21,11 +22,22 @@ export async function GET(req: NextRequest) {
   }
 
   const code = req.nextUrl.searchParams.get("code");
-  const userId = req.nextUrl.searchParams.get("state");
+  const state = req.nextUrl.searchParams.get("state");
 
-  if (!code || !userId) {
+  if (!code || !state) {
     return NextResponse.json({ error: "Callback do TikTok Shop incompleto" }, { status: 400 });
   }
+
+  // Identidade vem da sessão, não da URL — ver mesma nota em
+  // app/api/auth/mercado-pago/callback/route.ts.
+  const supabase = createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || user.id !== state) {
+    return NextResponse.json({ error: "Sessão inválida — conecte de novo a partir de Integrações." }, { status: 401 });
+  }
+  const userId = user.id;
 
   const tokenUrl = new URL("https://auth.tiktok-shops.com/api/v2/token/get");
   tokenUrl.searchParams.set("app_key", appKey);

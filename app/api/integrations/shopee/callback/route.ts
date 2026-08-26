@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 import { setIntegrationCredential } from "@/lib/vault";
 
 function adminClient() {
@@ -23,11 +24,22 @@ export async function GET(req: NextRequest) {
 
   const code = req.nextUrl.searchParams.get("code");
   const shopId = req.nextUrl.searchParams.get("shop_id");
-  const userId = req.nextUrl.searchParams.get("state");
+  const state = req.nextUrl.searchParams.get("state");
 
-  if (!code || !shopId || !userId) {
+  if (!code || !shopId || !state) {
     return NextResponse.json({ error: "Callback da Shopee incompleto" }, { status: 400 });
   }
+
+  // Identidade vem da sessão, não da URL — ver mesma nota em
+  // app/api/auth/mercado-pago/callback/route.ts.
+  const supabase = createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || user.id !== state) {
+    return NextResponse.json({ error: "Sessão inválida — conecte de novo a partir de Integrações." }, { status: 401 });
+  }
+  const userId = user.id;
 
   const path = "/api/v2/auth/token/get";
   const timestamp = Math.floor(Date.now() / 1000);
