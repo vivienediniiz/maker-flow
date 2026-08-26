@@ -10,7 +10,6 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { ExtraPurchaseModal } from "@/components/dashboard/ExtraPurchaseModal";
 import { FixedExpenseModal } from "@/components/dashboard/FixedExpenseModal";
 import { CouponsPeriodSummary } from "@/components/dashboard/CouponsPeriodSummary";
-import { CouponsCampaignsSection } from "@/components/dashboard/CouponsCampaignsSection";
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { FinancialEvolutionChart, type FinancialEvolutionPoint } from "@/components/charts/FinancialEvolutionChart";
@@ -34,6 +33,7 @@ const SOURCE_OPTIONS: { key: "all" | QuoteSource; label: string }[] = [
   { key: "mercado_livre", label: QUOTE_SOURCE_LABELS.mercado_livre },
   { key: "shopee", label: QUOTE_SOURCE_LABELS.shopee },
   { key: "tiktok_shop", label: QUOTE_SOURCE_LABELS.tiktok_shop },
+  { key: "loja_online", label: QUOTE_SOURCE_LABELS.loja_online },
   { key: "manual", label: QUOTE_SOURCE_LABELS.manual },
 ];
 
@@ -411,8 +411,6 @@ function FinancePageContent() {
             </section>
 
             <CouponsPeriodSummary />
-
-            <CouponsCampaignsSection source={source} />
           </>
         )}
       </main>
