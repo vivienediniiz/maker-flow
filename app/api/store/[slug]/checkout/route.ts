@@ -51,10 +51,17 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
 
   // Rota pública (sem login) que cria cobrança de verdade no Mercado
   // Pago/InfinitePay — precisa de limite por IP pra não virar alvo de spam.
+  // Se o Upstash falhar/estiver mal configurado, deixa passar (loga o erro)
+  // em vez de derrubar o checkout inteiro — o rate limit nunca pode ser o
+  // motivo de uma venda real falhar.
   if (checkoutRateLimit) {
-    const { success } = await checkoutRateLimit.limit(requestIp(req));
-    if (!success) {
-      return NextResponse.json({ error: "Muitas tentativas — aguarde um instante e tente de novo." }, { status: 429 });
+    try {
+      const { success } = await checkoutRateLimit.limit(requestIp(req));
+      if (!success) {
+        return NextResponse.json({ error: "Muitas tentativas — aguarde um instante e tente de novo." }, { status: 429 });
+      }
+    } catch (err) {
+      console.error("[checkout] falha ao consultar rate limit — deixando passar", (err as Error).message);
     }
   } else {
     console.warn("[checkout] rate limit desativado — configure UPSTASH_REDIS_REST_URL/TOKEN.");
