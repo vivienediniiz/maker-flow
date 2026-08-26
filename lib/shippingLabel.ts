@@ -72,7 +72,7 @@ export async function generateAndFetchLabel(
   let trackingCode: string | null = null;
 
   try {
-    labelUrl = await printMelhorEnvioLabel(admin, integration, orderId, "pdf");
+    labelUrl = await printMelhorEnvioLabel(admin, integration, orderId);
   } catch {
     // Sem problema — fica disponível pra buscar de novo no botão "Imprimir Etiqueta".
   }

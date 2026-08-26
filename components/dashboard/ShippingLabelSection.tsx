@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Truck, Loader2, Copy, Check, Printer, FileDown } from "lucide-react";
+import { Truck, Loader2, Copy, Check, Printer } from "lucide-react";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { ShippingPurchaseModal } from "@/components/dashboard/ShippingPurchaseModal";
 import { formatBRL } from "@/lib/utils";
@@ -21,7 +21,6 @@ export function ShippingLabelSection({ quote, onUpdate }: ShippingLabelSectionPr
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [printing, setPrinting] = useState(false);
-  const [downloadingZpl, setDownloadingZpl] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -49,11 +48,7 @@ export function ShippingLabelSection({ quote, onUpdate }: ShippingLabelSectionPr
     setPrinting(true);
     setActionError(null);
     try {
-      const res = await fetch(`/api/quotes/${quote.id}/shipping/print`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ format: "pdf" }),
-      });
+      const res = await fetch(`/api/quotes/${quote.id}/shipping/print`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
         setActionError(data.error ?? "Falha ao abrir etiqueta.");
@@ -65,28 +60,6 @@ export function ShippingLabelSection({ quote, onUpdate }: ShippingLabelSectionPr
       setActionError("Falha ao abrir etiqueta — tente de novo.");
     } finally {
       setPrinting(false);
-    }
-  }
-
-  async function handleDownloadZpl() {
-    setDownloadingZpl(true);
-    setActionError(null);
-    try {
-      const res = await fetch(`/api/quotes/${quote.id}/shipping/print`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ format: "zpl" }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setActionError(data.error ?? "Falha ao buscar arquivo ZPL.");
-        return;
-      }
-      window.open(data.url, "_blank", "noopener,noreferrer");
-    } catch {
-      setActionError("Falha ao buscar arquivo ZPL — tente de novo.");
-    } finally {
-      setDownloadingZpl(false);
     }
   }
 
@@ -150,16 +123,13 @@ export function ShippingLabelSection({ quote, onUpdate }: ShippingLabelSectionPr
           ) : (
             <p className="text-[11px] text-text-muted">Rastreio ainda não disponível — a transportadora libera depois de coletar.</p>
           )}
-          <div className="flex gap-2">
-            <NeonButton type="button" size="sm" className="flex-1" onClick={handlePrint} disabled={printing}>
-              {printing ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
-              {status === "impresso" ? "Abrir Etiqueta de Novo" : "Imprimir Etiqueta"}
-            </NeonButton>
-            <NeonButton type="button" variant="outline" size="sm" onClick={handleDownloadZpl} disabled={downloadingZpl} title="Formato pra impressora térmica de etiqueta">
-              {downloadingZpl ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
-              ZPL
-            </NeonButton>
-          </div>
+          <NeonButton type="button" size="sm" className="w-full" onClick={handlePrint} disabled={printing}>
+            {printing ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
+            {status === "impresso" ? "Abrir Etiqueta de Novo" : "Imprimir Etiqueta"}
+          </NeonButton>
+          <p className="text-[11px] text-text-muted">
+            Abre a interface de impressão do Melhor Envio — PDF ou impressora térmica (ZPL) se escolhe lá dentro.
+          </p>
           {status === "impresso" && <p className="text-[11px] text-text-muted">Impressão já foi acionada — isso registra a ação, não confirma que saiu da impressora.</p>}
         </div>
       )}

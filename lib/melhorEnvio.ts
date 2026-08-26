@@ -316,16 +316,28 @@ export async function fetchMelhorEnvioCartItem(
   return { status: data.status, tracking: data.tracking ?? null };
 }
 
-/** GET /me/imprimir/{pdf|zpl}/{id} — devolve a URL real do arquivo (S3), pronta pra abrir/baixar direto (diferente de POST /me/shipment/print, que devolve um link de interface). */
+/**
+ * POST /me/shipment/print — única forma de impressão confirmada contra a
+ * doc oficial (o endpoint GET /me/imprimir/{formato}/{id}, que prometia URL
+ * direta por formato, voltou 422 num teste real — abandonado). Não tem
+ * parâmetro de formato: devolve uma única URL (a interface de impressão do
+ * Melhor Envio, que deve trazer as opções PDF/ZPL dentro dela). `mode:
+ * "public"` evita exigir login na conta Melhor Envio pra abrir o link.
+ */
 export async function printMelhorEnvioLabel(
   admin: SupabaseClient,
   integration: { id: string; credential_secret_id: string | null },
-  orderId: string,
-  format: "pdf" | "zpl"
+  orderId: string
 ): Promise<string> {
-  const res = await melhorEnvioFetchForIntegration(admin, integration, `/me/imprimir/${format}/${orderId}`);
+  const res = await melhorEnvioFetchForIntegration(admin, integration, "/me/shipment/print", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orders: [orderId], mode: "public" }),
+  });
   if (!res.ok) {
-    throw new Error(`Melhor Envio respondeu ${res.status} ao buscar o link de impressão`);
+    const body = await res.json().catch(() => null);
+    const detail = body?.errors ? JSON.stringify(body.errors) : body?.message;
+    throw new Error(`Melhor Envio respondeu ${res.status} ao buscar o link de impressão${detail ? `: ${detail}` : ""}`);
   }
   const data = await res.json();
   const url = typeof data === "string" ? data : data?.url;

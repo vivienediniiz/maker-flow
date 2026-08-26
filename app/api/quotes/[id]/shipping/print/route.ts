@@ -9,14 +9,12 @@ function adminClient() {
 }
 
 /**
- * format "pdf" = botão principal "Imprimir Etiqueta": reaproveita a URL já
- * salva (ou busca de novo se por algum motivo não tiver) e marca
- * shipping_label_status "impresso" — registra a INTENÇÃO de imprimir (o
- * clique), não confirma que a impressão física aconteceu, não tem como via API.
- * format "zpl" = link avançado pra impressora térmica: só devolve a URL,
- * não persiste nem muda status (não é "a" ação de imprimir, é uma opção extra).
+ * Botão "Imprimir Etiqueta": reaproveita a URL já salva (ou busca de novo
+ * se por algum motivo não tiver) e marca shipping_label_status "impresso"
+ * — registra a INTENÇÃO de imprimir (o clique), não confirma que a
+ * impressão física aconteceu, não tem como via API.
  */
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createServerClient();
   const {
     data: { user },
@@ -25,9 +23,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!user) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
-
-  const body = await req.json().catch(() => ({}));
-  const format = body.format === "zpl" ? "zpl" : "pdf";
 
   const admin = adminClient();
   const ctx = await loadShippingContext(admin, user.id, params.id);
@@ -40,17 +35,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: "Gere a etiqueta antes de imprimir." }, { status: 400 });
   }
 
-  if (format === "zpl") {
-    try {
-      const url = await printMelhorEnvioLabel(admin, integration, quote.shipping_service_id, "zpl");
-      return NextResponse.json({ url });
-    } catch (err) {
-      return NextResponse.json({ error: (err as Error).message }, { status: 502 });
-    }
-  }
-
   try {
-    const url = quote.shipping_label_url ?? (await printMelhorEnvioLabel(admin, integration, quote.shipping_service_id, "pdf"));
+    const url = quote.shipping_label_url ?? (await printMelhorEnvioLabel(admin, integration, quote.shipping_service_id));
     const printedAt = new Date().toISOString();
     await admin
       .from("quotes")
