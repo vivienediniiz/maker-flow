@@ -44,6 +44,36 @@ export interface Profile {
   store_slug: string | null;
   store_headline: string | null;
   is_admin: boolean;
+  created_at: string;
+}
+
+/** Auditoria de troca de plano/status de assinatura — só admin lê (RLS). Alimentada a partir de 2026-08-26; sem histórico retroativo. */
+export interface SubscriptionEvent {
+  id: string;
+  user_id: string;
+  from_tier: SubscriptionTier | null;
+  from_status: SubscriptionStatus | null;
+  to_tier: SubscriptionTier;
+  to_status: SubscriptionStatus;
+  created_at: string;
+}
+
+/** Espelha a view `admin_subscribers_view` (security_invoker — só admin vê linha de outro usuário, via RLS de profiles). */
+export interface AdminSubscriberRow {
+  user_id: string;
+  email: string;
+  full_name: string;
+  studio_name: string | null;
+  subscription_tier: SubscriptionTier;
+  subscription_status: SubscriptionStatus;
+  billing_cycle: BillingCycle | null;
+  payment_method: PaymentMethodType;
+  paid_until: string | null;
+  trial_ends_at: string;
+  first_payment_confirmed_at: string | null;
+  affiliate_code: string | null;
+  referred_by: string | null;
+  created_at: string;
 }
 
 export type SupportTicketStatus = "open" | "closed";

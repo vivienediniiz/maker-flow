@@ -25,10 +25,21 @@ async function getCurrentProfile() {
   if (!profile) return null;
 
   if (profile.payment_method === "pix" && pixBillingState(profile.paid_until) === "expired") {
+    const beforeTier = profile.subscription_tier;
+    const beforeStatus = profile.subscription_status;
+
     await supabase
       .from("profiles")
       .update({ subscription_tier: "free", subscription_status: "inactive", payment_method: null, paid_until: null })
       .eq("id", user.id);
+
+    await supabase.from("subscription_events").insert({
+      user_id: user.id,
+      from_tier: beforeTier,
+      from_status: beforeStatus,
+      to_tier: "free",
+      to_status: "inactive",
+    });
 
     profile.subscription_tier = "free";
     profile.subscription_status = "inactive";
@@ -41,10 +52,20 @@ async function getCurrentProfile() {
   // Mesmo padrão lazy-check do Pix acima, só que pro fim do período de teste.
   const trialExpired = new Date(profile.trial_ends_at).getTime() < Date.now();
   if (trialExpired && profile.subscription_status !== "active" && profile.subscription_tier !== "free") {
+    const beforeTier = profile.subscription_tier;
+
     await supabase
       .from("profiles")
       .update({ subscription_tier: "free" })
       .eq("id", user.id);
+
+    await supabase.from("subscription_events").insert({
+      user_id: user.id,
+      from_tier: beforeTier,
+      from_status: profile.subscription_status,
+      to_tier: "free",
+      to_status: profile.subscription_status,
+    });
 
     profile.subscription_tier = "free";
   }

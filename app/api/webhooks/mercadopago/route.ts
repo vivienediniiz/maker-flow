@@ -45,6 +45,30 @@ async function maybeRecordAffiliateCommission(supabase: SupabaseClient, userId: 
   }
 }
 
+/**
+ * Loga toda troca de plano/status pra alimentar o Overview do admin
+ * (crescimento/churn mês-a-mês) — sem histórico antes disso, só existia a
+ * "foto do agora" em profiles. Nunca derruba o webhook se falhar.
+ */
+async function logSubscriptionEvent(
+  supabase: SupabaseClient,
+  userId: string,
+  before: { tier: string | null; status: string | null } | null,
+  after: { tier: string; status: string }
+) {
+  try {
+    await supabase.from("subscription_events").insert({
+      user_id: userId,
+      from_tier: before?.tier ?? null,
+      from_status: before?.status ?? null,
+      to_tier: after.tier,
+      to_status: after.status,
+    });
+  } catch (err) {
+    console.error("[mercadopago webhook] falha ao registrar subscription_event", err);
+  }
+}
+
 const MP_STATUS_TO_SUBSCRIPTION_STATUS: Record<string, "active" | "paused" | "cancelled" | "inactive"> = {
   authorized: "active",
   paused: "paused",
@@ -98,10 +122,18 @@ export async function POST(req: NextRequest) {
       const subscriptionStatus = MP_STATUS_TO_SUBSCRIPTION_STATUS[mpStatus] ?? "inactive";
       const isEffectivelyActive = subscriptionStatus === "active";
 
+      const { data: beforeProfile } = await supabase
+        .from("profiles")
+        .select("subscription_tier, subscription_status")
+        .eq("id", userId)
+        .maybeSingle();
+
+      const toTier = isEffectivelyActive ? planId : "free";
+
       const { error } = await supabase
         .from("profiles")
         .update({
-          subscription_tier: isEffectivelyActive ? planId : "free",
+          subscription_tier: toTier,
           billing_cycle: isEffectivelyActive ? planId : null,
           subscription_status: subscriptionStatus,
           payment_method: isEffectivelyActive ? "card" : null,
@@ -114,6 +146,15 @@ export async function POST(req: NextRequest) {
         console.error("[mercadopago webhook] falha ao atualizar profile (preapproval)", error);
         return NextResponse.json({ error: "Falha ao sincronizar assinatura" }, { status: 500 });
       }
+
+      await logSubscriptionEvent(
+        supabase,
+        userId,
+        beforeProfile
+          ? { tier: beforeProfile.subscription_tier, status: beforeProfile.subscription_status }
+          : null,
+        { tier: toTier, status: subscriptionStatus }
+      );
 
       if (isEffectivelyActive) {
         await maybeRecordAffiliateCommission(supabase, userId, planId);
@@ -147,6 +188,12 @@ export async function POST(req: NextRequest) {
         const periodDays = getPlan(planId).frequencyMonths * 30;
         const paidUntil = new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000).toISOString();
 
+        const { data: beforeProfile } = await supabase
+          .from("profiles")
+          .select("subscription_tier, subscription_status")
+          .eq("id", userId)
+          .maybeSingle();
+
         const { error } = await supabase
           .from("profiles")
           .update({
@@ -162,6 +209,15 @@ export async function POST(req: NextRequest) {
           console.error("[mercadopago webhook] falha ao atualizar profile (pix)", error);
           return NextResponse.json({ error: "Falha ao sincronizar pagamento Pix" }, { status: 500 });
         }
+
+        await logSubscriptionEvent(
+          supabase,
+          userId,
+          beforeProfile
+            ? { tier: beforeProfile.subscription_tier, status: beforeProfile.subscription_status }
+            : null,
+          { tier: planId, status: "active" }
+        );
 
         await maybeRecordAffiliateCommission(supabase, userId, planId);
       }
