@@ -181,7 +181,7 @@ export async function fetchMelhorEnvioBalance(
     // que "balance" não veio onde a doc (não-oficial) dizia que estaria.
     // Remover essa parte assim que confirmarmos o campo certo.
     throw new Error(
-      `Não foi possível ler o saldo da carteira Melhor Envio (campo "balance" não encontrado). Payload recebido: ${JSON.stringify(account).slice(0, 800)}`
+      `Não foi possível ler o saldo da carteira Melhor Envio (campo "balance" não encontrado). Chaves do payload: ${Object.keys(account ?? {}).join(", ")} | Payload: ${JSON.stringify(account).slice(0, 2500)}`
     );
   }
   return balance;
