@@ -470,6 +470,8 @@ export interface OnboardingProgress {
   fixed_expenses_registered: boolean;
   /** Fechou o card no X — some pra sempre, mesmo com passos pendentes. */
   dismissed: boolean;
+  /** Já viu o carrossel de boas-vindas (tela cheia, só no primeiro login) — não toca mais nele depois disso, "Pular" ou "Começar" tanto faz. */
+  carousel_seen: boolean;
   updated_at: string;
 }
 
