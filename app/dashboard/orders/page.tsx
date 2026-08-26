@@ -22,7 +22,7 @@ import {
   isProductionDeadlineDue,
   daysUntilProductionDeadline,
 } from "@/lib/quotes";
-import { Loader2, Plus, RefreshCw, Trash2, Pencil } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Trash2, Pencil, X } from "lucide-react";
 import type { QuoteWithClient, QuoteStatus, QuoteSource, Integration } from "@/lib/types";
 
 function deadlineBadgeLabel(deadlineDate: string): string {
@@ -80,6 +80,8 @@ export default function OrdersPage() {
   const [editingQuote, setEditingQuote] = useState<QuoteWithClient | null>(null);
   const [successQuote, setSuccessQuote] = useState<QuoteWithClient | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   useEffect(() => {
     loadAll();
@@ -168,7 +170,51 @@ export default function OrdersPage() {
     e.stopPropagation();
     if (!confirm("Excluir esta venda? Essa ação não pode ser desfeita.")) return;
     setQuotes((prev) => prev.filter((q) => q.id !== quoteId));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(quoteId);
+      return next;
+    });
     await supabase.from("quotes").delete().eq("id", quoteId);
+  }
+
+  function toggleSelected(quoteId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(quoteId)) next.delete(quoteId);
+      else next.add(quoteId);
+      return next;
+    });
+  }
+
+  function toggleSelectAllFiltered() {
+    setSelectedIds((prev) => {
+      if (allFilteredSelected) {
+        const next = new Set(prev);
+        filtered.forEach((q) => next.delete(q.id));
+        return next;
+      }
+      const next = new Set(prev);
+      filtered.forEach((q) => next.add(q.id));
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!confirm(`Excluir ${ids.length} venda${ids.length > 1 ? "s" : ""} selecionada${ids.length > 1 ? "s" : ""}? Essa ação não pode ser desfeita.`)) {
+      return;
+    }
+    setBulkDeleting(true);
+    const { error } = await supabase.from("quotes").delete().in("id", ids);
+    setBulkDeleting(false);
+    if (error) {
+      alert("Não foi possível excluir as vendas selecionadas. Tente novamente.");
+      return;
+    }
+    setQuotes((prev) => prev.filter((q) => !selectedIds.has(q.id)));
+    setSelectedIds(new Set());
   }
 
   const statusFiltered =
@@ -196,6 +242,8 @@ export default function OrdersPage() {
             q.project_name.toLowerCase().includes(searchLower)
         );
       })();
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((q) => selectedIds.has(q.id));
 
   const lastSync = integrations
     .filter((i) => i.status === "connected" && i.last_event_at)
@@ -253,6 +301,29 @@ export default function OrdersPage() {
           </select>
         </div>
 
+        {selectedIds.size > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neon-pink/30 bg-neon-pink/[0.06] px-4 py-3">
+            <p className="text-xs font-medium text-text-primary">
+              {selectedIds.size} venda{selectedIds.size > 1 ? "s" : ""} selecionada{selectedIds.size > 1 ? "s" : ""}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <NeonButton variant="outline" size="sm" onClick={handleBulkDelete} disabled={bulkDeleting}>
+                {bulkDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Excluir
+                Selecionadas
+              </NeonButton>
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:bg-white/5 hover:text-text-primary"
+                aria-label="Limpar seleção"
+                title="Limpar seleção"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {lastSync && (
           <p className="text-xs text-text-muted">Última sincronização {relativeTime(lastSync)}.</p>
         )}
@@ -273,6 +344,15 @@ export default function OrdersPage() {
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-border-glass text-xs uppercase tracking-wide text-text-muted">
+                      <th className="w-10 px-4 py-4">
+                        <input
+                          type="checkbox"
+                          checked={allFilteredSelected}
+                          onChange={toggleSelectAllFiltered}
+                          className="accent-[#FF4EDF]"
+                          aria-label="Selecionar todas as vendas filtradas"
+                        />
+                      </th>
                       <th className="px-6 py-4 font-medium">Origem</th>
                       <th className="px-6 py-4 font-medium">Pedido</th>
                       <th className="px-6 py-4 font-medium">Cliente</th>
@@ -294,8 +374,20 @@ export default function OrdersPage() {
                         <tr
                           key={q.id}
                           onClick={() => setSelectedQuote(q)}
-                          className="cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]"
+                          className={cn(
+                            "cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]",
+                            selectedIds.has(q.id) && "bg-neon-pink/[0.04]"
+                          )}
                         >
+                          <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(q.id)}
+                              onChange={() => toggleSelected(q.id)}
+                              className="accent-[#FF4EDF]"
+                              aria-label={`Selecionar venda ${formatOrderNumber(q.order_number)}`}
+                            />
+                          </td>
                           <td className="px-6 py-4">
                             <span
                               className={cn(
@@ -397,8 +489,19 @@ export default function OrdersPage() {
                 return (
                   <CollapsibleCard
                     key={q.id}
+                    className={selectedIds.has(q.id) ? "bg-neon-pink/[0.04]" : undefined}
                     header={
-                      <div className="min-w-0">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className="shrink-0 py-1" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(q.id)}
+                            onChange={() => toggleSelected(q.id)}
+                            className="h-[18px] w-[18px] accent-[#FF4EDF]"
+                            aria-label={`Selecionar venda ${formatOrderNumber(q.order_number)}`}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
                         <div className="mb-1.5 flex flex-wrap items-center gap-2">
                           <span
                             className={cn(
@@ -422,6 +525,7 @@ export default function OrdersPage() {
                         </div>
                         <p className="truncate text-base font-semibold text-text-primary">{buyerName}</p>
                         <p className="truncate text-xs text-text-secondary">{q.project_name}</p>
+                        </div>
                       </div>
                     }
                     actions={
