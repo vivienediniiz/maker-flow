@@ -164,25 +164,29 @@ export async function fetchMelhorEnvioAccount(
 }
 
 /**
- * Saldo da carteira Melhor Envio — não documentado como endpoint próprio
- * (só achamos "inserir saldo" na doc oficial), então lê do campo `balance`
- * de GET /me, que é o padrão conhecido da API. Se o formato mudar, isso
- * quebra explicitamente aqui em vez de deixar a compra seguir com um valor
- * errado — validar contra payload real na primeira compra de teste.
+ * Saldo da carteira Melhor Envio — não fica em GET /me diretamente, e sim
+ * dentro do array `accounts[].available_limit` (saldo já descontando o que
+ * está reservado; cai pra `balance` se por algum motivo faltar). Confirmado
+ * contra payload real de GET /me (sandbox): `accounts: [{ balance: "10000",
+ * reserved: "0", available_limit: "10000", ... }]` — soma todas as contas
+ * do array, caso existam mais de uma.
  */
 export async function fetchMelhorEnvioBalance(
   admin: SupabaseClient,
   integration: { id: string; credential_secret_id: string | null }
 ): Promise<number> {
   const account = await fetchMelhorEnvioAccount(admin, integration);
-  const balance = Number(account?.balance);
+  const accounts: Array<{ balance?: string; available_limit?: string }> = Array.isArray(account?.accounts)
+    ? account.accounts
+    : [];
+
+  if (accounts.length === 0) {
+    throw new Error('Não foi possível ler o saldo da carteira Melhor Envio (payload de GET /me sem "accounts").');
+  }
+
+  const balance = accounts.reduce((sum, acc) => sum + (Number(acc.available_limit ?? acc.balance) || 0), 0);
   if (!Number.isFinite(balance)) {
-    // Diagnóstico temporário: expõe o payload real que a API devolveu, já
-    // que "balance" não veio onde a doc (não-oficial) dizia que estaria.
-    // Remover essa parte assim que confirmarmos o campo certo.
-    throw new Error(
-      `Não foi possível ler o saldo da carteira Melhor Envio (campo "balance" não encontrado). Chaves do payload: ${Object.keys(account ?? {}).join(", ")} | Payload: ${JSON.stringify(account).slice(0, 2500)}`
-    );
+    throw new Error("Não foi possível ler o saldo da carteira Melhor Envio (formato de resposta inesperado).");
   }
   return balance;
 }
