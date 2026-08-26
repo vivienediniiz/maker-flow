@@ -176,6 +176,12 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
       return;
     }
 
+    // Diferente dos outros passos do checklist de onboarding (que navegam
+    // pra outra página e remontam o card sozinhos), esse modal abre por
+    // cima do próprio Dashboard — sem esse evento, o card nunca saberia que
+    // precisa reconsultar o endereço pra marcar "Minha Conta" como feito.
+    window.dispatchEvent(new Event("account-profile-saved"));
+
     setSuccess(true);
     onSaved?.({
       full_name: fullName,

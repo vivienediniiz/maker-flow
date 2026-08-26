@@ -61,7 +61,9 @@ export function OnboardingChecklistCard() {
       // que o card pode reaparecer numa navegação dentro da mesma sessão.
     }
 
-    (async () => {
+    let currentUserId: string | null = null;
+
+    async function loadProgress() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -69,6 +71,7 @@ export function OnboardingChecklistCard() {
         setLoading(false);
         return;
       }
+      currentUserId = user.id;
       setUserId(user.id);
       const [{ data: progressRow }, liveStatus] = await Promise.all([
         supabase.from("onboarding_progress").select("*").eq("user_id", user.id).maybeSingle(),
@@ -77,7 +80,20 @@ export function OnboardingChecklistCard() {
       setProgress((progressRow as OnboardingProgress) ?? null);
       setStatus(liveStatus);
       setLoading(false);
-    })();
+    }
+
+    loadProgress();
+
+    // "Minha Conta" abre por cima do próprio Dashboard (não navega pra outra
+    // página como os demais passos), então o card não remonta sozinho depois
+    // de salvar — precisa desse evento pra saber que deve reconsultar.
+    async function handleProfileSaved() {
+      if (!currentUserId) return;
+      const liveStatus = await computeOnboardingStatus(supabase, currentUserId);
+      setStatus(liveStatus);
+    }
+    window.addEventListener("account-profile-saved", handleProfileSaved);
+    return () => window.removeEventListener("account-profile-saved", handleProfileSaved);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
