@@ -61,7 +61,7 @@ export function Sidebar({ studioName, avatarUrl, tier, isAdmin }: SidebarProps) 
   const { open, close } = useMobileSidebar();
   // Só existe pra quem tem profiles.is_admin = true — em qualquer outra
   // conta este item nem chega a renderizar.
-  const navItems = isAdmin ? [...NAV, { href: "/admin/support", label: "Painel Admin", icon: ShieldCheck }] : NAV;
+  const navItems = isAdmin ? [...NAV, { href: "/admin", label: "Painel Admin", icon: ShieldCheck }] : NAV;
 
   return (
     <>
