@@ -50,17 +50,27 @@ export function ShippingPurchaseModal({ quote, open, onClose, onPurchased }: Shi
   useEffect(() => {
     if (!open) return;
     setStep("form");
-    setWeightG(quote.weight_g > 0 ? String(Math.round(quote.weight_g)) : "");
-    setHeightCm("");
-    setWidthCm("");
-    setLengthCm("");
+    // Pré-preenche com o peso/dimensões usados na cotação de frete lá na
+    // criação da venda, se existirem — só cai pro peso do produto (sem
+    // dimensões) quando a venda não passou por essa cotação (ex: frete
+    // digitado manualmente, ou venda de antes dessa função existir).
+    setWeightG(
+      quote.shipping_weight_g
+        ? String(Math.round(quote.shipping_weight_g))
+        : quote.weight_g > 0
+          ? String(Math.round(quote.weight_g))
+          : ""
+    );
+    setHeightCm(quote.shipping_height_cm ? String(quote.shipping_height_cm) : "");
+    setWidthCm(quote.shipping_width_cm ? String(quote.shipping_width_cm) : "");
+    setLengthCm(quote.shipping_length_cm ? String(quote.shipping_length_cm) : "");
     setQuoteError(null);
     setMissingFields(null);
     setBalance(null);
     setCarriers([]);
     setSelected(null);
     setBuyError(null);
-  }, [open, quote.id, quote.weight_g]);
+  }, [open, quote.id, quote.weight_g, quote.shipping_weight_g, quote.shipping_height_cm, quote.shipping_width_cm, quote.shipping_length_cm]);
 
   async function handleQuote() {
     setQuoteError(null);

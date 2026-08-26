@@ -14,6 +14,11 @@ export interface ShippingQuoteSelection {
   deliveryDays: number;
   /** CEP de destino realmente usado nessa cotação (pode ter sido editado no widget). */
   destinationCep: string;
+  /** Peso/dimensões usados nessa cotação — guardados na venda pra reaproveitar depois na compra do frete de verdade, sem digitar tudo de novo. */
+  weightG: number;
+  heightCm: number;
+  widthCm: number;
+  lengthCm: number;
 }
 
 interface QuoteResult {
@@ -104,6 +109,10 @@ export function ShippingQuoteWidget({
       price: quote.price,
       deliveryDays: quote.deliveryDays,
       destinationCep,
+      weightG: Number(weightG) || 0,
+      heightCm: Number(heightCm) || 0,
+      widthCm: Number(widthCm) || 0,
+      lengthCm: Number(lengthCm) || 0,
     });
   }
 

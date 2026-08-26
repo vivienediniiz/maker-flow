@@ -219,6 +219,11 @@ export interface Quote {
   channel: QuoteChannel | null;
   shipping_cost: number | null;
   destination_cep: string | null;
+  /** Peso/dimensões usados na cotação de frete feita ao criar a venda — reaproveitados pra pré-preencher a compra da etiqueta depois. */
+  shipping_weight_g: number | null;
+  shipping_height_cm: number | null;
+  shipping_width_cm: number | null;
+  shipping_length_cm: number | null;
   source: QuoteSource;
   external_order_id: string | null;
   buyer_name: string | null;

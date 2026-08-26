@@ -116,6 +116,11 @@ export function NewSaleModal({
   const [channel, setChannel] = useState<QuoteChannel>("whatsapp");
   const [shippingValue, setShippingValue] = useState<number | null>(null);
   const [shippingSummary, setShippingSummary] = useState<string | null>(null);
+  /** Peso/dimensões usados na última cotação de frete feita aqui — salvos na venda pra pré-preencher "Comprar Frete" depois, sem digitar tudo de novo. */
+  const [shippingWeightG, setShippingWeightG] = useState<number | null>(null);
+  const [shippingHeightCm, setShippingHeightCm] = useState<number | null>(null);
+  const [shippingWidthCm, setShippingWidthCm] = useState<number | null>(null);
+  const [shippingLengthCm, setShippingLengthCm] = useState<number | null>(null);
   const [shippingDestinationCep, setShippingDestinationCep] = useState<string | null>(null);
   /** CEP digitado/pré-preenchido no widget de frete inline — controlado aqui pra poder auto-preencher do cliente selecionado e persistir no cadastro dele quando faltava. */
   const [destinationCep, setDestinationCep] = useState("");
@@ -186,6 +191,10 @@ export function NewSaleModal({
       setShippingSummary(null);
       setShippingDestinationCep(quote.destination_cep ?? null);
       setDestinationCep(quote.destination_cep ?? "");
+      setShippingWeightG(quote.shipping_weight_g ?? null);
+      setShippingHeightCm(quote.shipping_height_cm ?? null);
+      setShippingWidthCm(quote.shipping_width_cm ?? null);
+      setShippingLengthCm(quote.shipping_length_cm ?? null);
       setDiscountType((quote.discount_amount ?? 0) > 0 || !!quote.coupon_id ? quote.discount_type ?? "fixed" : null);
       setDiscount(quote.discount_amount != null ? String(quote.discount_amount.toFixed(2)) : "0");
       setDiscountWarning(null);
@@ -216,6 +225,10 @@ export function NewSaleModal({
       setShippingSummary(null);
       setShippingDestinationCep(null);
       setDestinationCep("");
+      setShippingWeightG(null);
+      setShippingHeightCm(null);
+      setShippingWidthCm(null);
+      setShippingLengthCm(null);
       setDiscountType(null);
       setDiscount("0");
       setDiscountWarning(null);
@@ -352,6 +365,10 @@ export function NewSaleModal({
     setShippingSummary(`${sel.company} · ${sel.service}`);
     setShippingDestinationCep(sel.destinationCep);
     setDestinationCep(sel.destinationCep);
+    setShippingWeightG(sel.weightG || null);
+    setShippingHeightCm(sel.heightCm || null);
+    setShippingWidthCm(sel.widthCm || null);
+    setShippingLengthCm(sel.lengthCm || null);
 
     // Cliente sem CEP cadastrado: aproveita o CEP usado nessa cotação pra
     // completar o cadastro dele, sem precisar editar em Clientes depois.
@@ -556,6 +573,10 @@ export function NewSaleModal({
       channel,
       shipping_cost: shippingValue,
       destination_cep: shippingDestinationCep || selectedClient?.cep || null,
+      shipping_weight_g: shippingWeightG,
+      shipping_height_cm: shippingHeightCm,
+      shipping_width_cm: shippingWidthCm,
+      shipping_length_cm: shippingLengthCm,
       quantity: showUnitPricing ? Number(quantity) : null,
       unit_price: showUnitPricing ? Number(unitPrice) : null,
       price_tier_label: appliedTierLabel,
