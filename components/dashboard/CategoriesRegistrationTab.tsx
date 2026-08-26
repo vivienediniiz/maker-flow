@@ -6,10 +6,12 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { CategoryModal } from "@/components/dashboard/CategoryModal";
 import { createClient } from "@/lib/supabase/client";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import type { Category } from "@/lib/types";
 
 export function CategoriesRegistrationTab() {
   const supabase = createClient();
+  const confirm = useConfirm();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -38,7 +40,7 @@ export function CategoriesRegistrationTab() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Excluir esta categoria? Essa ação não pode ser desfeita.")) return;
+    if (!(await confirm("Excluir esta categoria? Essa ação não pode ser desfeita."))) return;
     setCategories((prev) => prev.filter((c) => c.id !== id));
     await supabase.from("categories").delete().eq("id", id);
   }

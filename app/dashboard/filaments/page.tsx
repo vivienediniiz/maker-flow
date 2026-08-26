@@ -11,6 +11,7 @@ import { FilamentGraduatedGauge } from "@/components/dashboard/FilamentGraduated
 import { AdjustFilamentStockInline } from "@/components/dashboard/AdjustFilamentStockInline";
 import { FilamentMovementsHistory } from "@/components/dashboard/FilamentMovementsHistory";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { canCreateMore, limitFor } from "@/lib/entitlements";
@@ -20,6 +21,7 @@ import type { Filament } from "@/lib/types";
 export default function FilamentsPage() {
   const supabase = createClient();
   const { tier } = useSubscription();
+  const confirm = useConfirm();
   const [filaments, setFilaments] = useState<Filament[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -53,7 +55,7 @@ export default function FilamentsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Excluir este filamento? O histórico de movimentações também será apagado. Essa ação não pode ser desfeita.")) return;
+    if (!(await confirm("Excluir este filamento? O histórico de movimentações também será apagado. Essa ação não pode ser desfeita."))) return;
     setFilaments((prev) => prev.filter((f) => f.id !== id));
     await supabase.from("filaments").delete().eq("id", id);
     setHistoryRefreshKey((k) => k + 1);

@@ -5,6 +5,7 @@ import { ImagePlus, Loader2, Trash2, ChevronUp, ChevronDown } from "lucide-react
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Toggle } from "@/components/ui/Toggle";
 import { createClient } from "@/lib/supabase/client";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import type { StoreBanner } from "@/lib/types";
 
 interface StoreBannersCardProps {
@@ -13,6 +14,7 @@ interface StoreBannersCardProps {
 
 export function StoreBannersCard({ userId }: StoreBannersCardProps) {
   const supabase = createClient();
+  const confirm = useConfirm();
   const [banners, setBanners] = useState<StoreBanner[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -73,7 +75,7 @@ export function StoreBannersCard({ userId }: StoreBannersCardProps) {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Remover este banner?")) return;
+    if (!(await confirm("Remover este banner?"))) return;
     setBanners((prev) => prev.filter((b) => b.id !== id));
     await supabase.from("store_banners").delete().eq("id", id);
   }

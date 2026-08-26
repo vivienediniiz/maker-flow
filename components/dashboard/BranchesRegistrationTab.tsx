@@ -9,10 +9,12 @@ import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { canCreateMore, limitFor } from "@/lib/entitlements";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import type { Branch } from "@/lib/types";
 
 export function BranchesRegistrationTab() {
   const supabase = createClient();
+  const confirm = useConfirm();
   const { tier } = useSubscription();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,7 @@ export function BranchesRegistrationTab() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Excluir esta filial? Essa ação não pode ser desfeita.")) return;
+    if (!(await confirm("Excluir esta filial? Essa ação não pode ser desfeita."))) return;
     setBranches((prev) => prev.filter((b) => b.id !== id));
     await supabase.from("branches").delete().eq("id", id);
   }

@@ -15,6 +15,7 @@ import { FilamentModal } from "@/components/dashboard/FilamentModal";
 import { FilamentPickerDropdown } from "@/components/dashboard/FilamentPickerDropdown";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { ConfigNudgeBanner } from "@/components/dashboard/ConfigNudgeBanner";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
@@ -102,6 +103,7 @@ function newSupplyLine(): SupplyLine {
 
 export default function CalculatorPage() {
   const supabase = createClient();
+  const confirm = useConfirm();
   const [selectedProductId, setSelectedProductId] = useState("");
   const [projectName, setProjectName] = useState("");
   const [marketplaces, setMarketplaces] = useState<{ name: string; fee: number }[]>([]);
@@ -487,7 +489,7 @@ export default function CalculatorPage() {
   }
 
   async function handleDeleteDraft(id: string) {
-    if (!confirm("Excluir este rascunho? Essa ação não pode ser desfeita.")) return;
+    if (!(await confirm("Excluir este rascunho? Essa ação não pode ser desfeita."))) return;
     setDrafts((prev) => prev.filter((d) => d.id !== id));
     if (currentDraftId === id) setCurrentDraftId(null);
     await supabase.from("calculator_drafts").delete().eq("id", id);

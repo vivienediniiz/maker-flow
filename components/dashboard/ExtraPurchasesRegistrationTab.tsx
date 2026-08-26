@@ -8,6 +8,7 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { ExtraPurchaseModal } from "@/components/dashboard/ExtraPurchaseModal";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import type { ExtraPurchase } from "@/lib/types";
 
 function formatDate(iso: string) {
@@ -17,6 +18,7 @@ function formatDate(iso: string) {
 
 export function ExtraPurchasesRegistrationTab() {
   const supabase = createClient();
+  const confirm = useConfirm();
   const [purchases, setPurchases] = useState<ExtraPurchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -45,7 +47,7 @@ export function ExtraPurchasesRegistrationTab() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Excluir esta compra? Essa ação não pode ser desfeita.")) return;
+    if (!(await confirm("Excluir esta compra? Essa ação não pode ser desfeita."))) return;
     setPurchases((prev) => prev.filter((p) => p.id !== id));
     await supabase.from("extra_purchases").delete().eq("id", id);
   }

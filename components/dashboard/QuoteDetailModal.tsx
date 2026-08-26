@@ -8,6 +8,7 @@ import { QuoteStatusStepper } from "@/components/dashboard/QuoteStatusStepper";
 import { SaleReceiptModal } from "@/components/dashboard/SaleReceiptModal";
 import { ShippingLabelSection } from "@/components/dashboard/ShippingLabelSection";
 import { WhatsAppLink, buildWhatsAppLink } from "@/components/ui/WhatsAppLink";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import { formatBRL, cn } from "@/lib/utils";
 import {
   formatOrderNumber,
@@ -31,6 +32,7 @@ export function QuoteDetailModal({
   onTrackingCodeChange: (quoteId: string, code: string) => Promise<void>;
   onShippingUpdate: (quoteId: string, patch: Partial<QuoteWithClient>) => void;
 }) {
+  const confirm = useConfirm();
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [trackingCode, setTrackingCode] = useState("");
   const [savingTracking, setSavingTracking] = useState(false);
@@ -350,8 +352,8 @@ export function QuoteDetailModal({
         {quote.status !== "cancelled" && quote.status !== "expired" && (
           <button
             type="button"
-            onClick={() => {
-              if (confirm("Cancelar esta venda? Ela vai contar como venda cancelada no Financeiro.")) {
+            onClick={async () => {
+              if (await confirm("Cancelar esta venda? Ela vai contar como venda cancelada no Financeiro.")) {
                 onStatusChange(quote.id, "cancelled");
               }
             }}

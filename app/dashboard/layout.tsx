@@ -3,6 +3,7 @@ import { TrialBanner } from "@/components/dashboard/TrialBanner";
 import { PixRenewalBanner } from "@/components/dashboard/PixRenewalBanner";
 import { SubscriptionProvider } from "@/components/dashboard/SubscriptionContext";
 import { MobileSidebarProvider } from "@/components/dashboard/MobileSidebarContext";
+import { ConfirmDialogProvider } from "@/components/dashboard/ConfirmDialogContext";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { pixBillingState } from "@/lib/pix";
 import type { SubscriptionTier, SubscriptionStatus } from "@/lib/types";
@@ -61,28 +62,30 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <SubscriptionProvider tier={tier}>
-      <MobileSidebarProvider>
-        <div className="min-h-screen">
-          <Sidebar
-            studioName={profile?.full_name}
-            avatarUrl={profile?.avatar_url}
-            tier={tier}
-            isAdmin={profile?.is_admin ?? false}
-          />
-          <div className="md:pl-72">
-            {isPix && pixState === "grace" ? (
-              <PixRenewalBanner paidUntil={profile!.paid_until} />
-            ) : (
-              <TrialBanner
-                tier={tier}
-                subscriptionStatus={subscriptionStatus}
-                trialEndsAt={profile?.trial_ends_at ?? null}
-              />
-            )}
-            {children}
+      <ConfirmDialogProvider>
+        <MobileSidebarProvider>
+          <div className="min-h-screen">
+            <Sidebar
+              studioName={profile?.full_name}
+              avatarUrl={profile?.avatar_url}
+              tier={tier}
+              isAdmin={profile?.is_admin ?? false}
+            />
+            <div className="md:pl-72">
+              {isPix && pixState === "grace" ? (
+                <PixRenewalBanner paidUntil={profile!.paid_until} />
+              ) : (
+                <TrialBanner
+                  tier={tier}
+                  subscriptionStatus={subscriptionStatus}
+                  trialEndsAt={profile?.trial_ends_at ?? null}
+                />
+              )}
+              {children}
+            </div>
           </div>
-        </div>
-      </MobileSidebarProvider>
+        </MobileSidebarProvider>
+      </ConfirmDialogProvider>
     </SubscriptionProvider>
   );
 }

@@ -9,6 +9,7 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteDetailModal } from "@/components/dashboard/QuoteDetailModal";
 import { NewSaleModal } from "@/components/dashboard/NewSaleModal";
 import { SaleSuccessModal } from "@/components/dashboard/SaleSuccessModal";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatBRL } from "@/lib/utils";
 import {
@@ -69,6 +70,7 @@ function relativeTime(iso: string | null) {
 
 export default function OrdersPage() {
   const supabase = createClient();
+  const confirm = useConfirm();
   const [quotes, setQuotes] = useState<QuoteWithClient[]>([]);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -168,7 +170,7 @@ export default function OrdersPage() {
 
   async function handleDelete(quoteId: string, e: React.MouseEvent) {
     e.stopPropagation();
-    if (!confirm("Excluir esta venda? Essa ação não pode ser desfeita.")) return;
+    if (!(await confirm("Excluir esta venda? Essa ação não pode ser desfeita."))) return;
     setQuotes((prev) => prev.filter((q) => q.id !== quoteId));
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -203,7 +205,7 @@ export default function OrdersPage() {
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    if (!confirm(`Excluir ${ids.length} venda${ids.length > 1 ? "s" : ""} selecionada${ids.length > 1 ? "s" : ""}? Essa ação não pode ser desfeita.`)) {
+    if (!(await confirm(`Excluir ${ids.length} venda${ids.length > 1 ? "s" : ""} selecionada${ids.length > 1 ? "s" : ""}? Essa ação não pode ser desfeita.`))) {
       return;
     }
     setBulkDeleting(true);

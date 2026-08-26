@@ -9,6 +9,7 @@ import { PrinterAssetModal } from "@/components/dashboard/PrinterAssetModal";
 import { PrinterAssetDetailModal } from "@/components/dashboard/PrinterAssetDetailModal";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import {
   PRINTER_ASSET_STATUS_LABELS,
   PRINTER_ASSET_STATUS_STYLES,
@@ -21,6 +22,7 @@ type PrinterAssetRow = PrinterAsset & { branches: { name: string } | null };
 
 export function PrintersRegistrationTab() {
   const supabase = createClient();
+  const confirm = useConfirm();
   const [assets, setAssets] = useState<PrinterAssetRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -51,7 +53,7 @@ export function PrintersRegistrationTab() {
 
   async function handleDelete(id: string, e: React.MouseEvent) {
     e.stopPropagation();
-    if (!confirm("Excluir esta impressora? O histórico de manutenção também será apagado. Essa ação não pode ser desfeita.")) return;
+    if (!(await confirm("Excluir esta impressora? O histórico de manutenção também será apagado. Essa ação não pode ser desfeita."))) return;
     setAssets((prev) => prev.filter((a) => a.id !== id));
     await supabase.from("printer_assets").delete().eq("id", id);
   }

@@ -9,6 +9,7 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { ProductDetailModal } from "@/components/dashboard/ProductDetailModal";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import { Toggle } from "@/components/ui/Toggle";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ import type { Product } from "@/lib/types";
 export default function ProductsPage() {
   const supabase = createClient();
   const { tier } = useSubscription();
+  const confirm = useConfirm();
   const [showFilters, setShowFilters] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -101,7 +103,7 @@ export default function ProductsPage() {
 
   async function handleDelete(productId: string, e: React.MouseEvent) {
     e.stopPropagation();
-    if (!confirm("Excluir este produto? Essa ação não pode ser desfeita.")) return;
+    if (!(await confirm("Excluir este produto? Essa ação não pode ser desfeita."))) return;
     setProducts((prev) => prev.filter((p) => p.id !== productId));
     await supabase.from("products").delete().eq("id", productId);
   }
@@ -137,7 +139,7 @@ export default function ProductsPage() {
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    if (!confirm(`Excluir ${ids.length} produto${ids.length > 1 ? "s" : ""} selecionado${ids.length > 1 ? "s" : ""}? Essa ação não pode ser desfeita.`)) {
+    if (!(await confirm(`Excluir ${ids.length} produto${ids.length > 1 ? "s" : ""} selecionado${ids.length > 1 ? "s" : ""}? Essa ação não pode ser desfeita.`))) {
       return;
     }
     setBulkDeleting(true);

@@ -11,6 +11,7 @@ import { ExtraPurchaseModal } from "@/components/dashboard/ExtraPurchaseModal";
 import { FixedExpenseModal } from "@/components/dashboard/FixedExpenseModal";
 import { CouponsPeriodSummary } from "@/components/dashboard/CouponsPeriodSummary";
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { FinancialEvolutionChart, type FinancialEvolutionPoint } from "@/components/charts/FinancialEvolutionChart";
 import { createClient } from "@/lib/supabase/client";
@@ -66,6 +67,7 @@ export default function FinancePage() {
 
 function FinancePageContent() {
   const supabase = createClient();
+  const confirm = useConfirm();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [expenses, setExpenses] = useState<ExtraPurchase[]>([]);
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
@@ -111,7 +113,7 @@ function FinancePageContent() {
   }
 
   async function handleDeleteFixedExpense(id: string) {
-    if (!confirm("Excluir esta despesa fixa? Essa ação não pode ser desfeita.")) return;
+    if (!(await confirm("Excluir esta despesa fixa? Essa ação não pode ser desfeita."))) return;
     setFixedExpenses((prev) => prev.filter((e) => e.id !== id));
     await supabase.from("fixed_expenses").delete().eq("id", id);
   }

@@ -6,6 +6,7 @@ import { CheckCircle2, CircleDashed, AlertCircle, Loader2, Lock } from "lucide-r
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import { cn } from "@/lib/utils";
 import type { Integration, IntegrationPlatform } from "@/lib/types";
 
@@ -57,6 +58,7 @@ export function IntegrationCard({
 }) {
   const router = useRouter();
   const { paid } = useSubscription();
+  const confirm = useConfirm();
   const [disconnecting, setDisconnecting] = useState(false);
   const status = integration?.status ?? "disconnected";
   const available = AVAILABLE_PLATFORMS.includes(platform);
@@ -66,7 +68,7 @@ export function IntegrationCard({
       platform === "mercado_pago"
         ? "\n\nIsso apaga a credencial aqui no StudioMaker, mas o Mercado Pago não tem revogação por API — pra remover o acesso na sua conta MP também, vá em Configurações → Aplicativos autorizados, na própria conta Mercado Pago."
         : "";
-    if (!confirm(`Desconectar ${PLATFORM_LABELS[platform]}? As credenciais salvas serão removidas.${extra}`)) return;
+    if (!(await confirm(`Desconectar ${PLATFORM_LABELS[platform]}? As credenciais salvas serão removidas.${extra}`))) return;
     setDisconnecting(true);
     await fetch(`/api/integrations/${platform}/disconnect`, { method: "POST" });
     setDisconnecting(false);

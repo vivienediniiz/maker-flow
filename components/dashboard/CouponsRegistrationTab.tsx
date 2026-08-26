@@ -9,6 +9,7 @@ import { CouponModal } from "@/components/dashboard/CouponModal";
 import { createClient } from "@/lib/supabase/client";
 import { getCouponStatusLabel } from "@/lib/coupons";
 import { formatBRL, cn } from "@/lib/utils";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import type { Coupon } from "@/lib/types";
 
 const STATUS_STYLES: Record<ReturnType<typeof getCouponStatusLabel>, string> = {
@@ -20,6 +21,7 @@ const STATUS_STYLES: Record<ReturnType<typeof getCouponStatusLabel>, string> = {
 
 export function CouponsRegistrationTab() {
   const supabase = createClient();
+  const confirm = useConfirm();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -48,7 +50,7 @@ export function CouponsRegistrationTab() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Excluir este cupom? Vendas que já usaram esse cupom mantêm o registro, mas ele some da lista. Essa ação não pode ser desfeita.")) return;
+    if (!(await confirm("Excluir este cupom? Vendas que já usaram esse cupom mantêm o registro, mas ele some da lista. Essa ação não pode ser desfeita."))) return;
     setCoupons((prev) => prev.filter((c) => c.id !== id));
     await supabase.from("coupons").delete().eq("id", id);
   }

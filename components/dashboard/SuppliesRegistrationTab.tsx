@@ -10,10 +10,12 @@ import { RegisterSupplyPurchaseModal } from "@/components/dashboard/RegisterSupp
 import { SupplyMovementsHistory } from "@/components/dashboard/SupplyMovementsHistory";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import type { Supply } from "@/lib/types";
 
 export function SuppliesRegistrationTab() {
   const supabase = createClient();
+  const confirm = useConfirm();
   const [supplies, setSupplies] = useState<Supply[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -45,7 +47,7 @@ export function SuppliesRegistrationTab() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Excluir este insumo? Essa ação não pode ser desfeita.")) return;
+    if (!(await confirm("Excluir este insumo? Essa ação não pode ser desfeita."))) return;
     setSupplies((prev) => prev.filter((s) => s.id !== id));
     await supabase.from("supplies").delete().eq("id", id);
   }

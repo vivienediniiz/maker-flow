@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pencil, Check, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { filamentLabel } from "@/lib/filaments";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import type { Filament, FilamentMovement } from "@/lib/types";
 
 interface AdjustFilamentStockInlineProps {
@@ -13,6 +14,7 @@ interface AdjustFilamentStockInlineProps {
 
 export function AdjustFilamentStockInline({ filament, onAdjusted }: AdjustFilamentStockInlineProps) {
   const supabase = createClient();
+  const confirm = useConfirm();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(String(filament.remaining_weight_g));
   const [saving, setSaving] = useState(false);
@@ -38,9 +40,11 @@ export function AdjustFilamentStockInline({ filament, onAdjusted }: AdjustFilame
     }
 
     const sign = diff > 0 ? "+" : "";
-    const confirmed = confirm(
-      `Isso vai ${diff > 0 ? "adicionar" : "remover"} ${sign}${diff}g ${diff > 0 ? "ao" : "do"} estoque de ${filamentLabel(filament)}. Confirmar?`
-    );
+    const confirmed = await confirm({
+      message: `Isso vai ${diff > 0 ? "adicionar" : "remover"} ${sign}${diff}g ${diff > 0 ? "ao" : "do"} estoque de ${filamentLabel(filament)}. Confirmar?`,
+      confirmLabel: "Confirmar",
+      danger: false,
+    });
     if (!confirmed) return;
 
     setSaving(true);

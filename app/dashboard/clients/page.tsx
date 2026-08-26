@@ -11,6 +11,7 @@ import { ClientDetailModal } from "@/components/dashboard/ClientDetailModal";
 import { WhatsAppLink } from "@/components/ui/WhatsAppLink";
 import { InstagramLink } from "@/components/ui/InstagramLink";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
+import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import { createClient } from "@/lib/supabase/client";
 import { canCreateMore, limitFor } from "@/lib/entitlements";
 import { Search, Plus, Loader2, Trash2, Lock, Pencil } from "lucide-react";
@@ -19,6 +20,7 @@ import type { Client } from "@/lib/types";
 export default function ClientsPage() {
   const supabase = createClient();
   const { tier } = useSubscription();
+  const confirm = useConfirm();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -51,7 +53,7 @@ export default function ClientsPage() {
 
   async function handleDelete(id: string, e: React.MouseEvent) {
     e.stopPropagation();
-    if (!confirm("Remover este cliente?")) return;
+    if (!(await confirm("Remover este cliente?"))) return;
     await supabase.from("clients").delete().eq("id", id);
     setClients((prev) => prev.filter((c) => c.id !== id));
   }
