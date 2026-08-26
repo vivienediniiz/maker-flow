@@ -457,21 +457,19 @@ export interface FixedExpense {
   created_at: string;
 }
 
+/**
+ * Só guarda o que NÃO dá pra derivar de outra tabela: se já viu o carrossel,
+ * e se pulou de propósito um passo opcional. Os 5 passos obrigatórios são
+ * verificados ao vivo (ver computeOnboardingStatus em lib/onboarding.ts)
+ * contra profiles/settings/printer_assets/filaments — sem flag própria, pra
+ * detectar automaticamente quando um cadastro que já existiu foi apagado.
+ */
 export interface OnboardingProgress {
   user_id: string;
-  profile_completed: boolean;
-  energy_rate_completed: boolean;
-  labor_rate_completed: boolean;
-  printer_registered: boolean;
-  filament_registered: boolean;
-  /** Opcional — não conta no total de passos do card, mas fica marcado ao cadastrar ou ao clicar "Pular". */
-  supplies_registered: boolean;
-  /** Opcional — mesma regra de supplies_registered. */
-  fixed_expenses_registered: boolean;
-  /** Fechou o card no X — some pra sempre, mesmo com passos pendentes. */
-  dismissed: boolean;
   /** Já viu o carrossel de boas-vindas (tela cheia, só no primeiro login) — não toca mais nele depois disso, "Pular" ou "Começar" tanto faz. */
   carousel_seen: boolean;
+  supplies_skipped: boolean;
+  fixed_expenses_skipped: boolean;
   updated_at: string;
 }
 

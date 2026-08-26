@@ -8,7 +8,14 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { WelcomeOnboardingCarousel } from "@/components/dashboard/WelcomeOnboardingCarousel";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { ONBOARDING_STEPS, ONBOARDING_REQUIRED_STEPS, markOnboardingStepComplete, type OnboardingStepKey, type OnboardingStepConfig } from "@/lib/onboarding";
+import {
+  ONBOARDING_STEPS,
+  ONBOARDING_REQUIRED_STEPS,
+  computeOnboardingStatus,
+  markOnboardingStepSkipped,
+  type OnboardingStatus,
+  type OnboardingStepConfig,
+} from "@/lib/onboarding";
 import type { OnboardingProgress } from "@/lib/types";
 
 /** Fechar "por agora" (X do modal, clique no fundo, Esc) some só pro resto desta sessão — reabre no próximo login, enquanto faltar passo obrigatório. */
@@ -17,15 +24,9 @@ const SESSION_HIDDEN_KEY = "onboarding_modal_hidden_session";
 function emptyProgress(userId: string): OnboardingProgress {
   return {
     user_id: userId,
-    profile_completed: false,
-    energy_rate_completed: false,
-    labor_rate_completed: false,
-    printer_registered: false,
-    filament_registered: false,
-    supplies_registered: false,
-    fixed_expenses_registered: false,
-    dismissed: false,
     carousel_seen: false,
+    supplies_skipped: false,
+    fixed_expenses_skipped: false,
     updated_at: new Date().toISOString(),
   };
 }
@@ -35,17 +36,20 @@ function emptyProgress(userId: string): OnboardingProgress {
  * 1. Carrossel de boas-vindas em tela cheia — só no primeiro login
  *    (carousel_seen = false), explica os passos antes de qualquer coisa.
  * 2. Checklist em modal — aparece no Dashboard toda vez que faltar algum
- *    passo obrigatório (inclui logo depois do carrossel, no mesmo primeiro
- *    acesso), e só para de aparecer quando os 5 passos obrigatórios
- *    estiverem completos. Fechar (X/fundo/Esc) esconde só pelo resto da
- *    sessão atual — não existe "não mostrar novamente" aqui de propósito,
- *    já que o pedido é continuar aparecendo até terminar. Complementa, sem
- *    substituir, os avisos contextuais já existentes (ConfigNudgeBanner).
+ *    passo obrigatório, e só para de aparecer quando os 5 estiverem
+ *    completos DE VERDADE: cada passo é verificado ao vivo contra os dados
+ *    reais (profiles/settings/printer_assets/filaments), não por uma flag
+ *    gravada uma vez — se a pessoa apagar a única impressora ou zerar a
+ *    tarifa de energia depois, o passo volta a aparecer como pendente na
+ *    próxima vez que o Dashboard carregar. Fechar (X/fundo/Esc) esconde só
+ *    pelo resto da sessão atual. Complementa, sem substituir, os avisos
+ *    contextuais já existentes (ConfigNudgeBanner).
  */
 export function OnboardingChecklistCard() {
   const supabase = createClient();
   const [userId, setUserId] = useState<string | null>(null);
   const [progress, setProgress] = useState<OnboardingProgress | null>(null);
+  const [status, setStatus] = useState<OnboardingStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [hiddenThisSession, setHiddenThisSession] = useState(false);
 
@@ -66,8 +70,12 @@ export function OnboardingChecklistCard() {
         return;
       }
       setUserId(user.id);
-      const { data } = await supabase.from("onboarding_progress").select("*").eq("user_id", user.id).maybeSingle();
-      setProgress((data as OnboardingProgress) ?? null);
+      const [{ data: progressRow }, liveStatus] = await Promise.all([
+        supabase.from("onboarding_progress").select("*").eq("user_id", user.id).maybeSingle(),
+        computeOnboardingStatus(supabase, user.id),
+      ]);
+      setProgress((progressRow as OnboardingProgress) ?? null);
+      setStatus(liveStatus);
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -82,10 +90,11 @@ export function OnboardingChecklistCard() {
     }
   }
 
-  async function handleSkip(step: OnboardingStepKey) {
+  async function handleSkip(step: "supplies_registered" | "fixed_expenses_registered") {
     if (!userId) return;
-    setProgress((prev) => ({ ...(prev ?? emptyProgress(userId)), [step]: true }));
-    await markOnboardingStepComplete(supabase, userId, step);
+    const column = step === "supplies_registered" ? "supplies_skipped" : "fixed_expenses_skipped";
+    setProgress((prev) => ({ ...(prev ?? emptyProgress(userId)), [column]: true }));
+    await markOnboardingStepSkipped(supabase, userId, step);
   }
 
   async function handleCarouselFinish() {
@@ -99,15 +108,22 @@ export function OnboardingChecklistCard() {
     step.action?.();
   }
 
-  if (loading || !userId) return null;
+  if (loading || !userId || !status) return null;
 
   if (!progress?.carousel_seen) {
     return <WelcomeOnboardingCarousel steps={ONBOARDING_STEPS} onFinish={handleCarouselFinish} />;
   }
 
-  const completedRequired = ONBOARDING_REQUIRED_STEPS.filter((s) => progress?.[s.key]).length;
+  function isDone(step: OnboardingStepConfig): boolean {
+    if (status![step.key]) return true;
+    if (step.key === "supplies_registered") return !!progress?.supplies_skipped;
+    if (step.key === "fixed_expenses_registered") return !!progress?.fixed_expenses_skipped;
+    return false;
+  }
+
+  const completedRequired = ONBOARDING_REQUIRED_STEPS.filter(isDone).length;
   const allRequiredDone = completedRequired === ONBOARDING_REQUIRED_STEPS.length;
-  const nextStep = ONBOARDING_STEPS.find((s) => !progress?.[s.key]);
+  const nextStep = ONBOARDING_STEPS.find((s) => !isDone(s));
   const percent = Math.round((completedRequired / ONBOARDING_REQUIRED_STEPS.length) * 100);
 
   const open = !hiddenThisSession && !allRequiredDone;
@@ -125,7 +141,7 @@ export function OnboardingChecklistCard() {
 
         <div className="divide-y divide-border-glass">
           {ONBOARDING_STEPS.map((step) => {
-            const done = !!progress?.[step.key];
+            const done = isDone(step);
             const rowContent = (
               <>
                 <span
@@ -165,7 +181,7 @@ export function OnboardingChecklistCard() {
                   {step.optional && !done && (
                     <button
                       type="button"
-                      onClick={() => handleSkip(step.key)}
+                      onClick={() => handleSkip(step.key as "supplies_registered" | "fixed_expenses_registered")}
                       className="text-[11px] text-text-muted transition-colors hover:text-text-secondary"
                     >
                       Pular

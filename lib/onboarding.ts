@@ -1,8 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MapPin, Zap, Clock, Printer, Box, Package, Banknote, type LucideIcon } from "lucide-react";
-import type { OnboardingProgress } from "./types";
 
-export type OnboardingStepKey = Exclude<keyof OnboardingProgress, "user_id" | "dismissed" | "carousel_seen" | "updated_at">;
+export type OnboardingStepKey =
+  | "profile_completed"
+  | "energy_rate_completed"
+  | "labor_rate_completed"
+  | "printer_registered"
+  | "filament_registered"
+  | "supplies_registered"
+  | "fixed_expenses_registered";
 
 export interface OnboardingStepConfig {
   key: OnboardingStepKey;
@@ -76,17 +82,42 @@ export const ONBOARDING_STEPS: OnboardingStepConfig[] = [
 
 export const ONBOARDING_REQUIRED_STEPS = ONBOARDING_STEPS.filter((s) => !s.optional);
 
+export type OnboardingStatus = Record<OnboardingStepKey, boolean>;
+
 /**
- * Marca um passo do checklist como concluído — chamado a partir do save
- * handler de cada tela correspondente (perfil, configurações, impressora,
- * filamento, insumo, despesa fixa), nunca exigindo que o usuário volte ao
- * card manualmente. Best-effort: nunca deixa uma falha aqui derrubar o save
- * de verdade que já aconteceu (por isso quem chama sempre engole o erro).
+ * Verifica ao vivo, contra os dados reais, quais passos já estão completos —
+ * em vez de confiar numa flag gravada uma vez que ficaria desatualizada se a
+ * pessoa apagasse o cadastro depois (única impressora, único filamento
+ * etc). Os dois passos opcionais contam como concluídos também quando
+ * marcados como "pulado" (não dá pra derivar isso dos dados).
  */
-export async function markOnboardingStepComplete(
+export async function computeOnboardingStatus(supabase: SupabaseClient, userId: string): Promise<OnboardingStatus> {
+  const [{ data: profile }, { data: settings }, printers, filaments, supplies, fixedExpenses] = await Promise.all([
+    supabase.from("profiles").select("cep, street, city, state").eq("id", userId).maybeSingle(),
+    supabase.from("settings").select("electricity_kwh_rate, hourly_work_rate").eq("user_id", userId).maybeSingle(),
+    supabase.from("printer_assets").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("filaments").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("supplies").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("fixed_expenses").select("id", { count: "exact", head: true }).eq("user_id", userId),
+  ]);
+
+  return {
+    profile_completed: !!(profile?.cep && profile?.street && profile?.city && profile?.state),
+    energy_rate_completed: settings?.electricity_kwh_rate != null,
+    labor_rate_completed: settings?.hourly_work_rate != null,
+    printer_registered: (printers.count ?? 0) > 0,
+    filament_registered: (filaments.count ?? 0) > 0,
+    supplies_registered: (supplies.count ?? 0) > 0,
+    fixed_expenses_registered: (fixedExpenses.count ?? 0) > 0,
+  };
+}
+
+/** Marca um passo opcional como "pulado" — só existe pros 2 opcionais, já que os obrigatórios não têm essa opção. */
+export async function markOnboardingStepSkipped(
   supabase: SupabaseClient,
   userId: string,
-  step: OnboardingStepKey
+  step: "supplies_registered" | "fixed_expenses_registered"
 ): Promise<void> {
-  await supabase.from("onboarding_progress").upsert({ user_id: userId, [step]: true }, { onConflict: "user_id" });
+  const column = step === "supplies_registered" ? "supplies_skipped" : "fixed_expenses_skipped";
+  await supabase.from("onboarding_progress").upsert({ user_id: userId, [column]: true }, { onConflict: "user_id" });
 }

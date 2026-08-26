@@ -6,7 +6,6 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { Toggle } from "@/components/ui/Toggle";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
-import { markOnboardingStepComplete } from "@/lib/onboarding";
 import type { FixedExpense } from "@/lib/types";
 
 interface FixedExpenseModalProps {
@@ -96,8 +95,6 @@ export function FixedExpenseModal({ open, onClose, expense, onSaved }: FixedExpe
       setError(insertError.message);
       return;
     }
-
-    markOnboardingStepComplete(supabase, user.id, "fixed_expenses_registered").catch(() => {});
 
     onSaved(data as FixedExpense);
     onClose();
