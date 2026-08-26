@@ -7,6 +7,7 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { MaintenanceLogModal } from "@/components/dashboard/MaintenanceLogModal";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatBRL } from "@/lib/utils";
+import { getSignedInvoiceUrl } from "@/lib/printerInvoices";
 import {
   PRINTER_ASSET_STATUS_LABELS,
   PRINTER_ASSET_STATUS_STYLES,
@@ -41,6 +42,12 @@ export function PrinterAssetDetailModal({ asset, branch, onClose }: PrinterAsset
       .order("performed_at", { ascending: false });
     setLogs((data as PrinterMaintenanceLog[]) ?? []);
     setLoading(false);
+  }
+
+  async function handleViewInvoice() {
+    if (!asset?.invoice_url) return;
+    const signedUrl = await getSignedInvoiceUrl(supabase, asset.invoice_url);
+    if (signedUrl) window.open(signedUrl, "_blank", "noopener,noreferrer");
   }
 
   if (!asset) return null;
@@ -79,14 +86,13 @@ export function PrinterAssetDetailModal({ asset, branch, onClose }: PrinterAsset
           </div>
 
           {asset.invoice_url && (
-            <a
-              href={asset.invoice_url}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={handleViewInvoice}
               className="flex items-center gap-2 text-xs text-neon-pink hover:underline"
             >
               <ExternalLink size={12} /> Ver nota fiscal
-            </a>
+            </button>
           )}
 
           {asset.notes && <p className="text-xs text-text-secondary">{asset.notes}</p>}

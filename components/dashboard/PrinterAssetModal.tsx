@@ -7,6 +7,7 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
 import { PRINTER_ASSET_STATUS_LABELS, PRINTER_MODEL_OPTIONS, PRINTER_MODEL_POWER_W } from "@/lib/printerAssets";
+import { getSignedInvoiceUrl } from "@/lib/printerInvoices";
 import type { PrinterAsset, PrinterAssetStatus, Branch } from "@/lib/types";
 
 const MODEL_OPTION_SET: readonly string[] = PRINTER_MODEL_OPTIONS;
@@ -114,9 +115,17 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
       return;
     }
 
-    const { data } = supabase.storage.from("printer-invoices").getPublicUrl(path);
-    setInvoiceUrl(data.publicUrl);
+    // Bucket é privado (dado financeiro, não pode ser público) — guarda só
+    // o caminho do arquivo; a URL de visualização é gerada assinada, na
+    // hora, sob demanda (ver handleViewInvoice).
+    setInvoiceUrl(path);
     setUploadingInvoice(false);
+  }
+
+  async function handleViewInvoice() {
+    if (!invoiceUrl) return;
+    const signedUrl = await getSignedInvoiceUrl(supabase, invoiceUrl);
+    if (signedUrl) window.open(signedUrl, "_blank", "noopener,noreferrer");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -285,14 +294,13 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
               />
             </label>
             {invoiceUrl && (
-              <a
-                href={invoiceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={handleViewInvoice}
                 className="flex shrink-0 items-center gap-1 rounded-lg border border-border-glass px-2.5 py-2 text-[11px] text-text-secondary hover:text-text-primary"
               >
                 <ExternalLink size={12} /> Ver
-              </a>
+              </button>
             )}
           </div>
         </div>
