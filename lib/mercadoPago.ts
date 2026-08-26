@@ -413,6 +413,8 @@ export async function upsertQuotesFromStorefrontCheckout(
       quantity: item.quantity,
       unit_price: item.unit_price,
       storefront_checkout_id: checkout.id,
+      is_custom: !!item.customization,
+      customization_notes: item.customization || null,
       weight_g: 0,
       print_time_min: 0,
       energy_cost: 0,

@@ -68,7 +68,7 @@ export function CheckoutForm({ slug, cart, total, onBack, onSuccess }: CheckoutF
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: cart.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+          items: cart.map((l) => ({ productId: l.productId, quantity: l.quantity, customization: l.customization || undefined })),
           paymentMethod,
           buyer: {
             name,

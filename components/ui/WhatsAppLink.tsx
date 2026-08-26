@@ -1,7 +1,8 @@
-export function buildWhatsAppLink(phone: string): string {
+export function buildWhatsAppLink(phone: string, message?: string): string {
   const digits = phone.replace(/\D/g, "");
   const withCountryCode = digits.startsWith("55") ? digits : `55${digits}`;
-  return `https://wa.me/${withCountryCode}`;
+  const base = `https://wa.me/${withCountryCode}`;
+  return message ? `${base}?text=${encodeURIComponent(message)}` : base;
 }
 
 /** Ícone da marca WhatsApp — não tem equivalente no lucide-react (só ícones genéricos). */

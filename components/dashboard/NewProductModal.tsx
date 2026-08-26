@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Camera, Loader2, Calculator } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { Toggle } from "@/components/ui/Toggle";
 import { CategorySelect } from "@/components/dashboard/CategorySelect";
 import { PriceTierEditor } from "@/components/dashboard/PriceTierEditor";
 import { CostCalculatorModal } from "@/components/dashboard/CostCalculatorModal";
@@ -50,6 +51,9 @@ export function NewProductModal({
   const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [estimatedProductionDays, setEstimatedProductionDays] = useState("");
+  const [allowsCustomization, setAllowsCustomization] = useState(false);
+  const [customizationLabel, setCustomizationLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [calculatorOpen, setCalculatorOpen] = useState(false);
@@ -69,6 +73,9 @@ export function NewProductModal({
       setCategory(product.category ?? "");
       setPriceTiers(product.price_tiers ?? []);
       setImageUrl(product.image_url ?? null);
+      setEstimatedProductionDays(product.estimated_production_days != null ? String(product.estimated_production_days) : "");
+      setAllowsCustomization(product.allows_customization ?? false);
+      setCustomizationLabel(product.customization_label ?? "");
     } else {
       setName(initialName);
       setDescription(initialDescription);
@@ -77,6 +84,9 @@ export function NewProductModal({
       setCategory("");
       setPriceTiers([]);
       setImageUrl(null);
+      setEstimatedProductionDays("");
+      setAllowsCustomization(false);
+      setCustomizationLabel("");
     }
     setCalculatedInputs(null);
     setError(null);
@@ -136,6 +146,9 @@ export function NewProductModal({
       cost_price: Number(costPrice) || 0,
       sale_price: Number(salePrice) || 0,
       price_tiers: priceTiers.filter((t) => t.quantity > 0 && t.price > 0),
+      estimated_production_days: estimatedProductionDays ? Number(estimatedProductionDays) : null,
+      allows_customization: allowsCustomization,
+      customization_label: allowsCustomization ? customizationLabel.trim() || null : null,
     };
 
     const { data, error: dbError } = isEditing
@@ -246,6 +259,42 @@ export function NewProductModal({
             Faixas de preço por quantidade <span className="text-text-muted/60">(opcional)</span>
           </label>
           <PriceTierEditor tiers={priceTiers} onChange={setPriceTiers} />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">
+            Prazo de produção (dias úteis) <span className="text-text-muted/60">(opcional)</span>
+          </label>
+          <input
+            type="number"
+            min={0}
+            value={estimatedProductionDays}
+            onChange={(e) => setEstimatedProductionDays(e.target.value)}
+            className="glass-input w-full"
+            placeholder="Ex: 5"
+          />
+          <p className="mt-1 text-[11px] text-text-muted">Exibido na loja como &quot;Pronto em até X dias úteis&quot;.</p>
+        </div>
+
+        <div className="rounded-xl border border-border-glass bg-white/[0.02] p-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-text-primary">Permite personalização</p>
+              <p className="text-[11px] text-text-muted">Mostra um campo de texto livre na loja antes da compra.</p>
+            </div>
+            <Toggle checked={allowsCustomization} onChange={setAllowsCustomization} />
+          </div>
+          {allowsCustomization && (
+            <div className="mt-3">
+              <label className="mb-1.5 block text-xs text-text-muted">Rótulo do campo</label>
+              <input
+                value={customizationLabel}
+                onChange={(e) => setCustomizationLabel(e.target.value)}
+                className="glass-input w-full"
+                placeholder="Ex: Texto para gravação"
+              />
+            </div>
+          )}
         </div>
 
         {(calculatedInputs ?? calcInputs) && (

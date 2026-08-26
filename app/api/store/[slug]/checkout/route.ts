@@ -21,6 +21,7 @@ function adminClient() {
 interface CheckoutItemInput {
   productId: string;
   quantity: number;
+  customization?: string;
 }
 
 interface CheckoutBuyerInput {
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
   const productIds = items.map((i) => i.productId);
   const { data: products } = await admin
     .from("products")
-    .select("id, name, sale_price")
+    .select("id, name, sale_price, allows_customization")
     .eq("user_id", sellerProfile.user_id)
     .eq("in_store", true)
     .in("id", productIds);
@@ -90,9 +91,21 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
       const product = productsById.get(item.productId);
       const quantity = Math.max(1, Math.floor(item.quantity) || 1);
       if (!product) return null;
-      return { product_id: product.id, name: product.name, unit_price: product.sale_price, quantity };
+      // Nunca confia no texto vindo do cliente sozinho — só persiste
+      // personalização se o produto de fato permite (evita que o campo seja
+      // usado como texto livre arbitrário em produto sem essa opção).
+      const customization = product.allows_customization && item.customization?.trim() ? item.customization.trim().slice(0, 500) : null;
+      return {
+        product_id: product.id,
+        name: product.name,
+        unit_price: product.sale_price,
+        quantity,
+        ...(customization ? { customization } : {}),
+      };
     })
-    .filter((i): i is { product_id: string; name: string; unit_price: number; quantity: number } => i !== null);
+    .filter(
+      (i): i is { product_id: string; name: string; unit_price: number; quantity: number; customization?: string } => i !== null
+    );
 
   if (checkoutItems.length === 0) {
     return NextResponse.json({ error: "Nenhum produto do carrinho está disponível." }, { status: 400 });
@@ -136,7 +149,7 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
           description: i.name,
         })),
         order_nsu: checkout.id,
-        redirect_url: `${SITE_URL}/loja/${slug}?pedido=sucesso`,
+        redirect_url: `${SITE_URL}/loja/${slug}?pedido=sucesso&checkout_id=${checkout.id}`,
         webhook_url: `${SITE_URL}/api/webhooks/infinitepay`,
         customer: { name: buyer.name.trim(), email: buyer.email.trim(), phone_number: buyer.phone || undefined },
       });
@@ -173,9 +186,9 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
       external_reference: checkout.id,
       notification_url: `${SITE_URL}/api/webhooks/mercado-pago`,
       back_urls: {
-        success: `${SITE_URL}/loja/${slug}?pedido=sucesso`,
-        failure: `${SITE_URL}/loja/${slug}?pedido=falha`,
-        pending: `${SITE_URL}/loja/${slug}?pedido=pendente`,
+        success: `${SITE_URL}/loja/${slug}?pedido=sucesso&checkout_id=${checkout.id}`,
+        failure: `${SITE_URL}/loja/${slug}?pedido=falha&checkout_id=${checkout.id}`,
+        pending: `${SITE_URL}/loja/${slug}?pedido=pendente&checkout_id=${checkout.id}`,
       },
       auto_return: "approved",
     });

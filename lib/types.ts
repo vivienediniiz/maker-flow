@@ -95,7 +95,7 @@ export interface StoreCheckout {
   buyer_neighborhood: string | null;
   buyer_city: string | null;
   buyer_state: string | null;
-  items: { product_id: string; name: string; unit_price: number; quantity: number }[];
+  items: { product_id: string; name: string; unit_price: number; quantity: number; customization?: string | null }[];
   total_amount: number;
   created_at: string;
 }
@@ -109,6 +109,10 @@ export interface StoreProductPublic {
   image_url: string | null;
   sale_price: number;
   store_display_order: number | null;
+  category: string | null;
+  estimated_production_days: number | null;
+  allows_customization: boolean;
+  customization_label: string | null;
 }
 
 /** Espelha a view pública `store_profiles_public`. */
@@ -120,6 +124,52 @@ export interface StoreProfilePublic {
   avatar_url: string | null;
   store_enabled: boolean;
   payment_ready: boolean;
+  /** `store_settings.logo_url`, com fallback pro avatar do perfil quando não configurado. */
+  logo_url: string | null;
+  primary_color: string | null;
+  secondary_color: string | null;
+  title_font: string | null;
+  whatsapp_number: string | null;
+  whatsapp_default_message: string | null;
+  /** Texto padrão pra prazo de produção quando o produto não tem `estimated_production_days`. */
+  default_production_message: string | null;
+}
+
+/** Identidade visual + WhatsApp da Loja Online, configurados pelo lojista (1:1 com o usuário). */
+export interface StoreSettings {
+  user_id: string;
+  logo_url: string | null;
+  primary_color: string | null;
+  secondary_color: string | null;
+  title_font: string | null;
+  whatsapp_number: string | null;
+  whatsapp_default_message: string | null;
+  default_production_message: string | null;
+  updated_at: string;
+}
+
+/** Um banner do slideshow do topo da loja — visão do dono (painel). */
+export interface StoreBanner {
+  id: string;
+  user_id: string;
+  image_url: string;
+  title: string | null;
+  subtitle: string | null;
+  target_link: string | null;
+  display_order: number;
+  active: boolean;
+  created_at: string;
+}
+
+/** Espelha a view pública `store_banners_public` — só banners ativos, já ordenados. */
+export interface StoreBannerPublic {
+  id: string;
+  user_id: string;
+  image_url: string;
+  title: string | null;
+  subtitle: string | null;
+  target_link: string | null;
+  display_order: number;
 }
 
 export interface AffiliateCommission {
@@ -380,6 +430,12 @@ export interface Product {
   in_store: boolean;
   /** Ordem de exibição na loja — só relevante entre produtos com in_store=true. */
   store_display_order: number | null;
+  /** Prazo de produção estimado em dias, exibido na página do produto na loja. Sem valor = usa o texto padrão configurado em store_settings. */
+  estimated_production_days: number | null;
+  /** Quando true, a loja mostra um campo de texto livre pro cliente antes de comprar (ex: nome pra gravar). */
+  allows_customization: boolean;
+  /** Rótulo do campo de personalização exibido na loja (ex: "Texto para gravação") — só usado quando allows_customization=true. */
+  customization_label: string | null;
 }
 
 export interface Category {

@@ -6,6 +6,8 @@ import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { Toggle } from "@/components/ui/Toggle";
+import { StoreBrandingCard } from "@/components/dashboard/StoreBrandingCard";
+import { StoreBannersCard } from "@/components/dashboard/StoreBannersCard";
 import { createClient } from "@/lib/supabase/client";
 import { slugify } from "@/lib/slug";
 import { ExternalLink, Copy, Check, AlertTriangle, Loader2 } from "lucide-react";
@@ -20,6 +22,7 @@ export default function StorePage() {
   const [storeSlug, setStoreSlug] = useState<string | null>(null);
   const [slugInput, setSlugInput] = useState("");
   const [headline, setHeadline] = useState("");
+  const [studioName, setStudioName] = useState("");
   const [paymentConnected, setPaymentConnected] = useState(false);
   const [saving, setSaving] = useState(false);
   const [slugError, setSlugError] = useState<string | null>(null);
@@ -60,6 +63,7 @@ export default function StorePage() {
     setStoreSlug(profile?.store_slug ?? null);
     setSlugInput(profile?.store_slug ?? slugify(profile?.studio_name || profile?.full_name || "meu-estudio"));
     setHeadline(profile?.store_headline ?? "");
+    setStudioName(profile?.studio_name || profile?.full_name || "");
     setPaymentConnected(!!integration);
     setLoading(false);
   }
@@ -222,9 +226,16 @@ export default function StorePage() {
             <Link href="/dashboard/products" className="text-neon-pink hover:underline">
               Produtos
             </Link>
-            .
+            . Prazo de produção e personalização também são configurados por produto lá.
           </p>
         </GlassCard>
+
+        {userId && (
+          <>
+            <StoreBrandingCard userId={userId} studioName={studioName} />
+            <StoreBannersCard userId={userId} />
+          </>
+        )}
       </main>
     </>
   );
