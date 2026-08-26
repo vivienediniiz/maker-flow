@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronRight, ArrowRight } from "lucide-react";
-import { Modal } from "@/components/ui/Modal";
+import { Check, ChevronRight, ArrowRight, X } from "lucide-react";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { WelcomeOnboardingCarousel } from "@/components/dashboard/WelcomeOnboardingCarousel";
 import { createClient } from "@/lib/supabase/client";
@@ -18,8 +18,8 @@ import {
 } from "@/lib/onboarding";
 import type { OnboardingProgress } from "@/lib/types";
 
-/** Fechar "por agora" (X do modal, clique no fundo, Esc) some só pro resto desta sessão — reabre no próximo login, enquanto faltar passo obrigatório. */
-const SESSION_HIDDEN_KEY = "onboarding_modal_hidden_session";
+/** Fechar no X do card some só pro resto desta sessão — reaparece no próximo login, enquanto faltar passo obrigatório. */
+const SESSION_HIDDEN_KEY = "onboarding_card_hidden_session";
 
 function emptyProgress(userId: string): OnboardingProgress {
   return {
@@ -33,17 +33,17 @@ function emptyProgress(userId: string): OnboardingProgress {
 
 /**
  * Onboarding do Dashboard, em duas partes:
- * 1. Carrossel de boas-vindas em tela cheia — só no primeiro login
- *    (carousel_seen = false), explica os passos antes de qualquer coisa.
- * 2. Checklist em modal — aparece no Dashboard toda vez que faltar algum
- *    passo obrigatório, e só para de aparecer quando os 5 estiverem
- *    completos DE VERDADE: cada passo é verificado ao vivo contra os dados
- *    reais (profiles/settings/printer_assets/filaments), não por uma flag
- *    gravada uma vez — se a pessoa apagar a única impressora ou zerar a
- *    tarifa de energia depois, o passo volta a aparecer como pendente na
- *    próxima vez que o Dashboard carregar. Fechar (X/fundo/Esc) esconde só
- *    pelo resto da sessão atual. Complementa, sem substituir, os avisos
- *    contextuais já existentes (ConfigNudgeBanner).
+ * 1. Carrossel de boas-vindas em tela cheia (pop-up) — só no primeiro login
+ *    (carousel_seen = false), traz as mensagens de instrução de cada passo.
+ * 2. Checklist como CARD fixo no topo do Dashboard (não modal) — fica
+ *    visível ali enquanto faltar algum passo obrigatório, e só some quando
+ *    os 5 estiverem completos DE VERDADE: cada passo é verificado ao vivo
+ *    contra os dados reais (profiles/settings/printer_assets/filaments),
+ *    não por uma flag gravada uma vez — se a pessoa apagar a única
+ *    impressora ou zerar a tarifa de energia depois, o passo volta a
+ *    aparecer como pendente na próxima vez que o Dashboard carregar.
+ *    Complementa, sem substituir, os avisos contextuais já existentes
+ *    (ConfigNudgeBanner).
  */
 export function OnboardingChecklistCard() {
   const supabase = createClient();
@@ -58,7 +58,7 @@ export function OnboardingChecklistCard() {
       if (sessionStorage.getItem(SESSION_HIDDEN_KEY) === "1") setHiddenThisSession(true);
     } catch {
       // sessionStorage indisponível (ex: aba privada bloqueando) — só significa
-      // que o modal pode reaparecer numa navegação dentro da mesma sessão.
+      // que o card pode reaparecer numa navegação dentro da mesma sessão.
     }
 
     (async () => {
@@ -103,11 +103,6 @@ export function OnboardingChecklistCard() {
     await supabase.from("onboarding_progress").upsert({ user_id: userId, carousel_seen: true }, { onConflict: "user_id" });
   }
 
-  function handleStepClick(step: OnboardingStepConfig) {
-    handleCloseForNow();
-    step.action?.();
-  }
-
   if (loading || !userId || !status) return null;
 
   if (!progress?.carousel_seen) {
@@ -126,95 +121,105 @@ export function OnboardingChecklistCard() {
   const nextStep = ONBOARDING_STEPS.find((s) => !isDone(s));
   const percent = Math.round((completedRequired / ONBOARDING_REQUIRED_STEPS.length) * 100);
 
-  const open = !hiddenThisSession && !allRequiredDone;
+  if (allRequiredDone || hiddenThisSession) return null;
 
   return (
-    <Modal open={open} onClose={handleCloseForNow} title="Configure seu Studio" maxWidthClass="max-w-lg">
-      <div className="space-y-4">
-        <p className="text-xs text-text-muted">
+    <GlassCard padding="lg" className="relative space-y-4">
+      <button
+        type="button"
+        onClick={handleCloseForNow}
+        className="absolute right-4 top-4 text-text-muted transition-colors hover:text-text-primary"
+        aria-label="Fechar"
+      >
+        <X size={16} />
+      </button>
+
+      <div className="pr-6">
+        <p className="font-display text-lg">Configure seu Studio</p>
+        <p className="mt-1 text-xs text-text-muted">
           {completedRequired} de {ONBOARDING_REQUIRED_STEPS.length} passos
         </p>
+      </div>
 
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-          <div className="h-full rounded-full bg-neon-gradient transition-all" style={{ width: `${percent}%` }} />
-        </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+        <div className="h-full rounded-full bg-neon-gradient transition-all" style={{ width: `${percent}%` }} />
+      </div>
 
-        <div className="divide-y divide-border-glass">
-          {ONBOARDING_STEPS.map((step) => {
-            const done = isDone(step);
-            const rowContent = (
-              <>
-                <span
-                  className={cn(
-                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border",
-                    done ? "border-neon-green bg-neon-green/15 text-neon-green" : "border-border-glassStrong text-transparent"
+      <div className="divide-y divide-border-glass">
+        {ONBOARDING_STEPS.map((step) => {
+          const done = isDone(step);
+          const rowContent = (
+            <>
+              <span
+                className={cn(
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border",
+                  done ? "border-neon-green bg-neon-green/15 text-neon-green" : "border-border-glassStrong text-transparent"
+                )}
+              >
+                <Check size={13} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <p className={cn("text-sm font-medium", done ? "text-text-muted line-through" : "text-text-primary")}>
+                    {step.title}
+                  </p>
+                  {step.optional && (
+                    <span className="shrink-0 rounded-pill bg-white/5 px-1.5 py-0.5 text-[10px] text-text-muted">Opcional</span>
                   )}
-                >
-                  <Check size={13} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <p className={cn("text-sm font-medium", done ? "text-text-muted line-through" : "text-text-primary")}>
-                      {step.title}
-                    </p>
-                    {step.optional && (
-                      <span className="shrink-0 rounded-pill bg-white/5 px-1.5 py-0.5 text-[10px] text-text-muted">Opcional</span>
-                    )}
-                  </div>
-                  <p className="text-xs text-text-muted">{step.description}</p>
                 </div>
-              </>
-            );
+                <p className="text-xs text-text-muted">{step.description}</p>
+              </div>
+            </>
+          );
 
-            return (
-              <div key={step.key} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-                {step.href ? (
-                  <Link href={step.href} onClick={handleCloseForNow} className="flex min-w-0 flex-1 items-center gap-3">
-                    {rowContent}
-                  </Link>
-                ) : (
-                  <button type="button" onClick={() => handleStepClick(step)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                    {rowContent}
+          return (
+            <div key={step.key} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+              {step.href ? (
+                <Link href={step.href} className="flex min-w-0 flex-1 items-center gap-3">
+                  {rowContent}
+                </Link>
+              ) : (
+                <button type="button" onClick={step.action} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                  {rowContent}
+                </button>
+              )}
+              <div className="flex shrink-0 items-center gap-1.5">
+                {step.optional && !done && (
+                  <button
+                    type="button"
+                    onClick={() => handleSkip(step.key as "supplies_registered" | "fixed_expenses_registered")}
+                    className="text-[11px] text-text-muted transition-colors hover:text-text-secondary"
+                  >
+                    Pular
                   </button>
                 )}
-                <div className="flex shrink-0 items-center gap-1.5">
-                  {step.optional && !done && (
-                    <button
-                      type="button"
-                      onClick={() => handleSkip(step.key as "supplies_registered" | "fixed_expenses_registered")}
-                      className="text-[11px] text-text-muted transition-colors hover:text-text-secondary"
-                    >
-                      Pular
-                    </button>
-                  )}
-                  <ChevronRight size={16} className="text-text-muted" />
-                </div>
+                <ChevronRight size={16} className="text-text-muted" />
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
+      </div>
 
-        {nextStep && (
-          <div className="space-y-3 pt-1">
-            {nextStep.href ? (
-              <Link href={nextStep.href} onClick={handleCloseForNow} className="block">
-                <NeonButton size="sm" className="w-full">
-                  <ArrowRight size={14} /> Próximo: {nextStep.title}
-                </NeonButton>
-              </Link>
-            ) : (
-              <NeonButton size="sm" className="w-full" onClick={() => handleStepClick(nextStep)}>
+      {nextStep && (
+        <div className="space-y-3 pt-1">
+          {nextStep.href ? (
+            <Link href={nextStep.href} className="block">
+              <NeonButton size="sm" className="w-full">
                 <ArrowRight size={14} /> Próximo: {nextStep.title}
               </NeonButton>
-            )}
-            <div className="flex items-center justify-center">
-              <Link href="/help" className="text-xs text-text-muted underline hover:text-text-secondary">
-                Precisa de ajuda?
-              </Link>
-            </div>
+            </Link>
+          ) : (
+            <NeonButton size="sm" className="w-full" onClick={nextStep.action}>
+              <ArrowRight size={14} /> Próximo: {nextStep.title}
+            </NeonButton>
+          )}
+          <div className="flex items-center justify-center">
+            <Link href="/help" className="text-xs text-text-muted underline hover:text-text-secondary">
+              Precisa de ajuda?
+            </Link>
           </div>
-        )}
-      </div>
-    </Modal>
+        </div>
+      )}
+    </GlassCard>
   );
 }
