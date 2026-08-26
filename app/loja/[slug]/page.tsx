@@ -8,6 +8,7 @@ import { formatBRL } from "@/lib/utils";
 import { CheckoutForm } from "./CheckoutForm";
 import { buildWhatsAppLink } from "@/components/ui/WhatsAppLink";
 import { BannerSlideshow } from "./BannerSlideshow";
+import { CategoryNav } from "./CategoryNav";
 import { ProductModal } from "./ProductModal";
 import { WhatsAppFloatingButton } from "./WhatsAppFloatingButton";
 import { getStoreFont, DEFAULT_STORE_PRIMARY_COLOR, DEFAULT_STORE_SECONDARY_COLOR, DEFAULT_STORE_TITLE_COLOR } from "@/lib/storeFonts";
@@ -227,6 +228,8 @@ function StorePageContent({ slug }: { slug: string }) {
         </button>
       </header>
 
+      <CategoryNav categories={categories} activeCategory={categoryFilter} onSelect={setCategoryFilter} primaryColor={primaryColor} />
+
       <main className="mx-auto max-w-5xl px-6 pb-24 md:px-12">
         {banners.length > 0 && (
           <div className="mb-8">
@@ -268,36 +271,6 @@ function StorePageContent({ slug }: { slug: string }) {
             </p>
           )}
         </div>
-
-        {categories.length > 0 && (
-          <div className="mb-6 flex flex-wrap justify-center gap-2">
-            <button
-              onClick={() => setCategoryFilter(null)}
-              className="rounded-full px-4 py-1.5 text-xs font-medium transition-colors"
-              style={
-                categoryFilter === null
-                  ? { backgroundColor: primaryColor, color: "#FFFFFF" }
-                  : { backgroundColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.75)" }
-              }
-            >
-              Todas
-            </button>
-            {categories.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCategoryFilter(c)}
-                className="rounded-full px-4 py-1.5 text-xs font-medium transition-colors"
-                style={
-                  categoryFilter === c
-                    ? { backgroundColor: primaryColor, color: "#FFFFFF" }
-                    : { backgroundColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.75)" }
-                }
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        )}
 
         {filteredProducts.length === 0 ? (
           <div className="rounded-2xl bg-white/[0.04] py-10 text-center text-sm text-white/60">
