@@ -158,6 +158,169 @@ export async function fetchMelhorEnvioAccount(
   return res.json();
 }
 
+/**
+ * Saldo da carteira Melhor Envio — não documentado como endpoint próprio
+ * (só achamos "inserir saldo" na doc oficial), então lê do campo `balance`
+ * de GET /me, que é o padrão conhecido da API. Se o formato mudar, isso
+ * quebra explicitamente aqui em vez de deixar a compra seguir com um valor
+ * errado — validar contra payload real na primeira compra de teste.
+ */
+export async function fetchMelhorEnvioBalance(
+  admin: SupabaseClient,
+  integration: { id: string; credential_secret_id: string | null }
+): Promise<number> {
+  const account = await fetchMelhorEnvioAccount(admin, integration);
+  const balance = Number(account?.balance);
+  if (!Number.isFinite(balance)) {
+    throw new Error("Não foi possível ler o saldo da carteira Melhor Envio (formato de resposta inesperado).");
+  }
+  return balance;
+}
+
+export interface MelhorEnvioParty {
+  name: string;
+  phone?: string;
+  document?: string;
+  company_document?: string;
+  address: string;
+  number: string;
+  complement?: string;
+  district: string;
+  city: string;
+  state_abbr: string;
+  postal_code: string;
+  country_id?: string;
+}
+
+export interface AddToCartParams {
+  serviceId: number;
+  from: MelhorEnvioParty;
+  to: MelhorEnvioParty;
+  productName: string;
+  productValue: number;
+  weightKg: number;
+  heightCm: number;
+  widthCm: number;
+  lengthCm: number;
+}
+
+export interface MelhorEnvioCartItem {
+  id: string;
+  protocol: string;
+  price: number;
+  status: string;
+}
+
+/** POST /me/cart — adiciona 1 frete ao carrinho. `id` retornado é o que identifica esse envio em todas as chamadas seguintes (checkout/generate/print). */
+export async function addToMelhorEnvioCart(
+  admin: SupabaseClient,
+  integration: { id: string; credential_secret_id: string | null },
+  params: AddToCartParams
+): Promise<MelhorEnvioCartItem> {
+  const res = await melhorEnvioFetchForIntegration(admin, integration, "/me/cart", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      service: params.serviceId,
+      from: { ...params.from, country_id: params.from.country_id ?? "BR" },
+      to: { ...params.to, country_id: params.to.country_id ?? "BR" },
+      products: [{ name: params.productName, quantity: "1", unitary_value: params.productValue.toFixed(2) }],
+      volumes: [{ height: params.heightCm, width: params.widthCm, length: params.lengthCm, weight: params.weightKg }],
+      options: { insurance_value: params.productValue, non_commercial: true },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    const detail = body?.errors ? JSON.stringify(body.errors) : body?.message;
+    throw new Error(`Melhor Envio respondeu ${res.status} ao adicionar ao carrinho${detail ? `: ${detail}` : ""}`);
+  }
+
+  const data = await res.json();
+  return { id: data.id, protocol: data.protocol, price: Number(data.price ?? data.quote), status: data.status };
+}
+
+/**
+ * POST /me/shipment/checkout — debita da carteira Melhor Envio. Manda só
+ * este `orderId` no array `orders` (nunca em lote com outros pedidos), pra
+ * cada compra continuar sendo uma decisão isolada por venda.
+ */
+export async function checkoutMelhorEnvioCart(
+  admin: SupabaseClient,
+  integration: { id: string; credential_secret_id: string | null },
+  orderId: string
+): Promise<{ status: string }> {
+  const res = await melhorEnvioFetchForIntegration(admin, integration, "/me/shipment/checkout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orders: [orderId] }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(`Melhor Envio respondeu ${res.status} ao comprar o frete${body?.message ? `: ${body.message}` : ""}`);
+  }
+
+  const data = await res.json();
+  return { status: data?.purchase?.status ?? "unknown" };
+}
+
+/** POST /me/shipment/generate — não devolve código de rastreio (confirmar contra payload real); só confirma que a transportadora foi notificada. */
+export async function generateMelhorEnvioLabel(
+  admin: SupabaseClient,
+  integration: { id: string; credential_secret_id: string | null },
+  orderId: string
+): Promise<void> {
+  const res = await melhorEnvioFetchForIntegration(admin, integration, "/me/shipment/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orders: [orderId] }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Melhor Envio respondeu ${res.status} ao gerar a etiqueta`);
+  }
+
+  const data = await res.json();
+  const result = data?.[orderId];
+  if (result && result.status !== true) {
+    throw new Error(result.message ?? "Falha ao gerar a etiqueta.");
+  }
+}
+
+/** GET /me/cart/{id} — usado depois de gerar, só pra tentar capturar o código de rastreio (`tracking`) se a transportadora já tiver disponibilizado; pode vir null ainda (só aparece quando o envio é postado). */
+export async function fetchMelhorEnvioCartItem(
+  admin: SupabaseClient,
+  integration: { id: string; credential_secret_id: string | null },
+  orderId: string
+): Promise<{ status: string; tracking: string | null }> {
+  const res = await melhorEnvioFetchForIntegration(admin, integration, `/me/cart/${orderId}`);
+  if (!res.ok) {
+    throw new Error(`Melhor Envio respondeu ${res.status} ao consultar o envio`);
+  }
+  const data = await res.json();
+  return { status: data.status, tracking: data.tracking ?? null };
+}
+
+/** GET /me/imprimir/{pdf|zpl}/{id} — devolve a URL real do arquivo (S3), pronta pra abrir/baixar direto (diferente de POST /me/shipment/print, que devolve um link de interface). */
+export async function printMelhorEnvioLabel(
+  admin: SupabaseClient,
+  integration: { id: string; credential_secret_id: string | null },
+  orderId: string,
+  format: "pdf" | "zpl"
+): Promise<string> {
+  const res = await melhorEnvioFetchForIntegration(admin, integration, `/me/imprimir/${format}/${orderId}`);
+  if (!res.ok) {
+    throw new Error(`Melhor Envio respondeu ${res.status} ao buscar o link de impressão`);
+  }
+  const data = await res.json();
+  const url = typeof data === "string" ? data : data?.url;
+  if (!url || typeof url !== "string") {
+    throw new Error("Melhor Envio não devolveu uma URL de impressão válida.");
+  }
+  return url;
+}
+
 export interface ShippingCalculateParams {
   originCep: string;
   destinationCep: string;
@@ -187,6 +350,100 @@ export interface ShippingUnavailable {
 export interface ShippingCalculateResult {
   quotes: ShippingQuote[];
   unavailable: ShippingUnavailable[];
+}
+
+interface OriginProfile {
+  studio_name: string | null;
+  full_name: string;
+  phone: string | null;
+  document: string | null;
+  street: string | null;
+  street_number: string | null;
+  complement: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
+  cep: string | null;
+}
+
+interface DestinationClient {
+  name: string;
+  phone: string | null;
+  document: string | null;
+  street: string | null;
+  number: string | null;
+  complement: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
+  cep: string | null;
+}
+
+function documentField(document: string | null): { document?: string; company_document?: string } {
+  const digits = (document ?? "").replace(/\D/g, "");
+  if (digits.length === 14) return { company_document: digits };
+  if (digits.length === 11) return { document: digits };
+  return {};
+}
+
+/**
+ * Monta os objetos `from`/`to` exigidos pelo POST /me/cart e valida que
+ * nenhum campo obrigatório está faltando ANTES de qualquer chamada à API —
+ * "endereço incompleto" precisa ser um erro nosso, claro, não um 422 da
+ * Melhor Envio no meio do fluxo de compra.
+ */
+export function buildShippingParties(
+  origin: OriginProfile,
+  destination: DestinationClient
+): { from: MelhorEnvioParty; to: MelhorEnvioParty } | { missing: string[] } {
+  const missing: string[] = [];
+
+  if (!origin.street) missing.push("Rua do remetente (Perfil do Estúdio)");
+  if (!origin.street_number) missing.push("Número do remetente (Perfil do Estúdio)");
+  if (!origin.neighborhood) missing.push("Bairro do remetente (Perfil do Estúdio)");
+  if (!origin.city) missing.push("Cidade do remetente (Perfil do Estúdio)");
+  if (!origin.state) missing.push("Estado do remetente (Perfil do Estúdio)");
+  if (!origin.cep) missing.push("CEP do remetente (Perfil do Estúdio)");
+  if (!origin.document) missing.push("CPF/CNPJ do remetente (Perfil do Estúdio)");
+  if (!origin.phone) missing.push("Telefone do remetente (Perfil do Estúdio)");
+
+  if (!destination.street) missing.push("Rua do cliente");
+  if (!destination.number) missing.push("Número do cliente");
+  if (!destination.neighborhood) missing.push("Bairro do cliente");
+  if (!destination.city) missing.push("Cidade do cliente");
+  if (!destination.state) missing.push("Estado do cliente");
+  if (!destination.cep) missing.push("CEP do cliente");
+  if (!destination.document) missing.push("CPF/CNPJ do cliente");
+  if (!destination.phone) missing.push("Telefone do cliente");
+
+  if (missing.length > 0) return { missing };
+
+  return {
+    from: {
+      name: origin.studio_name || origin.full_name,
+      phone: origin.phone!.replace(/\D/g, ""),
+      ...documentField(origin.document),
+      address: origin.street!,
+      number: origin.street_number!,
+      complement: origin.complement ?? undefined,
+      district: origin.neighborhood!,
+      city: origin.city!,
+      state_abbr: origin.state!,
+      postal_code: origin.cep!.replace(/\D/g, ""),
+    },
+    to: {
+      name: destination.name,
+      phone: destination.phone!.replace(/\D/g, ""),
+      ...documentField(destination.document),
+      address: destination.street!,
+      number: destination.number!,
+      complement: destination.complement ?? undefined,
+      district: destination.neighborhood!,
+      city: destination.city!,
+      state_abbr: destination.state!,
+      postal_code: destination.cep!.replace(/\D/g, ""),
+    },
+  };
 }
 
 /**

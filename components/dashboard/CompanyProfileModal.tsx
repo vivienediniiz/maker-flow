@@ -30,6 +30,8 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
   const [cep, setCep] = useState("");
   const [street, setStreet] = useState("");
   const [streetNumber, setStreetNumber] = useState("");
+  const [neighborhood, setNeighborhood] = useState("");
+  const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [complement, setComplement] = useState("");
   const [instagram, setInstagram] = useState("");
@@ -58,7 +60,7 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
     const { data } = await supabase
       .from("profiles")
       .select(
-        "full_name, studio_name, phone, document, cep, street, street_number, state, complement, address, instagram, website, bio, avatar_url"
+        "full_name, studio_name, phone, document, cep, street, street_number, neighborhood, city, state, complement, address, instagram, website, bio, avatar_url"
       )
       .eq("id", user.id)
       .single();
@@ -71,6 +73,8 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
       setCep(data.cep ?? "");
       setStreet(data.street ?? "");
       setStreetNumber(data.street_number ?? "");
+      setNeighborhood(data.neighborhood ?? "");
+      setCity(data.city ?? "");
       setState(data.state ?? "");
       setComplement(data.complement ?? "");
       setInstagram(data.instagram ?? "");
@@ -153,6 +157,8 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
         cep: cep || null,
         street: street || null,
         street_number: streetNumber || null,
+        neighborhood: neighborhood || null,
+        city: city || null,
         state: state || null,
         complement: complement || null,
         address: officialAddress || null,
@@ -309,6 +315,27 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1.5 block text-xs text-text-muted">Bairro</label>
+                <input
+                  value={neighborhood}
+                  onChange={(e) => setNeighborhood(e.target.value)}
+                  className="glass-input w-full"
+                  placeholder="Centro"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs text-text-muted">Cidade</label>
+                <input
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="glass-input w-full"
+                  placeholder="São Paulo"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="mb-1.5 block text-xs text-text-muted">Complemento</label>
               <input
@@ -318,6 +345,9 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
                 placeholder="Sala 01, bloco B"
               />
             </div>
+            <p className="text-[11px] text-text-muted">
+              Endereço completo (com bairro e cidade) é necessário pra comprar etiqueta de frete no Melhor Envio.
+            </p>
 
             <div className="grid grid-cols-2 gap-4">
               <div>

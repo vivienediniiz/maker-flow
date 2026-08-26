@@ -102,7 +102,9 @@ export default function OrdersPage() {
     const [{ data: quoteData }, { data: integrationData }] = await Promise.all([
       supabase
         .from("quotes")
-        .select("*, clients(name, phone, email, address), products(name, image_url, category, description, calc_inputs)")
+        .select(
+          "*, clients(name, phone, email, address, cep, street, number, complement, neighborhood, city, state, document), products(name, image_url, category, description, calc_inputs)"
+        )
         .eq("user_id", user.id)
         .order("order_number", { ascending: false }),
       supabase.from("integrations").select("*").eq("user_id", user.id),
@@ -144,6 +146,12 @@ export default function OrdersPage() {
       setSelectedQuote((prev) => (prev && prev.id === quoteId && previousStatus ? { ...prev, status: previousStatus } : prev));
       alert("Não foi possível atualizar o status dessa venda. Tente novamente.");
     }
+  }
+
+  /** Reflete localmente uma atualização já feita no servidor (rotas de compra/geração/impressão de etiqueta, que gravam direto via admin client) — sem chamada extra ao Supabase daqui. */
+  function handleShippingUpdate(quoteId: string, patch: Partial<QuoteWithClient>) {
+    setQuotes((prev) => prev.map((q) => (q.id === quoteId ? { ...q, ...patch } : q)));
+    setSelectedQuote((prev) => (prev && prev.id === quoteId ? { ...prev, ...patch } : prev));
   }
 
   async function handleTrackingCodeChange(quoteId: string, code: string) {
@@ -488,6 +496,7 @@ export default function OrdersPage() {
         onClose={() => setSelectedQuote(null)}
         onStatusChange={handleStatusChange}
         onTrackingCodeChange={handleTrackingCodeChange}
+        onShippingUpdate={handleShippingUpdate}
       />
       <NewSaleModal
         open={newSaleModalOpen || !!editingQuote}

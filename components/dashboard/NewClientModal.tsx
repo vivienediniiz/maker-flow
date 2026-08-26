@@ -56,6 +56,7 @@ export function NewClientModal({
   const [neighborhood, setNeighborhood] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
+  const [document, setDocument] = useState("");
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +76,7 @@ export function NewClientModal({
     setNeighborhood(client?.neighborhood ?? "");
     setCity(client?.city ?? "");
     setState(client?.state ?? "");
+    setDocument(client?.document ?? "");
     setCepError(null);
     setError(null);
   }, [open, client]);
@@ -134,6 +136,7 @@ export function NewClientModal({
       neighborhood: neighborhood || null,
       city: city || null,
       state: state || null,
+      document: document || null,
       // Mantém address sincronizado com os campos estruturados sempre que
       // pelo menos um deles é preenchido; se nenhum for, cai pro address
       // que já existia (não apaga um endereço antigo em texto livre à toa).
@@ -207,6 +210,16 @@ export function NewClientModal({
             className="glass-input w-full"
             placeholder="@perfil_do_cliente"
           />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">CPF/CNPJ</label>
+          <input
+            value={document}
+            onChange={(e) => setDocument(e.target.value)}
+            className="glass-input w-full"
+            placeholder="000.000.000-00"
+          />
+          <p className="mt-1 text-[11px] text-text-muted">Necessário só pra comprar etiqueta de frete (Melhor Envio).</p>
         </div>
 
         {showLegacyAddressHint && (

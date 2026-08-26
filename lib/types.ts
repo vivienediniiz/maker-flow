@@ -26,6 +26,9 @@ export interface Profile {
   street_number: string | null;
   state: string | null;
   complement: string | null;
+  /** Bairro — junto com `city`, obrigatório pra gerar etiqueta (endereço de origem/remetente na API do Melhor Envio). */
+  neighborhood: string | null;
+  city: string | null;
   address: string | null;
   instagram: string | null;
   website: string | null;
@@ -222,9 +225,20 @@ export interface Quote {
   platform_fee: number;
   cost_amount: number;
   net_amount: number;
+  /** Id (uuid) do item no carrinho do Melhor Envio — não é o `service_id` numérico da transportadora, é o `id` retornado por POST /me/cart, usado depois em checkout/generate/print. */
   shipping_service_id: string | null;
   shipping_tracking_code: string | null;
+  /** URL do PDF da etiqueta (GET /me/imprimir/pdf/{id}) — a versão ZPL não é persistida, é buscada sob demanda. */
   shipping_label_url: string | null;
+  shipping_label_status: ShippingLabelStatus;
+  /** Valor de fato debitado da carteira Melhor Envio — pode divergir do `shipping_cost` cotado/mostrado ao cliente. */
+  shipping_purchased_cost: number | null;
+  shipping_purchased_at: string | null;
+  shipping_generated_at: string | null;
+  /** Marca a intenção/ação de clicar em "Imprimir Etiqueta" — não confirma que a impressão física aconteceu. */
+  shipping_printed_at: string | null;
+  shipping_carrier_name: string | null;
+  shipping_service_name: string | null;
   quantity: number | null;
   unit_price: number | null;
   price_tier_label: string | null;
@@ -253,8 +267,24 @@ export interface Quote {
 
 export type QuoteDiscountType = "fixed" | "percentage" | "coupon";
 
+/** `nao_iniciado` → `no_carrinho` (compra iniciada mas checkout falhou, recuperável) → `comprado` → `gerado` → `impresso`. `cancelado` reservado pra uma entrega futura (cancelamento de etiqueta). */
+export type ShippingLabelStatus = "nao_iniciado" | "no_carrinho" | "comprado" | "gerado" | "impresso" | "cancelado";
+
 export interface QuoteWithClient extends Quote {
-  clients: { name: string; phone: string | null; email: string | null; address: string | null } | null;
+  clients: {
+    name: string;
+    phone: string | null;
+    email: string | null;
+    address: string | null;
+    cep: string | null;
+    street: string | null;
+    number: string | null;
+    complement: string | null;
+    neighborhood: string | null;
+    city: string | null;
+    state: string | null;
+    document: string | null;
+  } | null;
   products: { name: string; image_url: string | null; category: string; description: string | null; calc_inputs: CalcInputs | null } | null;
 }
 
@@ -468,6 +498,8 @@ export interface Client {
   city: string | null;
   state: string | null;
   instagram: string | null;
+  /** CPF ou CNPJ — obrigatório pra gerar etiqueta (destinatário na API do Melhor Envio). */
+  document: string | null;
 }
 
 export interface Sale {

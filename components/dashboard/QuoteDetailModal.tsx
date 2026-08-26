@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteStatusStepper } from "@/components/dashboard/QuoteStatusStepper";
 import { SaleReceiptModal } from "@/components/dashboard/SaleReceiptModal";
+import { ShippingLabelSection } from "@/components/dashboard/ShippingLabelSection";
 import { WhatsAppLink, buildWhatsAppLink } from "@/components/ui/WhatsAppLink";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
@@ -24,11 +25,13 @@ export function QuoteDetailModal({
   onClose,
   onStatusChange,
   onTrackingCodeChange,
+  onShippingUpdate,
 }: {
   quote: QuoteWithClient | null;
   onClose: () => void;
   onStatusChange: (quoteId: string, status: QuoteStatus) => void;
   onTrackingCodeChange: (quoteId: string, code: string) => Promise<void>;
+  onShippingUpdate: (quoteId: string, patch: Partial<QuoteWithClient>) => void;
 }) {
   const supabase = createClient();
   const { paid } = useSubscription();
@@ -320,6 +323,10 @@ export function QuoteDetailModal({
             <p>Frete: <span className="text-text-secondary">{formatBRL(quote.shipping_cost)}</span></p>
           )}
         </div>
+
+        {quote.status !== "cancelled" && quote.status !== "expired" && (
+          <ShippingLabelSection quote={quote} onUpdate={(patch) => onShippingUpdate(quote.id, patch)} />
+        )}
 
         {/* Documentos */}
         <div className="grid grid-cols-2 gap-2">
