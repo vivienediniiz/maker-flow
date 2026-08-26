@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import { formatOrderNumber, QUOTE_PAYMENT_METHOD_LABELS } from "@/lib/quotes";
 import { buildWhatsAppLink } from "@/components/ui/WhatsAppLink";
+import { escapeHtml } from "@/lib/escapeHtml";
 import type { QuoteWithClient } from "@/lib/types";
 
 interface ReceiptProfile {
@@ -230,14 +231,17 @@ function buildReceiptContainer(quote: QuoteWithClient, profile: ReceiptProfile |
   container.style.background =
     "radial-gradient(circle at 50% 0%, rgba(170,23,219,0.28) 0%, rgba(11,9,20,0) 60%), #0B0914";
 
-  const studioName = profile?.studio_name || "Meu Estúdio";
-  const clientName = quote.clients?.name ?? quote.buyer_name ?? "Cliente não informado";
+  // Escapado na origem (não só na hora de montar o innerHTML mais abaixo)
+  // porque studioName/initials(studioName) também é reaproveitado dentro do
+  // próprio logoHtml logo em seguida.
+  const studioName = escapeHtml(profile?.studio_name) || "Meu Estúdio";
+  const clientName = escapeHtml(quote.clients?.name ?? quote.buyer_name) || "Cliente não informado";
   const saleDate = new Date(quote.sent_at).toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
-  const productName = quote.products?.name || quote.project_name;
+  const productName = escapeHtml(quote.products?.name || quote.project_name);
   const quantity = quote.quantity ?? 1;
   const productValue =
     quote.unit_price != null && quote.quantity != null
@@ -262,7 +266,7 @@ function buildReceiptContainer(quote: QuoteWithClient, profile: ReceiptProfile |
       ? `<div style="display:flex; justify-content:space-between; font-size:26px; color:#FF8A8A; margin-top:14px;">
            <span>${
              quote.discount_type === "coupon" && quote.coupon_code
-               ? `Desconto (cupom ${quote.coupon_code})`
+               ? `Desconto (cupom ${escapeHtml(quote.coupon_code)})`
                : "Desconto"
            }</span>
            <span>-${formatBRL(quote.discount_amount)}</span>
@@ -279,13 +283,13 @@ function buildReceiptContainer(quote: QuoteWithClient, profile: ReceiptProfile |
     deadlineText && appearance.showProductionDeadline
       ? `<div style="display:flex; justify-content:space-between; font-size:24px; color:#B4AFC4; margin-top:10px;">
          <span>Prazo de Produção</span>
-         <span style="color:#F5F3FA; font-weight:600;">${deadlineText}</span>
+         <span style="color:#F5F3FA; font-weight:600;">${escapeHtml(deadlineText)}</span>
        </div>`
       : "";
 
   const footerParts = [
-    profile?.instagram ? `@${profile.instagram.replace(/^@/, "")}` : null,
-    profile?.website || null,
+    profile?.instagram ? `@${escapeHtml(profile.instagram.replace(/^@/, ""))}` : null,
+    profile?.website ? escapeHtml(profile.website) : null,
   ].filter(Boolean);
 
   container.innerHTML = `
@@ -336,7 +340,7 @@ function buildReceiptContainer(quote: QuoteWithClient, profile: ReceiptProfile |
     }
     ${
       appearance.footerMessage
-        ? `<div style="text-align:center; font-size:20px; color:#726C85; margin-top:10px;">${appearance.footerMessage}</div>`
+        ? `<div style="text-align:center; font-size:20px; color:#726C85; margin-top:10px;">${escapeHtml(appearance.footerMessage)}</div>`
         : ""
     }
   `;

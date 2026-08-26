@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createMercadoPagoPreferenceForIntegration } from "@/lib/mercadoPago";
 import { createInfinitePayCheckoutLink } from "@/lib/infinitePay";
@@ -19,24 +20,42 @@ function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-interface CheckoutItemInput {
-  productId: string;
-  quantity: number;
-  customization?: string;
-}
+// Bloqueia < e > em todo campo de texto livre digitado pelo comprador —
+// esses campos viram clients.name/address e, mais adiante, aparecem em
+// telas do LOJISTA (comprovante de venda, documento de envio) que montam
+// HTML por string (container.innerHTML). Sem isso, um "nome" tipo
+// "<img src=x onerror=...>" executa no navegador de quem vender.
+const noHtmlText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .regex(/^[^<>]*$/, "Não use os caracteres < ou >");
 
-interface CheckoutBuyerInput {
-  name: string;
-  email: string;
-  phone?: string;
-  cep?: string;
-  street?: string;
-  number?: string;
-  complement?: string;
-  neighborhood?: string;
-  city?: string;
-  state?: string;
-}
+const checkoutSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        productId: z.string().uuid(),
+        quantity: z.number().int().min(1).max(50),
+        customization: noHtmlText(500).optional(),
+      })
+    )
+    .min(1),
+  paymentMethod: z.enum(["mercado_pago", "infinitepay"]).optional(),
+  buyer: z.object({
+    name: noHtmlText(120).min(1, "Nome é obrigatório"),
+    email: z.string().trim().email().max(200),
+    phone: noHtmlText(30).optional(),
+    cep: noHtmlText(9).optional(),
+    street: noHtmlText(200).optional(),
+    number: noHtmlText(20).optional(),
+    complement: noHtmlText(100).optional(),
+    neighborhood: noHtmlText(100).optional(),
+    city: noHtmlText(100).optional(),
+    state: noHtmlText(2).optional(),
+  }),
+});
 
 /**
  * Checkout público da Loja Online — sem autenticação. Recalcula preços a
@@ -69,20 +88,16 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
 
   const admin = adminClient();
 
-  const body = await req.json().catch(() => null);
-  const items: CheckoutItemInput[] = Array.isArray(body?.items) ? body.items : [];
-  const buyer: CheckoutBuyerInput | null = body?.buyer ?? null;
-  const paymentMethod: "mercado_pago" | "infinitepay" = body?.paymentMethod === "infinitepay" ? "infinitepay" : "mercado_pago";
+  const rawBody = await req.json().catch(() => null);
+  const parsed = checkoutSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Dados do pedido inválidos." }, { status: 400 });
+  }
+  const { items, buyer, paymentMethod: paymentMethodInput } = parsed.data;
+  const paymentMethod: "mercado_pago" | "infinitepay" = paymentMethodInput === "infinitepay" ? "infinitepay" : "mercado_pago";
 
   if (paymentMethod === "infinitepay" && (!INFINITEPAY_HANDLE || slug !== INFINITEPAY_STORE_SLUG)) {
     return NextResponse.json({ error: "InfinitePay não está disponível pra essa loja." }, { status: 400 });
-  }
-
-  if (items.length === 0) {
-    return NextResponse.json({ error: "Carrinho vazio." }, { status: 400 });
-  }
-  if (!buyer?.name?.trim() || !buyer?.email?.trim()) {
-    return NextResponse.json({ error: "Nome e e-mail são obrigatórios." }, { status: 400 });
   }
 
   const { data: seller } = await admin

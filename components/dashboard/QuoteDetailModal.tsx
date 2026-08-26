@@ -11,6 +11,7 @@ import { WhatsAppLink, buildWhatsAppLink } from "@/components/ui/WhatsAppLink";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
+import { escapeHtml } from "@/lib/escapeHtml";
 import {
   formatOrderNumber,
   QUOTE_CHANNEL_LABELS,
@@ -152,22 +153,22 @@ export function QuoteDetailModal({
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
         <div style="border:1px solid #EEE6F2; border-radius:10px; padding:14px;">
           <p style="margin:0 0 8px; font-size:11px; font-weight:700; color:#AA17DB;">REMETENTE</p>
-          <p style="margin:0; font-size:13px; font-weight:600;">${profile?.studio_name || profile?.full_name || "Meu Estúdio"}</p>
-          <p style="margin:4px 0 0; font-size:12px; color:#3A3548;">${profile?.address || "Endereço não cadastrado"}</p>
-          <p style="margin:2px 0 0; font-size:12px; color:#3A3548;">CEP: ${profile?.cep || "—"}</p>
-          ${profile?.phone ? `<p style="margin:2px 0 0; font-size:12px; color:#3A3548;">${profile.phone}</p>` : ""}
+          <p style="margin:0; font-size:13px; font-weight:600;">${escapeHtml(profile?.studio_name || profile?.full_name || "Meu Estúdio")}</p>
+          <p style="margin:4px 0 0; font-size:12px; color:#3A3548;">${escapeHtml(profile?.address) || "Endereço não cadastrado"}</p>
+          <p style="margin:2px 0 0; font-size:12px; color:#3A3548;">CEP: ${escapeHtml(profile?.cep) || "—"}</p>
+          ${profile?.phone ? `<p style="margin:2px 0 0; font-size:12px; color:#3A3548;">${escapeHtml(profile.phone)}</p>` : ""}
         </div>
         <div style="border:1px solid #EEE6F2; border-radius:10px; padding:14px;">
           <p style="margin:0 0 8px; font-size:11px; font-weight:700; color:#AA17DB;">DESTINATÁRIO</p>
-          <p style="margin:0; font-size:13px; font-weight:600;">${quote!.clients?.name ?? "Cliente não informado"}</p>
-          <p style="margin:4px 0 0; font-size:12px; color:#3A3548;">${quote!.clients?.address || "Endereço não cadastrado"}</p>
-          <p style="margin:2px 0 0; font-size:12px; color:#3A3548;">CEP: ${quote!.destination_cep || "—"}</p>
-          ${quote!.clients?.phone ? `<p style="margin:2px 0 0; font-size:12px; color:#3A3548;">${quote!.clients.phone}</p>` : ""}
+          <p style="margin:0; font-size:13px; font-weight:600;">${escapeHtml(quote!.clients?.name) || "Cliente não informado"}</p>
+          <p style="margin:4px 0 0; font-size:12px; color:#3A3548;">${escapeHtml(quote!.clients?.address) || "Endereço não cadastrado"}</p>
+          <p style="margin:2px 0 0; font-size:12px; color:#3A3548;">CEP: ${escapeHtml(quote!.destination_cep) || "—"}</p>
+          ${quote!.clients?.phone ? `<p style="margin:2px 0 0; font-size:12px; color:#3A3548;">${escapeHtml(quote!.clients.phone)}</p>` : ""}
         </div>
       </div>
 
       <div style="margin-top:20px; border:1px solid #EEE6F2; border-radius:10px; padding:14px; font-size:12px;">
-        <p style="margin:0 0 4px;"><strong>Produto:</strong> ${quote!.project_name}</p>
+        <p style="margin:0 0 4px;"><strong>Produto:</strong> ${escapeHtml(quote!.project_name)}</p>
         ${quote!.weight_g > 0 ? `<p style="margin:0 0 4px;"><strong>Peso:</strong> ${quote!.weight_g.toFixed(0)} g</p>` : ""}
         ${quote!.shipping_cost ? `<p style="margin:0;"><strong>Valor do frete:</strong> ${formatBRL(quote!.shipping_cost)}</p>` : ""}
       </div>
