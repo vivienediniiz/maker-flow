@@ -64,6 +64,7 @@ export interface AdminSubscriberRow {
   email: string;
   full_name: string;
   studio_name: string | null;
+  phone: string | null;
   subscription_tier: SubscriptionTier;
   subscription_status: SubscriptionStatus;
   billing_cycle: BillingCycle | null;
