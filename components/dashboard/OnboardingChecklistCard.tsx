@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronRight, ArrowRight, X } from "lucide-react";
+import { Check, ChevronRight, ArrowRight, X, AlertTriangle } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { WelcomeOnboardingCarousel } from "@/components/dashboard/WelcomeOnboardingCarousel";
@@ -90,6 +90,15 @@ export function OnboardingChecklistCard() {
     }
   }
 
+  function handleReopen() {
+    setHiddenThisSession(false);
+    try {
+      sessionStorage.removeItem(SESSION_HIDDEN_KEY);
+    } catch {
+      // Sem sessionStorage, não tinha ficado escondido entre navegações mesmo.
+    }
+  }
+
   async function handleSkip(step: "supplies_registered" | "fixed_expenses_registered") {
     if (!userId) return;
     const column = step === "supplies_registered" ? "supplies_skipped" : "fixed_expenses_skipped";
@@ -121,7 +130,25 @@ export function OnboardingChecklistCard() {
   const nextStep = ONBOARDING_STEPS.find((s) => !isDone(s));
   const percent = Math.round((completedRequired / ONBOARDING_REQUIRED_STEPS.length) * 100);
 
-  if (allRequiredDone || hiddenThisSession) return null;
+  if (allRequiredDone) return null;
+
+  if (hiddenThisSession) {
+    return (
+      <button
+        type="button"
+        onClick={handleReopen}
+        className="flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-left text-sm text-amber-200 transition-colors hover:bg-amber-400/15"
+      >
+        <span className="flex items-center gap-2.5">
+          <AlertTriangle size={16} className="shrink-0 text-amber-400" />
+          Complete as configurações do seu Studio ({completedRequired} de {ONBOARDING_REQUIRED_STEPS.length} passos) pra aproveitar o sistema por completo.
+        </span>
+        <span className="shrink-0 rounded-pill bg-amber-400/20 px-4 py-1.5 text-xs font-semibold text-amber-100">
+          Completar agora
+        </span>
+      </button>
+    );
+  }
 
   return (
     <GlassCard padding="lg" className="relative space-y-4">
