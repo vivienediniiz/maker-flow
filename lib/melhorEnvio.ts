@@ -6,8 +6,13 @@ import { getIntegrationCredential, setIntegrationCredential } from "@/lib/vault"
 // app no painel do Melhor Envio, senão a autorização é rejeitada com
 // "invalid_scope". "shipping-cart" não existe como escopo (causou o erro);
 // o nome correto pra adicionar/ler o carrinho é cart-write/cart-read.
+// "users-read" é o que libera GET /me (dados da conta, incluindo saldo da
+// carteira) — sem ele a chamada authentica normalmente mas volta 403 nesse
+// endpoint específico. Faltava aqui; qualquer integração já conectada
+// ANTES dessa mudança precisa desconectar e reconectar pra ganhar esse
+// escopo (o token antigo não pode simplesmente "adquirir" permissão nova).
 const OAUTH_SCOPES =
-  "shipping-calculate shipping-checkout shipping-generate shipping-preview shipping-print shipping-tracking cart-read cart-write";
+  "shipping-calculate shipping-checkout shipping-generate shipping-preview shipping-print shipping-tracking cart-read cart-write users-read";
 
 function melhorEnvioHost() {
   // Sandbox não usa "www." — só a produção.
