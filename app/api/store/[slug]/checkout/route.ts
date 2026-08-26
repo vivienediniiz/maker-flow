@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createMercadoPagoPreferenceForIntegration } from "@/lib/mercadoPago";
 import { createInfinitePayCheckoutLink } from "@/lib/infinitePay";
+import { checkoutRateLimit, requestIp } from "@/lib/rateLimit";
 import type { StoreProfilePublic } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -46,8 +47,20 @@ interface CheckoutBuyerInput {
  * volta pra achar esse checkout.
  */
 export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
-  const admin = adminClient();
   const { slug } = params;
+
+  // Rota pública (sem login) que cria cobrança de verdade no Mercado
+  // Pago/InfinitePay — precisa de limite por IP pra não virar alvo de spam.
+  if (checkoutRateLimit) {
+    const { success } = await checkoutRateLimit.limit(requestIp(req));
+    if (!success) {
+      return NextResponse.json({ error: "Muitas tentativas — aguarde um instante e tente de novo." }, { status: 429 });
+    }
+  } else {
+    console.warn("[checkout] rate limit desativado — configure UPSTASH_REDIS_REST_URL/TOKEN.");
+  }
+
+  const admin = adminClient();
 
   const body = await req.json().catch(() => null);
   const items: CheckoutItemInput[] = Array.isArray(body?.items) ? body.items : [];
