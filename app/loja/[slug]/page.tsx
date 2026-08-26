@@ -10,7 +10,7 @@ import { buildWhatsAppLink } from "@/components/ui/WhatsAppLink";
 import { BannerSlideshow } from "./BannerSlideshow";
 import { ProductModal } from "./ProductModal";
 import { WhatsAppFloatingButton } from "./WhatsAppFloatingButton";
-import { getStoreFont, DEFAULT_STORE_PRIMARY_COLOR, DEFAULT_STORE_SECONDARY_COLOR } from "@/lib/storeFonts";
+import { getStoreFont, DEFAULT_STORE_PRIMARY_COLOR, DEFAULT_STORE_SECONDARY_COLOR, DEFAULT_STORE_TITLE_COLOR } from "@/lib/storeFonts";
 import { ShoppingCart, Plus, Minus, Trash2, Store, Loader2, CheckCircle2, Clock, MessageCircle } from "lucide-react";
 import type { StoreProductPublic, StoreProfilePublic, StoreBannerPublic } from "@/lib/types";
 
@@ -171,7 +171,9 @@ function StorePageContent({ slug }: { slug: string }) {
 
   const primaryColor = seller?.primary_color || DEFAULT_STORE_PRIMARY_COLOR;
   const secondaryColor = seller?.secondary_color || DEFAULT_STORE_SECONDARY_COLOR;
-  const fontOption = getStoreFont(seller?.title_font);
+  const titleColor = seller?.title_color || DEFAULT_STORE_TITLE_COLOR;
+  const titleFontOption = getStoreFont(seller?.title_font);
+  const subtitleFontOption = getStoreFont(seller?.subtitle_font);
 
   if (loading) {
     return (
@@ -203,7 +205,7 @@ function StorePageContent({ slug }: { slug: string }) {
               <img src={seller.logo_url} alt="" className="h-full w-full object-cover" />
             )}
           </div>
-          <span style={{ fontFamily: fontOption.cssFamily }} className="text-lg">
+          <span style={{ fontFamily: titleFontOption.cssFamily, color: titleColor }} className="text-lg">
             {seller.studio_name || "Loja"}
           </span>
         </div>
@@ -228,7 +230,7 @@ function StorePageContent({ slug }: { slug: string }) {
       <main className="mx-auto max-w-5xl px-6 pb-24 md:px-12">
         {banners.length > 0 && (
           <div className="mb-8">
-            <BannerSlideshow banners={banners} />
+            <BannerSlideshow banners={banners} subtitleFontFamily={subtitleFontOption.cssFamily} />
           </div>
         )}
 
@@ -238,7 +240,9 @@ function StorePageContent({ slug }: { slug: string }) {
             loading={orderSummaryLoading}
             products={products}
             primaryColor={primaryColor}
-            titleFontFamily={fontOption.cssFamily}
+            titleColor={titleColor}
+            titleFontFamily={titleFontOption.cssFamily}
+            subtitleFontFamily={subtitleFontOption.cssFamily}
             defaultProductionMessage={seller.default_production_message}
             whatsappNumber={seller.whatsapp_number}
           />
@@ -255,10 +259,14 @@ function StorePageContent({ slug }: { slug: string }) {
         )}
 
         <div className="mb-8 text-center">
-          <h1 style={{ fontFamily: fontOption.cssFamily }} className="text-3xl md:text-4xl">
+          <h1 style={{ fontFamily: titleFontOption.cssFamily, color: titleColor }} className="text-3xl md:text-4xl">
             {seller.studio_name || "Loja"}
           </h1>
-          {seller.store_headline && <p className="mt-3 text-white/70">{seller.store_headline}</p>}
+          {seller.store_headline && (
+            <p style={{ fontFamily: subtitleFontOption.cssFamily, color: titleColor }} className="mt-3 opacity-75">
+              {seller.store_headline}
+            </p>
+          )}
         </div>
 
         {categories.length > 0 && (
@@ -352,7 +360,8 @@ function StorePageContent({ slug }: { slug: string }) {
         <ProductModal
           product={viewingProduct}
           primaryColor={primaryColor}
-          titleFontFamily={fontOption.cssFamily}
+          titleFontFamily={titleFontOption.cssFamily}
+          subtitleFontFamily={subtitleFontOption.cssFamily}
           defaultProductionMessage={seller.default_production_message}
           onClose={() => setViewingProduct(null)}
           onAddToCart={(customization) => {
@@ -447,7 +456,9 @@ function OrderConfirmation({
   loading,
   products,
   primaryColor,
+  titleColor,
   titleFontFamily,
+  subtitleFontFamily,
   defaultProductionMessage,
   whatsappNumber,
 }: {
@@ -455,7 +466,9 @@ function OrderConfirmation({
   loading: boolean;
   products: StoreProductPublic[];
   primaryColor: string;
+  titleColor: string;
   titleFontFamily: string;
+  subtitleFontFamily: string;
   defaultProductionMessage: string | null;
   whatsappNumber: string | null;
 }) {
@@ -491,7 +504,7 @@ function OrderConfirmation({
           return (
             <div key={idx} className="flex items-start justify-between gap-3 border-b border-white/10 pb-3 last:border-0 last:pb-0">
               <div className="min-w-0">
-                <p className="text-sm text-white">
+                <p style={{ fontFamily: titleFontFamily, color: titleColor }} className="text-sm">
                   {item.quantity}x {item.name}
                 </p>
                 {item.customization && <p className="mt-0.5 text-xs text-white/60">&quot;{item.customization}&quot;</p>}
@@ -511,7 +524,7 @@ function OrderConfirmation({
             {formatBRL(summary.total_amount)}
           </span>
         </div>
-        <p className="text-xs text-white/50">
+        <p style={{ fontFamily: subtitleFontFamily }} className="text-xs text-white/50">
           Você receberá a confirmação de pagamento e o acompanhamento por WhatsApp/e-mail. Pedido {summary.id.slice(0, 8)}.
         </p>
         {whatsappNumber && (

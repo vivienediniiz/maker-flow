@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import type { StoreBannerPublic } from "@/lib/types";
 
-export function BannerSlideshow({ banners }: { banners: StoreBannerPublic[] }) {
+export function BannerSlideshow({
+  banners,
+  subtitleFontFamily,
+}: {
+  banners: StoreBannerPublic[];
+  subtitleFontFamily: string;
+}) {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -22,7 +28,11 @@ export function BannerSlideshow({ banners }: { banners: StoreBannerPublic[] }) {
       {(active.title || active.subtitle) && (
         <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/60 via-black/10 to-transparent p-5 sm:p-8">
           {active.title && <p className="text-xl font-semibold text-white sm:text-2xl">{active.title}</p>}
-          {active.subtitle && <p className="mt-1 text-sm text-white/85">{active.subtitle}</p>}
+          {active.subtitle && (
+            <p style={{ fontFamily: subtitleFontFamily }} className="mt-1 text-sm text-white/85">
+              {active.subtitle}
+            </p>
+          )}
         </div>
       )}
       {banners.length > 1 && (

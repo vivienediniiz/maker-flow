@@ -5,7 +5,13 @@ import { Camera, Loader2, Store as StoreIcon } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
-import { STORE_TITLE_FONTS, getStoreFont, DEFAULT_STORE_PRIMARY_COLOR, DEFAULT_STORE_SECONDARY_COLOR } from "@/lib/storeFonts";
+import {
+  STORE_TITLE_FONTS,
+  getStoreFont,
+  DEFAULT_STORE_PRIMARY_COLOR,
+  DEFAULT_STORE_SECONDARY_COLOR,
+  DEFAULT_STORE_TITLE_COLOR,
+} from "@/lib/storeFonts";
 import type { StoreSettings } from "@/lib/types";
 
 interface StoreBrandingCardProps {
@@ -14,9 +20,10 @@ interface StoreBrandingCardProps {
 }
 
 /**
- * Identidade visual + WhatsApp da loja: logo, 2 cores (destaque + fundo) e
- * fonte de título — deliberadamente controlado (não é um editor de CSS
- * livre), com preview ao vivo do topo da loja.
+ * Identidade visual + WhatsApp da loja: logo, 3 cores (destaque, fundo,
+ * texto/títulos) e 2 fontes (título + subtítulo) — deliberadamente
+ * controlado (não é um editor de CSS livre), com preview ao vivo do topo da
+ * loja.
  */
 export function StoreBrandingCard({ userId, studioName }: StoreBrandingCardProps) {
   const supabase = createClient();
@@ -29,7 +36,9 @@ export function StoreBrandingCard({ userId, studioName }: StoreBrandingCardProps
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [primaryColor, setPrimaryColor] = useState(DEFAULT_STORE_PRIMARY_COLOR);
   const [secondaryColor, setSecondaryColor] = useState(DEFAULT_STORE_SECONDARY_COLOR);
+  const [titleColor, setTitleColor] = useState(DEFAULT_STORE_TITLE_COLOR);
   const [titleFont, setTitleFont] = useState(STORE_TITLE_FONTS[0].value);
+  const [subtitleFont, setSubtitleFont] = useState(STORE_TITLE_FONTS[STORE_TITLE_FONTS.length - 1].value);
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [whatsappMessage, setWhatsappMessage] = useState("");
   const [defaultProductionMessage, setDefaultProductionMessage] = useState("");
@@ -47,7 +56,9 @@ export function StoreBrandingCard({ userId, studioName }: StoreBrandingCardProps
       setLogoUrl(settings.logo_url);
       setPrimaryColor(settings.primary_color || DEFAULT_STORE_PRIMARY_COLOR);
       setSecondaryColor(settings.secondary_color || DEFAULT_STORE_SECONDARY_COLOR);
+      setTitleColor(settings.title_color || DEFAULT_STORE_TITLE_COLOR);
       setTitleFont(settings.title_font || STORE_TITLE_FONTS[0].value);
+      setSubtitleFont(settings.subtitle_font || STORE_TITLE_FONTS[STORE_TITLE_FONTS.length - 1].value);
       setWhatsappNumber(settings.whatsapp_number || "");
       setWhatsappMessage(settings.whatsapp_default_message || "");
       setDefaultProductionMessage(settings.default_production_message || "");
@@ -88,7 +99,9 @@ export function StoreBrandingCard({ userId, studioName }: StoreBrandingCardProps
       logo_url: logoUrl ? logoUrl.split("?")[0] : null,
       primary_color: primaryColor,
       secondary_color: secondaryColor,
+      title_color: titleColor,
       title_font: titleFont,
+      subtitle_font: subtitleFont,
       whatsapp_number: whatsappNumber.trim() || null,
       whatsapp_default_message: whatsappMessage.trim() || null,
       default_production_message: defaultProductionMessage.trim() || null,
@@ -104,7 +117,8 @@ export function StoreBrandingCard({ userId, studioName }: StoreBrandingCardProps
     setTimeout(() => setSaved(false), 2000);
   }
 
-  const fontOption = getStoreFont(titleFont);
+  const titleFontOption = getStoreFont(titleFont);
+  const subtitleFontOption = getStoreFont(subtitleFont);
 
   if (loading) {
     return (
@@ -119,7 +133,7 @@ export function StoreBrandingCard({ userId, studioName }: StoreBrandingCardProps
       <div>
         <h3 className="font-display text-lg">Identidade Visual e WhatsApp</h3>
         <p className="text-sm text-text-secondary">
-          Logo, cores e fonte de título aparecem só na sua loja pública — não afetam o painel.
+          Logo, cores e fontes aparecem só na sua loja pública — não afetam o painel.
         </p>
       </div>
 
@@ -146,7 +160,7 @@ export function StoreBrandingCard({ userId, studioName }: StoreBrandingCardProps
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="mb-1.5 block text-xs text-text-muted">Cor de destaque</label>
               <div className="flex items-center gap-2">
@@ -179,17 +193,45 @@ export function StoreBrandingCard({ userId, studioName }: StoreBrandingCardProps
                 />
               </div>
             </div>
+            <div>
+              <label className="mb-1.5 block text-xs text-text-muted">Cor de texto/títulos</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={titleColor}
+                  onChange={(e) => setTitleColor(e.target.value)}
+                  className="h-9 w-9 shrink-0 cursor-pointer rounded-lg border border-border-glass bg-transparent"
+                />
+                <input
+                  value={titleColor}
+                  onChange={(e) => setTitleColor(e.target.value)}
+                  className="glass-input w-full"
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-xs text-text-muted">Fonte de título</label>
-            <select value={titleFont} onChange={(e) => setTitleFont(e.target.value)} className="glass-input w-full">
-              {STORE_TITLE_FONTS.map((f) => (
-                <option key={f.value} value={f.value} className="bg-bg-raised">
-                  {f.label}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-xs text-text-muted">Fonte de título</label>
+              <select value={titleFont} onChange={(e) => setTitleFont(e.target.value)} className="glass-input w-full">
+                {STORE_TITLE_FONTS.map((f) => (
+                  <option key={f.value} value={f.value} className="bg-bg-raised">
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs text-text-muted">Fonte de subtítulo</label>
+              <select value={subtitleFont} onChange={(e) => setSubtitleFont(e.target.value)} className="glass-input w-full">
+                {STORE_TITLE_FONTS.map((f) => (
+                  <option key={f.value} value={f.value} className="bg-bg-raised">
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -254,15 +296,18 @@ export function StoreBrandingCard({ userId, studioName }: StoreBrandingCardProps
                     <StoreIcon size={16} color={primaryColor} />
                   )}
                 </div>
-                <span style={{ fontFamily: fontOption.cssFamily, color: "#FFFFFF" }} className="text-base">
+                <span style={{ fontFamily: titleFontOption.cssFamily, color: titleColor }} className="text-base">
                   {studioName || "Sua Loja"}
                 </span>
               </div>
               <div className="h-8 w-8 rounded-full border border-white/20" />
             </div>
             <div className="px-5 pb-6">
-              <p style={{ fontFamily: fontOption.cssFamily, color: "#FFFFFF" }} className="text-xl">
+              <p style={{ fontFamily: titleFontOption.cssFamily, color: titleColor }} className="text-xl">
                 {studioName || "Sua Loja"}
+              </p>
+              <p style={{ fontFamily: subtitleFontOption.cssFamily, color: titleColor, opacity: 0.75 }} className="mt-1 text-sm">
+                Peças personalizadas feitas com carinho
               </p>
               <div className="mt-4 inline-block rounded-full px-4 py-2 text-xs font-semibold text-white" style={{ backgroundColor: primaryColor }}>
                 Adicionar ao carrinho

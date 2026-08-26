@@ -9,6 +9,7 @@ interface ProductModalProps {
   product: StoreProductPublic;
   primaryColor: string;
   titleFontFamily: string;
+  subtitleFontFamily: string;
   defaultProductionMessage: string | null;
   onClose: () => void;
   onAddToCart: (customization: string | null) => void;
@@ -18,6 +19,7 @@ export function ProductModal({
   product,
   primaryColor,
   titleFontFamily,
+  subtitleFontFamily,
   defaultProductionMessage,
   onClose,
   onAddToCart,
@@ -60,7 +62,11 @@ export function ProductModal({
           <h2 style={{ fontFamily: titleFontFamily }} className="text-2xl text-white">
             {product.name}
           </h2>
-          {product.description && <p className="text-sm text-white/70">{product.description}</p>}
+          {product.description && (
+            <p style={{ fontFamily: subtitleFontFamily }} className="text-sm text-white/70">
+              {product.description}
+            </p>
+          )}
 
           <p className="text-2xl font-semibold" style={{ color: primaryColor }}>
             {formatBRL(product.sale_price)}

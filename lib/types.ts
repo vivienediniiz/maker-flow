@@ -128,7 +128,10 @@ export interface StoreProfilePublic {
   logo_url: string | null;
   primary_color: string | null;
   secondary_color: string | null;
+  /** Cor do texto de títulos (nome da loja, nome do produto etc.) — 3ª cor da paleta. */
+  title_color: string | null;
   title_font: string | null;
+  subtitle_font: string | null;
   whatsapp_number: string | null;
   whatsapp_default_message: string | null;
   /** Texto padrão pra prazo de produção quando o produto não tem `estimated_production_days`. */
@@ -141,7 +144,9 @@ export interface StoreSettings {
   logo_url: string | null;
   primary_color: string | null;
   secondary_color: string | null;
+  title_color: string | null;
   title_font: string | null;
+  subtitle_font: string | null;
   whatsapp_number: string | null;
   whatsapp_default_message: string | null;
   default_production_message: string | null;

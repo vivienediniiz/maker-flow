@@ -58,3 +58,4 @@ export function buildStoreFontsStylesheetUrl(): string {
 
 export const DEFAULT_STORE_PRIMARY_COLOR = "#FF4EDF";
 export const DEFAULT_STORE_SECONDARY_COLOR = "#0B0914";
+export const DEFAULT_STORE_TITLE_COLOR = "#FFFFFF";
