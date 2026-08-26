@@ -31,7 +31,16 @@ async function maybeRecordAffiliateCommission(supabase: SupabaseClient, userId: 
 
     if (!profile.referred_by) return;
 
-    const amount = getPlan(planId).price * AFFILIATE_COMMISSION_RATE;
+    // % customizada por afiliado (configurada pelo admin) sobrepõe o padrão
+    // global quando preenchida.
+    const { data: affiliateProfile } = await supabase
+      .from("profiles")
+      .select("affiliate_commission_rate")
+      .eq("id", profile.referred_by)
+      .maybeSingle();
+
+    const commissionRate = affiliateProfile?.affiliate_commission_rate ?? AFFILIATE_COMMISSION_RATE;
+    const amount = getPlan(planId).price * commissionRate;
     const { error } = await supabase.from("affiliate_commissions").insert({
       affiliate_user_id: profile.referred_by,
       referred_user_id: userId,

@@ -75,6 +75,10 @@ export interface AdminSubscriberRow {
   affiliate_code: string | null;
   referred_by: string | null;
   created_at: string;
+  affiliate_active: boolean;
+  /** Sobrepõe AFFILIATE_COMMISSION_RATE global (0.3) quando preenchido — configurado pelo admin. */
+  affiliate_commission_rate: number | null;
+  affiliate_pix_key: string | null;
 }
 
 export type SupportTicketStatus = "open" | "closed";
@@ -212,7 +216,8 @@ export interface AffiliateCommission {
   id: string;
   affiliate_user_id: string;
   referred_user_id: string;
-  plan_id: string;
+  /** Mesmo union de PlanId em lib/plans.ts (não importado aqui pra evitar ciclo — plans.ts já importa de types.ts). */
+  plan_id: "monthly" | "quarterly";
   amount: number;
   status: "pending" | "paid";
   created_at: string;

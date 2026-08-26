@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
-import { ArrowLeft, LayoutDashboard, MessageSquare, Users } from "lucide-react";
+import { ArrowLeft, LayoutDashboard, MessageSquare, Users, Gift } from "lucide-react";
 
 const ADMIN_NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/subscribers", label: "Assinantes", icon: Users },
+  { href: "/admin/affiliates", label: "Afiliados", icon: Gift },
   { href: "/admin/support", label: "Suporte", icon: MessageSquare },
 ];
 
