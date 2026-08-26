@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { fetchMercadoPagoOrderForIntegration, upsertQuoteFromMercadoPagoOrder, validateMercadoPagoSignature } from "@/lib/mercadoPago";
+import { apiError } from "@/lib/apiError";
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
     await upsertQuoteFromMercadoPagoOrder(admin, integration.user_id, order);
   } catch (err) {
     await admin.from("integrations").update({ status: "error" }).eq("id", integration.id);
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+    return apiError("webhook:mercado-pago", err, "Falha ao processar notificação.", 500);
   }
 
   await admin.from("integrations").update({ last_event_at: new Date().toISOString() }).eq("id", integration.id);

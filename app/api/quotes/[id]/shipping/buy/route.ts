@@ -8,6 +8,7 @@ import {
   buildShippingParties,
 } from "@/lib/melhorEnvio";
 import { loadShippingContext, generateAndFetchLabel } from "@/lib/shippingLabel";
+import { apiError } from "@/lib/apiError";
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   try {
     balance = await fetchMelhorEnvioBalance(admin, integration);
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+    return apiError("shipping-buy:balance", err, "Não foi possível confirmar o saldo da carteira Melhor Envio agora. Tente novamente.");
   }
   if (balance < Number(price)) {
     return NextResponse.json(
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         })
         .eq("id", quote.id);
     } catch (err) {
-      return NextResponse.json({ error: `Falha ao adicionar ao carrinho: ${(err as Error).message}` }, { status: 502 });
+      return apiError("shipping-buy:cart", err, "Falha ao adicionar o frete ao carrinho do Melhor Envio. Tente novamente.");
     }
   }
 
@@ -106,10 +107,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   } catch (err) {
     // Fica em "no_carrinho" — dinheiro ainda não saiu, próxima tentativa
     // retoma do checkout sem adicionar ao carrinho de novo.
-    return NextResponse.json(
-      { error: `Compra ficou no carrinho, mas o checkout falhou: ${(err as Error).message} — tente de novo.` },
-      { status: 502 }
-    );
+    return apiError("shipping-buy:checkout", err, "Compra ficou no carrinho, mas o checkout falhou — tente de novo em instantes.");
   }
 
   const purchasedAt = new Date().toISOString();
@@ -150,6 +148,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       shipping_tracking_code: result.trackingCode,
     });
   } catch (err) {
+    console.error("[shipping-buy:generate]", err instanceof Error ? err.message : err);
     return NextResponse.json({
       shipping_label_status: "comprado",
       shipping_service_id: orderId,
@@ -157,7 +156,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       shipping_service_name: serviceName ?? null,
       shipping_purchased_cost: Number(price),
       shipping_purchased_at: purchasedAt,
-      generateError: `Frete comprado, mas falhou ao gerar a etiqueta automaticamente: ${(err as Error).message} — use o botão "Gerar Etiqueta".`,
+      generateError: `Frete comprado, mas falhou ao gerar a etiqueta automaticamente — use o botão "Gerar Etiqueta".`,
     });
   }
 }

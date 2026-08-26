@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { loadShippingContext, generateAndFetchLabel } from "@/lib/shippingLabel";
+import { apiError } from "@/lib/apiError";
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -55,6 +56,6 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       shipping_tracking_code: result.trackingCode,
     });
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+    return apiError("shipping-generate", err, "Não foi possível gerar a etiqueta agora. Tente novamente.");
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { searchMercadoPagoPaymentsForIntegration, upsertQuoteFromMercadoPagoPayment } from "@/lib/mercadoPago";
+import { apiError } from "@/lib/apiError";
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -49,7 +50,7 @@ export async function POST(_req: NextRequest) {
     );
   } catch (err) {
     await admin.from("integrations").update({ status: "error" }).eq("id", integration.id);
-    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+    return apiError("mercado-pago-sync", err, "Não foi possível sincronizar os pedidos agora. Tente novamente.");
   }
 
   let synced = 0;

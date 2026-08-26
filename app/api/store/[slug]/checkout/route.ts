@@ -4,6 +4,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createMercadoPagoPreferenceForIntegration } from "@/lib/mercadoPago";
 import { createInfinitePayCheckoutLink } from "@/lib/infinitePay";
 import { checkoutRateLimit, requestIp } from "@/lib/rateLimit";
+import { apiError } from "@/lib/apiError";
 import type { StoreProfilePublic } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -193,7 +194,7 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
 
       return NextResponse.json({ init_point: link.url });
     } catch (err) {
-      return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+      return apiError("checkout:infinitepay", err, "Não foi possível iniciar o pagamento. Tente novamente.");
     }
   }
 
@@ -232,6 +233,6 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
 
     return NextResponse.json({ init_point: preference.init_point });
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+    return apiError("checkout:mercado-pago", err, "Não foi possível iniciar o pagamento. Tente novamente.");
   }
 }

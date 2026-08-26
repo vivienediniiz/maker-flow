@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createMercadoPagoPreferenceForIntegration } from "@/lib/mercadoPago";
+import { apiError } from "@/lib/apiError";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://maker-flow.netlify.app";
 
@@ -94,6 +95,6 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
     return NextResponse.json({ url: preference.init_point });
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+    return apiError("payment-link", err, "Não foi possível gerar o link de pagamento agora. Tente novamente.");
   }
 }

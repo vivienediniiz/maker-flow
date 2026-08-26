@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { calculateShipping } from "@/lib/melhorEnvio";
+import { apiError } from "@/lib/apiError";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ quotes, unavailable });
   } catch (err) {
     await admin.from("integrations").update({ status: "error" }).eq("id", integration.id);
-    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+    return apiError("shipping-quote", err, "Não foi possível cotar o frete agora. Tente novamente.");
   }
 }

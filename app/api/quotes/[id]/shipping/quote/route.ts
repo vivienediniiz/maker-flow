@@ -3,6 +3,7 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { calculateShipping, fetchMelhorEnvioBalance, buildShippingParties } from "@/lib/melhorEnvio";
 import { loadShippingContext } from "@/lib/shippingLabel";
+import { apiError } from "@/lib/apiError";
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -57,6 +58,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     return NextResponse.json({ balance, quotes, unavailable });
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+    return apiError("shipping-quote-by-id", err, "Não foi possível cotar o frete agora. Tente novamente.");
   }
 }

@@ -3,6 +3,7 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { printMelhorEnvioLabel } from "@/lib/melhorEnvio";
 import { loadShippingContext } from "@/lib/shippingLabel";
+import { apiError } from "@/lib/apiError";
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -44,6 +45,6 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       .eq("id", quote.id);
     return NextResponse.json({ url, shipping_label_status: "impresso", shipping_printed_at: printedAt });
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+    return apiError("shipping-print", err, "Não foi possível abrir a etiqueta agora. Tente novamente.");
   }
 }
