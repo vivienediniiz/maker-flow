@@ -2,10 +2,22 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Hand, type LucideIcon } from "lucide-react";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { cn } from "@/lib/utils";
 import type { OnboardingStepConfig } from "@/lib/onboarding";
+
+interface CarouselSlide {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+}
+
+const WELCOME_SLIDE: CarouselSlide = {
+  title: "Bem-vindo ao StudioMaker3D",
+  description: "Antes do primeiro cálculo, configure impressora, materiais e custos. O Dashboard mostra o passo a passo.",
+  icon: Hand,
+};
 
 interface WelcomeOnboardingCarouselProps {
   steps: OnboardingStepConfig[];
@@ -14,19 +26,22 @@ interface WelcomeOnboardingCarouselProps {
 
 /**
  * Tour de boas-vindas em tela cheia — só aparece uma vez, no primeiro login
- * (controlado por `carousel_seen` em onboarding_progress). Em telas maiores
+ * (controlado por `carousel_seen` em onboarding_progress). Primeiro slide é
+ * uma mensagem de boas-vindas genérica, os demais espelham os passos reais
+ * do checklist (mesma fonte de verdade, lib/onboarding.ts). Em telas maiores
  * (tablet/desktop) vira um painel centralizado com fundo/backdrop em vez de
  * ocupar a tela inteira, que só faz sentido no formato mobile.
  */
 export function WelcomeOnboardingCarousel({ steps, onFinish }: WelcomeOnboardingCarouselProps) {
   const [index, setIndex] = useState(0);
+  const slides: CarouselSlide[] = [WELCOME_SLIDE, ...steps];
 
   if (typeof document === "undefined") return null;
 
-  const step = steps[index];
-  const Icon = step.icon;
+  const slide = slides[index];
+  const Icon = slide.icon;
   const isFirst = index === 0;
-  const isLast = index === steps.length - 1;
+  const isLast = index === slides.length - 1;
 
   function handleNext() {
     if (isLast) {
@@ -54,16 +69,16 @@ export function WelcomeOnboardingCarousel({ steps, onFinish }: WelcomeOnboarding
             <Icon size={40} className="text-neon-pink" />
           </div>
           <div className="space-y-3">
-            <h2 className="font-display text-2xl font-semibold text-text-primary">{step.title}</h2>
-            <p className="mx-auto max-w-xs text-sm leading-relaxed text-text-secondary">{step.description}</p>
+            <h2 className="font-display text-2xl font-semibold text-text-primary">{slide.title}</h2>
+            <p className="mx-auto max-w-xs text-sm leading-relaxed text-text-secondary">{slide.description}</p>
           </div>
         </div>
 
         <div className="flex shrink-0 flex-col items-center gap-6">
           <div className="flex items-center gap-2">
-            {steps.map((s, i) => (
+            {slides.map((s, i) => (
               <span
-                key={s.key}
+                key={i}
                 className={cn("h-2 rounded-full transition-all", i === index ? "w-6 bg-neon-gradient" : "w-2 bg-white/15")}
               />
             ))}

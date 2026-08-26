@@ -34,10 +34,12 @@ function emptyProgress(userId: string): OnboardingProgress {
  * Onboarding do Dashboard, em duas partes:
  * 1. Carrossel de boas-vindas em tela cheia — só no primeiro login
  *    (carousel_seen = false), explica os passos antes de qualquer coisa.
- * 2. Checklist em modal — abre a cada login enquanto os passos obrigatórios
- *    não estiverem completos (inclui logo depois do carrossel, no mesmo
- *    primeiro acesso). Fechar (X/fundo/Esc) esconde só pelo resto da sessão;
- *    "Não mostrar novamente" é que esconde de vez. Complementa, sem
+ * 2. Checklist em modal — aparece no Dashboard toda vez que faltar algum
+ *    passo obrigatório (inclui logo depois do carrossel, no mesmo primeiro
+ *    acesso), e só para de aparecer quando os 5 passos obrigatórios
+ *    estiverem completos. Fechar (X/fundo/Esc) esconde só pelo resto da
+ *    sessão atual — não existe "não mostrar novamente" aqui de propósito,
+ *    já que o pedido é continuar aparecendo até terminar. Complementa, sem
  *    substituir, os avisos contextuais já existentes (ConfigNudgeBanner).
  */
 export function OnboardingChecklistCard() {
@@ -86,12 +88,6 @@ export function OnboardingChecklistCard() {
     await markOnboardingStepComplete(supabase, userId, step);
   }
 
-  async function handleNeverShowAgain() {
-    if (!userId) return;
-    setProgress((prev) => ({ ...(prev ?? emptyProgress(userId)), dismissed: true }));
-    await supabase.from("onboarding_progress").upsert({ user_id: userId, dismissed: true }, { onConflict: "user_id" });
-  }
-
   async function handleCarouselFinish() {
     if (!userId) return;
     setProgress((prev) => ({ ...(prev ?? emptyProgress(userId)), carousel_seen: true }));
@@ -114,7 +110,7 @@ export function OnboardingChecklistCard() {
   const nextStep = ONBOARDING_STEPS.find((s) => !progress?.[s.key]);
   const percent = Math.round((completedRequired / ONBOARDING_REQUIRED_STEPS.length) * 100);
 
-  const open = !progress?.dismissed && !hiddenThisSession && !allRequiredDone;
+  const open = !hiddenThisSession && !allRequiredDone;
 
   return (
     <Modal open={open} onClose={handleCloseForNow} title="Configure seu Studio" maxWidthClass="max-w-lg">
@@ -165,17 +161,18 @@ export function OnboardingChecklistCard() {
                     {rowContent}
                   </button>
                 )}
-                {step.optional && !done ? (
-                  <button
-                    type="button"
-                    onClick={() => handleSkip(step.key)}
-                    className="shrink-0 text-[11px] text-text-muted transition-colors hover:text-text-secondary"
-                  >
-                    Pular
-                  </button>
-                ) : (
-                  <ChevronRight size={16} className="shrink-0 text-text-muted" />
-                )}
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {step.optional && !done && (
+                    <button
+                      type="button"
+                      onClick={() => handleSkip(step.key)}
+                      className="text-[11px] text-text-muted transition-colors hover:text-text-secondary"
+                    >
+                      Pular
+                    </button>
+                  )}
+                  <ChevronRight size={16} className="text-text-muted" />
+                </div>
               </div>
             );
           })}
@@ -194,17 +191,10 @@ export function OnboardingChecklistCard() {
                 <ArrowRight size={14} /> Próximo: {nextStep.title}
               </NeonButton>
             )}
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center justify-center">
               <Link href="/help" className="text-xs text-text-muted underline hover:text-text-secondary">
                 Precisa de ajuda?
               </Link>
-              <button
-                type="button"
-                onClick={handleNeverShowAgain}
-                className="text-xs text-text-muted underline transition-colors hover:text-text-secondary"
-              >
-                Não mostrar novamente
-              </button>
             </div>
           </div>
         )}
