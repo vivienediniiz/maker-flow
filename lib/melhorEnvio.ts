@@ -177,7 +177,12 @@ export async function fetchMelhorEnvioBalance(
   const account = await fetchMelhorEnvioAccount(admin, integration);
   const balance = Number(account?.balance);
   if (!Number.isFinite(balance)) {
-    throw new Error("Não foi possível ler o saldo da carteira Melhor Envio (formato de resposta inesperado).");
+    // Diagnóstico temporário: expõe o payload real que a API devolveu, já
+    // que "balance" não veio onde a doc (não-oficial) dizia que estaria.
+    // Remover essa parte assim que confirmarmos o campo certo.
+    throw new Error(
+      `Não foi possível ler o saldo da carteira Melhor Envio (campo "balance" não encontrado). Payload recebido: ${JSON.stringify(account).slice(0, 800)}`
+    );
   }
   return balance;
 }
