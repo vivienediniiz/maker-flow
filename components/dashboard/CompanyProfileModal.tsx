@@ -19,7 +19,6 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -133,7 +132,6 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
     e.preventDefault();
     setSaving(true);
     setError(null);
-    setSuccess(false);
 
     const {
       data: { user },
@@ -182,14 +180,13 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
     // precisa reconsultar o endereço pra marcar "Minha Conta" como feito.
     window.dispatchEvent(new Event("account-profile-saved"));
 
-    setSuccess(true);
     onSaved?.({
       full_name: fullName,
       studio_name: studioName,
       avatar_url: avatarUrlToSave,
     });
     window.dispatchEvent(new CustomEvent("studio-address-updated", { detail: { cep: cep || null } }));
-    setTimeout(() => setSuccess(false), 2000);
+    onClose();
   }
 
   async function handlePasswordChange(e: React.FormEvent) {
@@ -388,7 +385,6 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
             </div>
 
             {error && <p className="text-xs text-red-400">{error}</p>}
-            {success && <p className="text-xs text-neon-green">Salvo com sucesso!</p>}
 
             <NeonButton type="submit" className="w-full" disabled={saving}>
               {saving ? "Salvando..." : "Salvar Perfil"}

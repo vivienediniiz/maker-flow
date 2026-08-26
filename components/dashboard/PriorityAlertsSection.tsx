@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isFilamentLow } from "@/lib/filaments";
+import { isProductionDeadlineDue, daysUntilProductionDeadline } from "@/lib/quotes";
 import { cn } from "@/lib/utils";
-import { Clock, Disc3, Truck, ShieldAlert, CheckCircle2, Loader2, type LucideIcon } from "lucide-react";
+import { Clock, Disc3, Truck, ShieldAlert, CheckCircle2, Loader2, PackageX, CalendarClock, type LucideIcon } from "lucide-react";
 
 interface AlertCardData {
   key: string;
@@ -71,6 +72,14 @@ export function PriorityAlertsSection() {
     count: 0,
     mostUrgent: null,
   });
+  const [productionDeadline, setProductionDeadline] = useState<{
+    count: number;
+    mostUrgent: { name: string; days: number } | null;
+  }>({ count: 0, mostUrgent: null });
+  const [lowStockProducts, setLowStockProducts] = useState<{
+    count: number;
+    worst: { name: string; stock: number } | null;
+  }>({ count: 0, worst: null });
 
   useEffect(() => {
     (async () => {
@@ -86,33 +95,47 @@ export function PriorityAlertsSection() {
       const today = new Date().toISOString().slice(0, 10);
       const in30Days = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 
-      const [{ data: sentQuotes }, { data: filaments }, { data: unshipped }, { data: printerAssets }] = await Promise.all([
-        supabase
-          .from("quotes")
-          .select("sent_at")
-          .eq("user_id", user.id)
-          .eq("status", "sent")
-          .order("sent_at", { ascending: true }),
-        supabase
-          .from("filaments")
-          .select("brand, material, remaining_weight_g, weight_total_g, low_stock_threshold_g")
-          .eq("user_id", user.id),
-        supabase
-          .from("quotes")
-          .select("sent_at")
-          .eq("user_id", user.id)
-          .in("status", ["paid", "in_production"])
-          .is("shipping_tracking_code", null)
-          .order("sent_at", { ascending: true }),
-        supabase
-          .from("printer_assets")
-          .select("model, warranty_expiry_date")
-          .eq("user_id", user.id)
-          .not("warranty_expiry_date", "is", null)
-          .gte("warranty_expiry_date", today)
-          .lte("warranty_expiry_date", in30Days)
-          .order("warranty_expiry_date", { ascending: true }),
-      ]);
+      const [{ data: sentQuotes }, { data: filaments }, { data: unshipped }, { data: printerAssets }, { data: deadlineQuotes }, { data: lowStockRows }] =
+        await Promise.all([
+          supabase
+            .from("quotes")
+            .select("sent_at")
+            .eq("user_id", user.id)
+            .eq("status", "sent")
+            .order("sent_at", { ascending: true }),
+          supabase
+            .from("filaments")
+            .select("brand, material, remaining_weight_g, weight_total_g, low_stock_threshold_g")
+            .eq("user_id", user.id),
+          supabase
+            .from("quotes")
+            .select("sent_at")
+            .eq("user_id", user.id)
+            .in("status", ["paid", "in_production"])
+            .is("shipping_tracking_code", null)
+            .order("sent_at", { ascending: true }),
+          supabase
+            .from("printer_assets")
+            .select("model, warranty_expiry_date")
+            .eq("user_id", user.id)
+            .not("warranty_expiry_date", "is", null)
+            .gte("warranty_expiry_date", today)
+            .lte("warranty_expiry_date", in30Days)
+            .order("warranty_expiry_date", { ascending: true }),
+          supabase
+            .from("quotes")
+            .select("project_name, status, production_deadline_date")
+            .eq("user_id", user.id)
+            .not("production_deadline_date", "is", null)
+            .in("status", ["sent", "awaiting_payment", "paid", "in_production"])
+            .order("production_deadline_date", { ascending: true }),
+          supabase
+            .from("products")
+            .select("name, stock_quantity")
+            .eq("user_id", user.id)
+            .lt("stock_quantity", 2)
+            .order("stock_quantity", { ascending: true }),
+        ]);
 
       const sentRows = sentQuotes ?? [];
       setPending({
@@ -141,6 +164,23 @@ export function PriorityAlertsSection() {
           warrantyRows.length > 0
             ? { model: warrantyRows[0].model, daysLeft: daysUntil(warrantyRows[0].warranty_expiry_date) }
             : null,
+      });
+
+      const deadlineRows = (deadlineQuotes ?? [])
+        .filter((q) => isProductionDeadlineDue(q.status, q.production_deadline_date))
+        .sort((a, b) => daysUntilProductionDeadline(a.production_deadline_date!) - daysUntilProductionDeadline(b.production_deadline_date!));
+      setProductionDeadline({
+        count: deadlineRows.length,
+        mostUrgent:
+          deadlineRows.length > 0
+            ? { name: deadlineRows[0].project_name, days: daysUntilProductionDeadline(deadlineRows[0].production_deadline_date!) }
+            : null,
+      });
+
+      const lowStockRowsData = lowStockRows ?? [];
+      setLowStockProducts({
+        count: lowStockRowsData.length,
+        worst: lowStockRowsData.length > 0 ? { name: lowStockRowsData[0].name, stock: lowStockRowsData[0].stock_quantity } : null,
       });
 
       setLoading(false);
@@ -179,6 +219,38 @@ export function PriorityAlertsSection() {
       secondaryText: lowFilament.worst ? `${lowFilament.worst.label} com ${lowFilament.worst.remaining}g restantes` : null,
     },
     {
+      key: "product-stock",
+      href: "/dashboard/inventory",
+      icon: PackageX,
+      title: "Produto com Estoque Baixo",
+      urgent: lowStockProducts.count > 0,
+      primaryText:
+        lowStockProducts.count > 0
+          ? `${lowStockProducts.count} ${plural(lowStockProducts.count, "produto baixo", "produtos baixos")}`
+          : "Estoque de produtos OK",
+      secondaryText: lowStockProducts.worst
+        ? `${lowStockProducts.worst.name} com ${lowStockProducts.worst.stock} ${plural(lowStockProducts.worst.stock, "unidade", "unidades")}`
+        : null,
+    },
+    {
+      key: "production-deadline",
+      href: "/dashboard/orders",
+      icon: CalendarClock,
+      title: "Prazo de Produção",
+      urgent: productionDeadline.count > 0,
+      primaryText:
+        productionDeadline.count > 0
+          ? `${productionDeadline.count} ${plural(productionDeadline.count, "pedido a vencer", "pedidos a vencer")}`
+          : "Nenhum prazo vencendo",
+      secondaryText: productionDeadline.mostUrgent
+        ? productionDeadline.mostUrgent.days < 0
+          ? `${productionDeadline.mostUrgent.name} venceu há ${Math.abs(productionDeadline.mostUrgent.days)} ${plural(Math.abs(productionDeadline.mostUrgent.days), "dia", "dias")}`
+          : productionDeadline.mostUrgent.days === 0
+            ? `${productionDeadline.mostUrgent.name} vence hoje`
+            : `${productionDeadline.mostUrgent.name} vence em ${productionDeadline.mostUrgent.days} ${plural(productionDeadline.mostUrgent.days, "dia", "dias")}`
+        : null,
+    },
+    {
       key: "shipment",
       href: "/dashboard/orders?status=awaiting_shipment",
       icon: Truck,
@@ -208,7 +280,7 @@ export function PriorityAlertsSection() {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
       {cards.map((c) => (
         <AlertCard key={c.key} data={c} />
       ))}

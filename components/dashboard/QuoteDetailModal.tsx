@@ -1,17 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FileText, Truck, Loader2, Lock, Image as ImageIcon, MessageCircle, Link2, Copy, Check } from "lucide-react";
+import { FileText, Loader2, Image as ImageIcon, MessageCircle, Link2, Copy, Check } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { QuoteStatusStepper } from "@/components/dashboard/QuoteStatusStepper";
 import { SaleReceiptModal } from "@/components/dashboard/SaleReceiptModal";
 import { ShippingLabelSection } from "@/components/dashboard/ShippingLabelSection";
 import { WhatsAppLink, buildWhatsAppLink } from "@/components/ui/WhatsAppLink";
-import { useSubscription } from "@/components/dashboard/SubscriptionContext";
-import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
-import { escapeHtml } from "@/lib/escapeHtml";
 import {
   formatOrderNumber,
   QUOTE_CHANNEL_LABELS,
@@ -34,9 +31,6 @@ export function QuoteDetailModal({
   onTrackingCodeChange: (quoteId: string, code: string) => Promise<void>;
   onShippingUpdate: (quoteId: string, patch: Partial<QuoteWithClient>) => void;
 }) {
-  const supabase = createClient();
-  const { paid } = useSubscription();
-  const [generatingLabel, setGeneratingLabel] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [trackingCode, setTrackingCode] = useState("");
   const [savingTracking, setSavingTracking] = useState(false);
@@ -118,80 +112,6 @@ export function QuoteDetailModal({
 
   const hasOwnCalcDetails = quote.weight_g > 0 || quote.print_time_min > 0;
   const linkedProductCalc = quote.products?.calc_inputs ?? null;
-
-  async function handlePrintShippingDocument() {
-    setGeneratingLabel(true);
-
-    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-      import("html2canvas"),
-      import("jspdf"),
-    ]);
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("studio_name, full_name, phone, cep, address")
-      .eq("id", user!.id)
-      .single();
-
-    const container = document.createElement("div");
-    container.style.width = "600px";
-    container.style.padding = "32px";
-    container.style.fontFamily = "'Segoe UI', Arial, sans-serif";
-    container.style.background = "#FFFFFF";
-    container.style.color = "#1A1625";
-
-    container.innerHTML = `
-      <div style="border-bottom:3px solid #FF4EDF; padding-bottom:12px; margin-bottom:20px;">
-        <p style="margin:0; font-size:18px; font-weight:700;">Documento de Envio</p>
-        <p style="margin:2px 0 0; font-size:11px; color:#726C85;">Pedido ${formatOrderNumber(quote!.order_number)}</p>
-      </div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-        <div style="border:1px solid #EEE6F2; border-radius:10px; padding:14px;">
-          <p style="margin:0 0 8px; font-size:11px; font-weight:700; color:#AA17DB;">REMETENTE</p>
-          <p style="margin:0; font-size:13px; font-weight:600;">${escapeHtml(profile?.studio_name || profile?.full_name || "Meu Estúdio")}</p>
-          <p style="margin:4px 0 0; font-size:12px; color:#3A3548;">${escapeHtml(profile?.address) || "Endereço não cadastrado"}</p>
-          <p style="margin:2px 0 0; font-size:12px; color:#3A3548;">CEP: ${escapeHtml(profile?.cep) || "—"}</p>
-          ${profile?.phone ? `<p style="margin:2px 0 0; font-size:12px; color:#3A3548;">${escapeHtml(profile.phone)}</p>` : ""}
-        </div>
-        <div style="border:1px solid #EEE6F2; border-radius:10px; padding:14px;">
-          <p style="margin:0 0 8px; font-size:11px; font-weight:700; color:#AA17DB;">DESTINATÁRIO</p>
-          <p style="margin:0; font-size:13px; font-weight:600;">${escapeHtml(quote!.clients?.name) || "Cliente não informado"}</p>
-          <p style="margin:4px 0 0; font-size:12px; color:#3A3548;">${escapeHtml(quote!.clients?.address) || "Endereço não cadastrado"}</p>
-          <p style="margin:2px 0 0; font-size:12px; color:#3A3548;">CEP: ${escapeHtml(quote!.destination_cep) || "—"}</p>
-          ${quote!.clients?.phone ? `<p style="margin:2px 0 0; font-size:12px; color:#3A3548;">${escapeHtml(quote!.clients.phone)}</p>` : ""}
-        </div>
-      </div>
-
-      <div style="margin-top:20px; border:1px solid #EEE6F2; border-radius:10px; padding:14px; font-size:12px;">
-        <p style="margin:0 0 4px;"><strong>Produto:</strong> ${escapeHtml(quote!.project_name)}</p>
-        ${quote!.weight_g > 0 ? `<p style="margin:0 0 4px;"><strong>Peso:</strong> ${quote!.weight_g.toFixed(0)} g</p>` : ""}
-        ${quote!.shipping_cost ? `<p style="margin:0;"><strong>Valor do frete:</strong> ${formatBRL(quote!.shipping_cost)}</p>` : ""}
-      </div>
-
-      <p style="text-align:center; font-size:9px; color:#B4AFC4; margin-top:24px;">Gerado via StudioMaker</p>
-    `;
-
-    document.body.appendChild(container);
-
-    try {
-      const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: "#FFFFFF" });
-      const imgData = canvas.toDataURL("image/png");
-      const doc = new jsPDF({ unit: "mm", format: "a4" });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      doc.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-      doc.save(`envio-pedido-${formatOrderNumber(quote!.order_number)}.pdf`);
-    } finally {
-      document.body.removeChild(container);
-      setGeneratingLabel(false);
-    }
-  }
 
   return (
     <Modal open={!!quote} onClose={onClose} title={`Pedido ${formatOrderNumber(quote.order_number)}`}>
@@ -331,23 +251,6 @@ export function QuoteDetailModal({
 
         {/* Documentos */}
         <div className="grid grid-cols-2 gap-2">
-          <NeonButton
-            variant="outline"
-            size="sm"
-            onClick={handlePrintShippingDocument}
-            disabled={generatingLabel || !paid}
-            className={!paid ? "opacity-40" : undefined}
-            title={!paid ? "PDF de orçamento é recurso pago" : undefined}
-          >
-            {generatingLabel ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : !paid ? (
-              <Lock size={14} />
-            ) : (
-              <Truck size={14} />
-            )}
-            Doc. de Envio
-          </NeonButton>
           <NeonButton variant="outline" size="sm" onClick={() => setReceiptOpen(true)}>
             <ImageIcon size={14} /> Gerar Comprovante
           </NeonButton>
@@ -355,21 +258,12 @@ export function QuoteDetailModal({
             variant="ghost"
             size="sm"
             disabled
-            className="col-span-2 opacity-40"
+            className="opacity-40"
             title="Em breve — precisa de um provedor fiscal"
           >
             <FileText size={14} /> Emitir NF
           </NeonButton>
         </div>
-        {!paid && (
-          <p className="text-[11px] text-amber-400">
-            Gerar PDF de orçamento é recurso pago —{" "}
-            <a href="/dashboard/subscription" className="underline hover:text-amber-300">
-              assine um plano
-            </a>{" "}
-            pra liberar.
-          </p>
-        )}
 
         <div>
           <p className="mb-3 text-xs font-medium uppercase tracking-wider text-text-muted">Status do pedido</p>

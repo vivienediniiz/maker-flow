@@ -40,8 +40,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [marketplaces, setMarketplaces] = useState<MarketplaceRow[]>([]);
   const [newName, setNewName] = useState("");
-  const [electricityKwhRate, setElectricityKwhRate] = useState(0.95);
-  const [hourlyWorkRate, setHourlyWorkRate] = useState(25);
+  const [electricityKwhRate, setElectricityKwhRate] = useState<number | null>(null);
+  const [hourlyWorkRate, setHourlyWorkRate] = useState<number | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -157,9 +157,9 @@ export default function SettingsPage() {
             <label className="block max-w-xs">
               <span className="mb-1.5 block text-xs text-text-muted">Tarifa (R$/kWh)</span>
               <CurrencyInput
-                value={String(electricityKwhRate)}
+                value={electricityKwhRate != null ? String(electricityKwhRate) : ""}
                 onChange={(v) => {
-                  setElectricityKwhRate(v === "" ? 0 : Number(v));
+                  setElectricityKwhRate(v === "" ? null : Number(v));
                   markDirty();
                 }}
               />
@@ -237,9 +237,9 @@ export default function SettingsPage() {
             <label className="block max-w-xs">
               <span className="mb-1.5 block text-xs text-text-muted">Valor hora padrão (R$)</span>
               <CurrencyInput
-                value={String(hourlyWorkRate)}
+                value={hourlyWorkRate != null ? String(hourlyWorkRate) : ""}
                 onChange={(v) => {
-                  setHourlyWorkRate(v === "" ? 0 : Number(v));
+                  setHourlyWorkRate(v === "" ? null : Number(v));
                   markDirty();
                 }}
               />

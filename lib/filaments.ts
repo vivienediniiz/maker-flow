@@ -1,6 +1,6 @@
 import type { Filament, FilamentMovementType } from "./types";
 
-const DEFAULT_LOW_STOCK_WEIGHT_G = 150;
+const DEFAULT_LOW_STOCK_WEIGHT_G = 101;
 const DEFAULT_LOW_STOCK_PERCENT = 15;
 
 export function filamentFillPercent(f: Pick<Filament, "remaining_weight_g" | "weight_total_g">) {

@@ -599,9 +599,10 @@ export interface Sale {
 
 export interface Settings {
   user_id: string;
-  electricity_kwh_rate: number;
-  default_markup: number;
-  hourly_work_rate: number;
+  /** Sem valor até o usuário configurar de propósito (não vem pré-preenchido no cadastro) — ver ConfigNudgeBanner na Calculadora. */
+  electricity_kwh_rate: number | null;
+  default_markup: number | null;
+  hourly_work_rate: number | null;
   marketplace_fees_json: Record<string, number>;
   operational_risk_json: Record<string, number>;
   origin_cep: string | null;
