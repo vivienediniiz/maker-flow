@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlassAccordion } from "@/components/ui/GlassAccordion";
@@ -75,9 +76,16 @@ function FinancePageContent() {
   const [fixedExpenseModalOpen, setFixedExpenseModalOpen] = useState(false);
   const [editingFixedExpense, setEditingFixedExpense] = useState<FixedExpense | null>(null);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     loadAll();
+    // Deep link (checklist de onboarding) — abre direto o modal de Nova
+    // Despesa Fixa.
+    if (searchParams.get("openFixedExpense") === "1") {
+      setFixedExpenseModalOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadAll() {

@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
+import { markOnboardingStepComplete } from "@/lib/onboarding";
 import { SUPPLY_CATEGORY_SUGGESTIONS } from "@/lib/supplies";
 import type { Supply, SupplyUnit } from "@/lib/types";
 
@@ -114,6 +115,8 @@ export function SupplyModal({ open, onClose, supply, onSaved }: SupplyModalProps
       setError(insertError.message);
       return;
     }
+
+    markOnboardingStepComplete(supabase, user.id, "supplies_registered").catch(() => {});
 
     onSaved(data as Supply);
     onClose();

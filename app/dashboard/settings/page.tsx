@@ -5,6 +5,7 @@ import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
+import { markOnboardingStepComplete } from "@/lib/onboarding";
 import { cn } from "@/lib/utils";
 import { Save, Plus, Trash2, Loader2 } from "lucide-react";
 import { RiskTiersManager } from "@/components/dashboard/RiskTiersManager";
@@ -125,6 +126,9 @@ export default function SettingsPage() {
         hourly_work_rate: hourlyWorkRate,
       })
       .eq("user_id", user.id);
+
+    if (electricityKwhRate != null) markOnboardingStepComplete(supabase, user.id, "energy_rate_completed").catch(() => {});
+    if (hourlyWorkRate != null) markOnboardingStepComplete(supabase, user.id, "labor_rate_completed").catch(() => {});
 
     setSaving(false);
     setDirty(false);

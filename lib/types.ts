@@ -457,6 +457,22 @@ export interface FixedExpense {
   created_at: string;
 }
 
+export interface OnboardingProgress {
+  user_id: string;
+  profile_completed: boolean;
+  energy_rate_completed: boolean;
+  labor_rate_completed: boolean;
+  printer_registered: boolean;
+  filament_registered: boolean;
+  /** Opcional — não conta no total de passos do card, mas fica marcado ao cadastrar ou ao clicar "Pular". */
+  supplies_registered: boolean;
+  /** Opcional — mesma regra de supplies_registered. */
+  fixed_expenses_registered: boolean;
+  /** Fechou o card no X — some pra sempre, mesmo com passos pendentes. */
+  dismissed: boolean;
+  updated_at: string;
+}
+
 export type PrinterAssetStatus = "active" | "maintenance" | "inactive" | "sold";
 
 export interface PrinterAsset {

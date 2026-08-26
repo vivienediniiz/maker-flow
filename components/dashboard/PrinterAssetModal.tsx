@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
+import { markOnboardingStepComplete } from "@/lib/onboarding";
 import { PRINTER_ASSET_STATUS_LABELS, PRINTER_MODEL_OPTIONS, PRINTER_MODEL_POWER_W } from "@/lib/printerAssets";
 import type { PrinterAsset, PrinterAssetStatus, Branch } from "@/lib/types";
 
@@ -184,6 +185,8 @@ export function PrinterAssetModal({ open, onClose, asset, onSaved }: PrinterAsse
       setError(insertError.message);
       return;
     }
+
+    markOnboardingStepComplete(supabase, user.id, "printer_registered").catch(() => {});
 
     onSaved(data as PrinterAsset);
     onClose();

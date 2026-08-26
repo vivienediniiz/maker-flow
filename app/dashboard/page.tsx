@@ -6,6 +6,7 @@ import { PrinterCard } from "@/components/dashboard/PrinterCard";
 import { SalesPeriodSummary } from "@/components/dashboard/SalesPeriodSummary";
 import { SalesGoalsCard } from "@/components/dashboard/SalesGoalsCard";
 import { AffiliateSummaryCard } from "@/components/dashboard/AffiliateSummaryCard";
+import { OnboardingChecklistCard } from "@/components/dashboard/OnboardingChecklistCard";
 import { PriorityAlertsSection } from "@/components/dashboard/PriorityAlertsSection";
 import { DashboardClock } from "@/components/dashboard/DashboardClock";
 import { GreetingTypewriter } from "@/components/dashboard/GreetingTypewriter";
@@ -220,6 +221,8 @@ export default async function DashboardPage() {
         <main className="space-y-8 px-6 py-8 md:px-8">
           <DashboardHeader studioName={studioName} />
 
+          <OnboardingChecklistCard />
+
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard label="Clientes" value={`${counts.clients}/${FREE_LIMITS.clients}`} icon={Users} accent="pink" />
             <KpiCard label="Produtos" value={`${counts.products}/${FREE_LIMITS.products}`} icon={Package} accent="orange" />
@@ -278,6 +281,8 @@ export default async function DashboardPage() {
 
       <main className="space-y-8 px-6 py-8 md:px-8">
         <DashboardHeader studioName={studioName} />
+
+        <OnboardingChecklistCard />
 
         {/* Resumo de vendas por período + metas do mês + indicações */}
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">

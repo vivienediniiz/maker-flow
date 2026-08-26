@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { createClient } from "@/lib/supabase/client";
+import { markOnboardingStepComplete } from "@/lib/onboarding";
 import { FILAMENT_MATERIAL_OPTIONS, FILAMENT_BRAND_SUGGESTIONS } from "@/lib/filaments";
 import type { Filament } from "@/lib/types";
 
@@ -149,6 +150,8 @@ export function FilamentModal({ open, onClose, filament, onSaved }: FilamentModa
       setError(insertError.message);
       return;
     }
+
+    markOnboardingStepComplete(supabase, user.id, "filament_registered").catch(() => {});
 
     onSaved(data as Filament);
     onClose();

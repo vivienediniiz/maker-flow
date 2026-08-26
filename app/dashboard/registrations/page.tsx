@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { PrintersRegistrationTab } from "@/components/dashboard/PrintersRegistrationTab";
 import { SuppliesRegistrationTab } from "@/components/dashboard/SuppliesRegistrationTab";
@@ -16,7 +17,18 @@ const TABS = ["Impressoras", "Insumos", "Compras Extras", "Cupons", "Filiais", "
 
 export default function RegistrationsPage() {
   const { paid } = useSubscription();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<(typeof TABS)[number]>("Impressoras");
+
+  // Deep link (ex: checklist de onboarding em ?tab=Insumos) — só troca a aba
+  // se o valor bater com uma das existentes, senão mantém "Impressoras".
+  useEffect(() => {
+    const requested = searchParams.get("tab");
+    if (requested && (TABS as readonly string[]).includes(requested)) {
+      setTab(requested as (typeof TABS)[number]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>

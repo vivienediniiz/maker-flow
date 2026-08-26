@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { createClient } from "@/lib/supabase/client";
+import { markOnboardingStepComplete } from "@/lib/onboarding";
 import type { Profile } from "@/lib/types";
 
 interface CompanyProfileModalProps {
@@ -174,6 +175,10 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
     if (updateError) {
       setError(updateError.message);
       return;
+    }
+
+    if (cep && street && city && state) {
+      markOnboardingStepComplete(supabase, user.id, "profile_completed").catch(() => {});
     }
 
     setSuccess(true);
