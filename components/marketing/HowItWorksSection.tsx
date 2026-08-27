@@ -2,46 +2,6 @@
 
 import { motion } from "framer-motion";
 import { BrowserFrame } from "./BrowserFrame";
-import { SidebarMockup } from "./mockups/SidebarMockup";
-import { CalculatorMockup } from "./mockups/CalculatorMockup";
-import { IntegrationsMockup } from "./mockups/IntegrationsMockup";
-import { AffiliationMockup } from "./mockups/AffiliationMockup";
-
-const TILES = [
-  {
-    title: "app.studiomaker.com.br/dashboard",
-    // Única tela da grade com screenshot real (não mockup em código) — é o
-    // maior card, a "vitrine" da seção, e o dashboard de verdade já existe
-    // como asset em /public/landing.
-    image: { src: "/landing/dashboard.png", alt: "Dashboard real do StudioMaker", width: 1895, height: 905 },
-    className: "sm:col-span-2",
-    minHeight: "min-h-[360px]",
-  },
-  {
-    title: "menu",
-    Mockup: SidebarMockup,
-    className: "",
-    minHeight: "min-h-[360px]",
-  },
-  {
-    title: "app.studiomaker.com.br/calculator",
-    Mockup: CalculatorMockup,
-    className: "",
-    minHeight: "min-h-[420px]",
-  },
-  {
-    title: "app.studiomaker.com.br/integrations",
-    Mockup: IntegrationsMockup,
-    className: "sm:col-span-2 lg:col-span-1",
-    minHeight: "min-h-[420px]",
-  },
-  {
-    title: "app.studiomaker.com.br/affiliates",
-    Mockup: AffiliationMockup,
-    className: "sm:col-span-2 lg:col-span-1",
-    minHeight: "min-h-[300px]",
-  },
-];
 
 export function HowItWorksSection() {
   return (
@@ -62,35 +22,23 @@ export function HowItWorksSection() {
         </p>
       </motion.div>
 
-      <div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {TILES.map((tile, i) => (
-          <motion.div
-            key={tile.title}
-            initial={{ opacity: 0, y: 28 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.5, ease: "easeOut", delay: (i % 3) * 0.08 }}
-            className={tile.className}
-          >
-            {tile.image ? (
-              <BrowserFrame
-                title={tile.title}
-                className="h-full"
-                src={tile.image.src}
-                alt={tile.image.alt}
-                width={tile.image.width}
-                height={tile.image.height}
-              />
-            ) : (
-              <BrowserFrame title={tile.title} className="h-full">
-                <div className={tile.minHeight}>
-                  <tile.Mockup />
-                </div>
-              </BrowserFrame>
-            )}
-          </motion.div>
-        ))}
-      </div>
+      {/* Uma única tela, em largura cheia: o dashboard real (screenshot, não mockup em código). */}
+      <motion.div
+        initial={{ opacity: 0, y: 28 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="mt-14"
+      >
+        <BrowserFrame
+          title="app.studiomaker.com.br/dashboard"
+          src="/landing/dashboard.png"
+          alt="Dashboard real do StudioMaker"
+          width={1895}
+          height={905}
+          sizes="(max-width: 768px) 100vw, 1056px"
+        />
+      </motion.div>
     </section>
   );
 }

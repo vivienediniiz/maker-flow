@@ -25,6 +25,7 @@ import { BrowserFrame } from "@/components/marketing/BrowserFrame";
 import { LandingHero } from "@/components/marketing/LandingHero";
 import { HowItWorksSection } from "@/components/marketing/HowItWorksSection";
 import { StoreShowcaseSection } from "@/components/marketing/StoreShowcaseSection";
+import { ScreensShowcaseSection } from "@/components/marketing/ScreensShowcaseSection";
 import { LiveCalculatorSection } from "@/components/marketing/LiveCalculatorSection";
 import { SalesMockup } from "@/components/marketing/mockups/SalesMockup";
 import { FilamentShelfMockup } from "@/components/marketing/mockups/FilamentShelfMockup";
@@ -373,6 +374,8 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      <ScreensShowcaseSection />
 
       {/* Planos */}
       <section id="planos" className="mx-auto mt-28 max-w-5xl px-6 md:px-12">
