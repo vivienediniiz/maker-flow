@@ -66,7 +66,7 @@ export function SidebarMockup() {
 
       <div className="space-y-1 border-t border-border-glass pt-3">
         <p className="truncate text-[11px] font-medium text-text-primary">Viviene</p>
-        <p className="text-[10px] text-text-muted">Plano Trimestral</p>
+        <p className="text-[10px] text-text-muted">Plano Pro</p>
         <p className="text-[10px] text-neon-pink">Conheça os planos</p>
       </div>
     </div>

@@ -70,7 +70,7 @@ export default function InsightsPage() {
         <main className="px-6 py-8 md:px-8">
           <UpgradeGate
             title="Insights & BI é recurso pago"
-            description="Rankings, matriz venda x lucro e prateleira de filamentos — disponível nos planos Mensal e Trimestral."
+            description="Rankings, matriz venda x lucro e prateleira de filamentos — disponível nos planos Starter e Pro."
           />
         </main>
       </>

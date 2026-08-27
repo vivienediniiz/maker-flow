@@ -65,7 +65,7 @@ export default function TermsPage() {
             items={[
               "Toda conta nova recebe 14 dias de acesso completo aos recursos pagos, sem necessidade de cadastrar cartão.",
               "Após o período de teste, a conta permanece ativa no plano Grátis (com limites) até que uma assinatura paga seja contratada.",
-              "Os planos pagos (Mensal e Trimestral) são cobrados de forma recorrente, por cartão de crédito (cobrança automática) ou Pix (renovação manual a cada ciclo), conforme detalhado na página de Planos.",
+              "Os planos pagos (Starter e Pro, ciclo mensal ou anual) são cobrados de forma recorrente, por cartão de crédito (cobrança automática) ou Pix (renovação manual a cada ciclo), conforme detalhado na página de Planos.",
               "Você pode cancelar sua assinatura a qualquer momento, sem multa ou fidelidade — o acesso pago continua até o fim do período já pago, voltando automaticamente ao plano Grátis em seguida.",
               "Valores e condições dos planos podem ser reajustados mediante aviso prévio, sem afetar cobranças já realizadas.",
             ]}

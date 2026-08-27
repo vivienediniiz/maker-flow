@@ -55,7 +55,7 @@ export default function FinancePage() {
         <main className="px-6 py-8 md:px-8">
           <UpgradeGate
             title="Financeiro é recurso pago"
-            description="Receita bruta, custos, lucro líquido real, vendas canceladas e gráfico de evolução — disponível nos planos Mensal e Trimestral."
+            description="Receita bruta, custos, lucro líquido real, vendas canceladas e gráfico de evolução — disponível nos planos Starter e Pro."
           />
         </main>
       </>

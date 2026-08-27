@@ -22,7 +22,7 @@ const FAQ = [
   {
     question: "Como faço pra assinar ou trocar de plano?",
     answer:
-      "Vá em Assinatura, no menu lateral. Lá dá pra assinar Mensal ou Trimestral, por cartão (cobrança automática) ou Pix (renovação manual a cada ciclo).",
+      "Vá em Assinatura, no menu lateral. Lá dá pra assinar Starter ou Pro, mensal ou anual, por cartão (cobrança automática) ou Pix (renovação manual a cada ciclo).",
   },
   {
     question: "Posso cancelar quando quiser?",
@@ -42,7 +42,7 @@ const FAQ = [
   {
     question: "Não achei resposta pra minha dúvida — e agora?",
     answer:
-      "Assinantes dos planos Mensal e Trimestral têm suporte direto via WhatsApp (veja em Suporte). Se você está no plano Grátis ou ainda não tem conta, mande um e-mail pra viviennydiniz@gmail.com ou use a página de Sugestões e Reclamações.",
+      "Assinantes dos planos Starter e Pro têm suporte direto via WhatsApp (veja em Suporte). Se você está no plano Grátis ou ainda não tem conta, mande um e-mail pra viviennydiniz@gmail.com ou use a página de Sugestões e Reclamações.",
   },
 ];
 

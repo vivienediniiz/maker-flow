@@ -56,7 +56,7 @@ export default function RegistrationsPage() {
           ) : (
             <UpgradeGate
               title="Insumos é recurso pago"
-              description="Cadastre parafusos, embalagens e outros insumos do seu estúdio — disponível nos planos Mensal e Trimestral."
+              description="Cadastre parafusos, embalagens e outros insumos do seu estúdio — disponível nos planos Starter e Pro."
             />
           ))}
         {tab === "Compras Extras" &&
@@ -65,7 +65,7 @@ export default function RegistrationsPage() {
           ) : (
             <UpgradeGate
               title="Compras Extras é recurso pago"
-              description="Registre despesas avulsas (manutenção, ferramentas, etc.) — disponível nos planos Mensal e Trimestral."
+              description="Registre despesas avulsas (manutenção, ferramentas, etc.) — disponível nos planos Starter e Pro."
             />
           ))}
         {tab === "Cupons" &&
@@ -74,7 +74,7 @@ export default function RegistrationsPage() {
           ) : (
             <UpgradeGate
               title="Cupons é recurso pago"
-              description="Crie cupons de desconto e aplique nas vendas manuais — disponível nos planos Mensal e Trimestral."
+              description="Crie cupons de desconto e aplique nas vendas manuais — disponível nos planos Starter e Pro."
             />
           ))}
         {tab === "Filiais" && <BranchesRegistrationTab />}
