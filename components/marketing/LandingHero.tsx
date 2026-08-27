@@ -81,31 +81,34 @@ export function LandingHero() {
         <div className="absolute bottom-[-15%] left-[30%] h-[400px] w-[400px] animate-blob-3 bg-neon-orange/15 blur-[110px]" />
       </div>
 
-      {/* Mockups decorativos flanqueando o hero — mesmo código reaproveitado do "Veja como funciona" */}
+      {/* Mockups decorativos flanqueando o hero — inclinados e encostados nas bordas, como no Figma */}
       <div
         aria-hidden
-        className="pointer-events-none absolute left-[-8%] top-1/2 z-0 hidden w-72 -translate-y-1/2 opacity-25 blur-[0.5px] lg:block xl:w-80"
+        className="pointer-events-none absolute left-[-16px] top-1/2 z-0 hidden w-72 -translate-y-1/2 opacity-25 blur-[0.5px] lg:block xl:w-80"
       >
-        <BrowserFrame className="scale-90">
+        <BrowserFrame className="rotate-[-7.04deg] scale-90">
           <CalculatorMockup />
         </BrowserFrame>
       </div>
       <div
         aria-hidden
-        className="pointer-events-none absolute right-[-8%] top-1/2 z-0 hidden w-72 -translate-y-1/2 opacity-25 blur-[0.5px] lg:block xl:w-80"
+        className="pointer-events-none absolute right-[-4px] top-1/2 z-0 hidden w-72 -translate-y-1/2 opacity-25 blur-[0.5px] lg:block xl:w-80"
       >
-        <BrowserFrame className="scale-90">
+        <BrowserFrame className="rotate-[5.54deg] scale-90">
           <SidebarMockup />
         </BrowserFrame>
       </div>
 
       <main className="relative z-10 px-6 pt-16 text-center md:px-12 md:pt-24">
-        <div className="mx-auto flex max-w-2xl flex-col items-center">
+        <div className="mx-auto flex max-w-[705px] flex-col items-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border-glass bg-white/5">
             <PhraseIcon size={22} className="text-neon-pink" />
           </div>
           <p className="mt-5 max-w-xl text-sm text-text-secondary">{EYEBROW}</p>
-          <h1 className="font-display mt-4 text-4xl leading-tight md:text-5xl xl:text-6xl">{HEADLINE}</h1>
+          {/* leading igual ao tamanho da fonte (60/60 no Figma) e bloco de 4 linhas de altura */}
+          <h1 className="font-display mt-4 text-4xl leading-none md:text-5xl xl:min-h-[240px] xl:text-6xl">
+            {HEADLINE}
+          </h1>
           <p className="mt-4 min-h-[2rem] max-w-xl text-lg text-text-secondary md:text-xl">
             {typed}
             <span className="animate-caret-blink ml-0.5 inline-block h-[0.85em] w-[2px] translate-y-0.5 bg-neon-pink align-middle" />
