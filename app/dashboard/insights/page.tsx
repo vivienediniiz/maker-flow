@@ -54,8 +54,8 @@ interface ScatterPoint {
 
 interface ProductAgg {
   name: string;
-  salePrice: number;
-  costPrice: number;
+  revenue: number;
+  cost: number;
   qty: number;
   profit: number;
 }
@@ -107,20 +107,27 @@ function InsightsPageContent() {
     const cutoff = start.toISOString();
     const cutoffDate = cutoff.slice(0, 10);
 
-    const [salesRes, quotesForClientsRes, filamentsRes, extraPurchasesRes] = await Promise.all([
-      supabase
-        .from("sales")
-        .select(
-          "id, product_id, quantity, total, sold_at, filament_id, products(id, name, sale_price, cost_price), filaments(id, brand, material)"
-        )
-        .eq("user_id", user.id)
-        .gte("sold_at", cutoff),
+    const [quotesRes, filamentMovementsRes, filamentsRes, extraPurchasesRes] = await Promise.all([
+      // `quotes` é a fonte única e completa de vendas do app (Venda Manual,
+      // Baixa Rápida, Mercado Pago/Livre, Loja Online) — ao contrário de
+      // `sales`, que só era alimentada pelo botão "Baixa Rápida" do Estoque.
       supabase
         .from("quotes")
-        .select("id, client_id, final_price, sent_at, clients(id, name)")
+        .select(
+          "id, product_id, quantity, final_price, cost_amount, platform_fee, client_id, sent_at, products(id, name), clients(id, name)"
+        )
         .eq("user_id", user.id)
         .in("status", ["paid", "in_production", "shipped"])
         .gte("sent_at", cutoff),
+      // Consumo real de filamento por venda (criado junto com a Venda Manual
+      // quando tem "Filamento(s) Utilizados"), muito mais confiável que o
+      // campo `sales.filament_id` (nunca preenchido por nenhum fluxo).
+      supabase
+        .from("filament_movements")
+        .select("quantity_g, filament_id, filaments(id, brand, material)")
+        .eq("user_id", user.id)
+        .eq("movement_type", "sale_consumption")
+        .gte("created_at", cutoff),
       supabase.from("filaments").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase
         .from("extra_purchases")
@@ -129,45 +136,39 @@ function InsightsPageContent() {
         .gte("purchased_at", cutoffDate),
     ]);
 
+    const quotes = quotesRes.data ?? [];
+
     const productAgg = new Map<string, ProductAgg>();
+    for (const row of quotes) {
+      const product = one<{ id: string; name: string }>(row.products as never);
+      if (!row.product_id || !product) continue;
+      const revenue = Number(row.final_price) || 0;
+      const cost = (Number(row.cost_amount) || 0) + (Number(row.platform_fee) || 0);
+      const qty = Number(row.quantity) || 1;
+      const entry = productAgg.get(row.product_id) ?? { name: product.name, revenue: 0, cost: 0, qty: 0, profit: 0 };
+      entry.revenue += revenue;
+      entry.cost += cost;
+      entry.qty += qty;
+      entry.profit += revenue - cost;
+      productAgg.set(row.product_id, entry);
+    }
+
     const filamentAgg = new Map<string, { label: string; qty: number }>();
-
-    for (const row of salesRes.data ?? []) {
-      const product = one<{ id: string; name: string; sale_price: number; cost_price: number }>(
-        row.products as never
-      );
-      if (row.product_id && product) {
-        const cost = Number(product.cost_price) || 0;
-        const profit = Number(row.total) - cost * Number(row.quantity);
-        const entry =
-          productAgg.get(row.product_id) ??
-          ({
-            name: product.name,
-            salePrice: Number(product.sale_price) || 0,
-            costPrice: cost,
-            qty: 0,
-            profit: 0,
-          } satisfies ProductAgg);
-        entry.qty += Number(row.quantity);
-        entry.profit += profit;
-        productAgg.set(row.product_id, entry);
-      }
-
+    for (const row of filamentMovementsRes.data ?? []) {
       const filament = one<{ id: string; brand: string; material: string }>(row.filaments as never);
-      if (row.filament_id && filament) {
-        const label = `${filament.material} — ${filament.brand}`;
-        const entry = filamentAgg.get(row.filament_id) ?? { label, qty: 0 };
-        entry.qty += Number(row.quantity);
-        filamentAgg.set(row.filament_id, entry);
-      }
+      if (!row.filament_id || !filament) continue;
+      const label = `${filament.material} — ${filament.brand}`;
+      const entry = filamentAgg.get(row.filament_id) ?? { label, qty: 0 };
+      entry.qty += Math.abs(Number(row.quantity_g)) || 0;
+      filamentAgg.set(row.filament_id, entry);
     }
 
     const clientAgg = new Map<string, { name: string; total: number; count: number }>();
-    for (const row of quotesForClientsRes.data ?? []) {
+    for (const row of quotes) {
       const client = one<{ id: string; name: string }>(row.clients as never);
       if (row.client_id && client) {
         const entry = clientAgg.get(row.client_id) ?? { name: client.name, total: 0, count: 0 };
-        entry.total += Number(row.final_price);
+        entry.total += Number(row.final_price) || 0;
         entry.count += 1;
         clientAgg.set(row.client_id, entry);
       }
@@ -177,7 +178,7 @@ function InsightsPageContent() {
     const clients = Array.from(clientAgg.values());
     const filamentsUsed = Array.from(filamentAgg.values());
 
-    const marginOf = (p: ProductAgg) => (p.salePrice > 0 ? ((p.salePrice - p.costPrice) / p.salePrice) * 100 : 0);
+    const marginOf = (p: ProductAgg) => (p.revenue > 0 ? (p.profit / p.revenue) * 100 : 0);
 
     const topProfit = products.length ? products.reduce((a, b) => (b.profit > a.profit ? b : a)) : null;
     const topQty = products.length ? products.reduce((a, b) => (b.qty > a.qty ? b : a)) : null;
@@ -189,17 +190,20 @@ function InsightsPageContent() {
     const repeatClients = clients.filter((c) => c.count > 1).length;
     const repeatRate = distinctClients > 0 ? (repeatClients / distinctClients) * 100 : null;
 
-    // Custo operacional do periodo: por enquanto so compras extras entram na
-    // conta, porque tem data (purchased_at) e valor por lancamento — supplies
-    // e estoque (quantidade parada), sem log de quando/quanto foi consumido,
-    // entao nao da pra atribuir a um periodo especifico sem inventar numero.
-    const totalProductProfit = products.reduce((sum, p) => sum + p.profit, 0);
+    // Lucro líquido usa TODAS as vendas do período (com ou sem produto de
+    // catálogo vinculado, igual ao cálculo do Financeiro), diferente dos
+    // cards de produto acima, que só cobrem vendas com product_id.
+    const totalRevenue = quotes.reduce((sum, q) => sum + (Number(q.final_price) || 0), 0);
+    const totalCost = quotes.reduce(
+      (sum, q) => sum + (Number(q.cost_amount) || 0) + (Number(q.platform_fee) || 0),
+      0
+    );
     const totalExtraPurchases = (extraPurchasesRes.data ?? []).reduce(
       (sum, row) => sum + (Number(row.amount) || 0),
       0
     );
-    const hasNetProfitData = products.length > 0 || totalExtraPurchases > 0;
-    const netProfit = hasNetProfitData ? totalProductProfit - totalExtraPurchases : null;
+    const hasNetProfitData = quotes.length > 0 || totalExtraPurchases > 0;
+    const netProfit = hasNetProfitData ? totalRevenue - totalCost - totalExtraPurchases : null;
 
     setRankings([
       {
@@ -217,7 +221,7 @@ function InsightsPageContent() {
       {
         icon: Layers,
         label: "Filamento Mais Usado",
-        value: topFilament ? `${topFilament.label} (${topFilament.qty}x)` : null,
+        value: topFilament ? `${topFilament.label} (${Math.round(topFilament.qty)}g)` : null,
         emptyMessage: "Nenhuma venda com filamento vinculado ainda",
       },
       {
@@ -247,7 +251,11 @@ function InsightsPageContent() {
     ]);
 
     setScatterData(
-      products.map((p) => ({ name: p.name, venda: p.salePrice, lucro: Math.round(p.profit * 100) / 100 }))
+      products.map((p) => ({
+        name: p.name,
+        venda: Math.round(p.revenue * 100) / 100,
+        lucro: Math.round(p.profit * 100) / 100,
+      }))
     );
     setFilaments((filamentsRes.data as Filament[]) ?? []);
     setLoading(false);
