@@ -15,6 +15,8 @@ import {
   Sparkles,
   Wallet,
   LayoutGrid,
+  Check,
+  X,
 } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlassAccordion } from "@/components/ui/GlassAccordion";
@@ -23,7 +25,9 @@ import { BrowserFrame } from "@/components/marketing/BrowserFrame";
 import { LandingHero } from "@/components/marketing/LandingHero";
 import { HowItWorksSection } from "@/components/marketing/HowItWorksSection";
 import { StoreShowcaseSection } from "@/components/marketing/StoreShowcaseSection";
+import { LiveCalculatorSection } from "@/components/marketing/LiveCalculatorSection";
 import { PLANS, getCyclePricing } from "@/lib/plans";
+import { formatBRL } from "@/lib/utils";
 
 const PROBLEMS = [
   {
@@ -120,6 +124,31 @@ const EXTRA_FEATURES = [
   },
 ];
 
+const FREE_FEATURES = [
+  "5 orçamentos/vendas por mês",
+  "Até 15 clientes e 10 produtos",
+  "Até 5 rolos de filamento",
+  "1 impressora e 1 filial (matriz)",
+  "PDF de orçamento com marca d'água",
+];
+
+const BEFORE_AFTER = {
+  before: [
+    "Cálculo manual, fórmula que só quem criou entende",
+    "Orçamento em texto solto no WhatsApp",
+    "Sem histórico do que cada cliente já comprou",
+    "Filamento acaba no meio da impressão sem avisar",
+    "Lucro só aparece (ou não) no fim do mês",
+  ],
+  after: [
+    "Custo calculado automaticamente — filamento, energia e mão de obra, mesa a mesa",
+    "Orçamento em PDF profissional, pronto pra enviar por link ou WhatsApp",
+    "Histórico completo de cada cliente, pronto pra puxar no orçamento seguinte",
+    "Estoque de filamento com alerta antes de acabar",
+    "Lucro real por venda, sem esperar o fim do mês",
+  ],
+};
+
 const WHY_US = [
   {
     icon: Sparkles,
@@ -163,6 +192,11 @@ const FAQ = [
       "Mercado Pago e Mercado Livre já conectam via um clique em Integrações. Shopee e TikTok Shop estão prontos no sistema, aguardando aprovação do app nas respectivas plataformas — assim que liberar, é só conectar.",
   },
   {
+    question: "O que acontece quando eu bato o limite de orçamentos do mês?",
+    answer:
+      "No plano Grátis são 5 orçamentos/vendas por mês, no Starter 50 — o contador reseta todo dia 1º. Ao chegar no limite, você não perde nada que já criou: só precisa esperar o próximo mês ou assinar/fazer upgrade pra continuar criando na hora. No Pro não tem limite.",
+  },
+  {
     question: "Posso cancelar quando quiser?",
     answer:
       "Sim, não tem fidelidade. Cancelando a assinatura por cartão, você continua com acesso até o fim do período já pago e depois volta pro plano Grátis automaticamente — seus dados continuam salvos.",
@@ -172,22 +206,32 @@ const FAQ = [
 export default function HomePage() {
   return (
     <div className="min-h-screen">
-      <header className="flex items-center justify-between px-4 py-6 sm:px-6 md:px-12">
-        <AppLogo iconClassName="h-8 w-8 sm:h-9 sm:w-9" textClassName="font-display text-base tracking-wide sm:text-lg" />
-        <nav className="flex items-center gap-3 sm:gap-6">
-          <Link href="/pricing" className="hidden text-sm text-text-secondary hover:text-text-primary sm:block">
-            Planos
-          </Link>
-          <Link href="/login" className="whitespace-nowrap text-sm text-text-secondary hover:text-text-primary">
-            Entrar
-          </Link>
-          <Link
-            href="/signup"
-            className="whitespace-nowrap rounded-pill border border-border-glassStrong px-3 py-1.5 text-xs font-medium hover:bg-white/5 sm:px-4 sm:py-2 sm:text-sm"
-          >
-            Criar conta
-          </Link>
-        </nav>
+      <header className="sticky top-0 z-40 border-b border-border-glass bg-bg/80 backdrop-blur-xl">
+        <div className="flex items-center justify-between px-4 py-4 sm:px-6 md:px-12">
+          <AppLogo iconClassName="h-8 w-8 sm:h-9 sm:w-9" textClassName="font-display text-base tracking-wide sm:text-lg" />
+          <nav className="hidden items-center gap-6 sm:flex">
+            <a href="#ferramentas" className="text-sm text-text-secondary hover:text-text-primary">
+              Ferramentas
+            </a>
+            <a href="#planos" className="text-sm text-text-secondary hover:text-text-primary">
+              Preços
+            </a>
+            <a href="#faq" className="text-sm text-text-secondary hover:text-text-primary">
+              FAQ
+            </a>
+          </nav>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Link href="/login" className="whitespace-nowrap text-sm text-text-secondary hover:text-text-primary">
+              Entrar
+            </Link>
+            <Link
+              href="/signup"
+              className="whitespace-nowrap rounded-pill border border-border-glassStrong px-3 py-1.5 text-xs font-medium hover:bg-white/5 sm:px-4 sm:py-2 sm:text-sm"
+            >
+              Criar conta
+            </Link>
+          </div>
+        </div>
       </header>
 
       <LandingHero />
@@ -221,7 +265,7 @@ export default function HomePage() {
       </section>
 
       {/* Funcionalidades */}
-      <section className="mx-auto mt-28 max-w-5xl px-6 md:px-12">
+      <section id="ferramentas" className="mx-auto mt-28 max-w-5xl px-6 md:px-12">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="font-display text-3xl md:text-4xl">
             O sistema de verdade, <span className="neon-text">funcionando</span>
@@ -265,6 +309,39 @@ export default function HomePage() {
         </div>
       </section>
 
+      <LiveCalculatorSection />
+
+      {/* Antes e depois */}
+      <section className="mx-auto mt-28 max-w-4xl px-6 md:px-12">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="font-display text-3xl md:text-4xl">
+            Sua planilha <span className="neon-text">versus</span> o Studio Maker
+          </h2>
+        </div>
+        <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <GlassCard padding="lg" className="space-y-4">
+            <p className="font-display text-sm uppercase tracking-wider text-text-muted">Planilha / no achismo</p>
+            <ul className="space-y-3">
+              {BEFORE_AFTER.before.map((item) => (
+                <li key={item} className="flex items-start gap-2.5 text-sm text-text-secondary">
+                  <X size={16} className="mt-0.5 shrink-0 text-text-muted" /> {item}
+                </li>
+              ))}
+            </ul>
+          </GlassCard>
+          <GlassCard padding="lg" className="space-y-4 ring-1 ring-neon-pink/30">
+            <p className="font-display text-sm uppercase tracking-wider text-neon-pink">Studio Maker</p>
+            <ul className="space-y-3">
+              {BEFORE_AFTER.after.map((item) => (
+                <li key={item} className="flex items-start gap-2.5 text-sm text-text-secondary">
+                  <Check size={16} className="mt-0.5 shrink-0 text-neon-green" /> {item}
+                </li>
+              ))}
+            </ul>
+          </GlassCard>
+        </div>
+      </section>
+
       {/* Por que StudioMaker3D */}
       <section className="mx-auto mt-28 max-w-5xl px-6 md:px-12">
         <h2 className="text-center font-display text-3xl md:text-4xl">
@@ -284,19 +361,34 @@ export default function HomePage() {
       </section>
 
       {/* Planos */}
-      <section className="mx-auto mt-28 max-w-4xl px-6 md:px-12">
+      <section id="planos" className="mx-auto mt-28 max-w-5xl px-6 md:px-12">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="font-display text-3xl md:text-4xl">Planos simples, sem pegadinha</h2>
           <p className="mt-4 text-text-secondary">
             14 dias de acesso completo pra testar tudo, sem pedir cartão. Depois, continue no Grátis pra sempre ou
-            assine pra manter tudo liberado.
+            assine pra manter tudo liberado. Valores mensais — ciclo anual com desconto disponível na assinatura.
           </p>
         </div>
         <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
           <GlassCard padding="lg" className="flex flex-col gap-4">
-            <h3 className="font-display text-xl">Grátis</h3>
+            <div>
+              <h3 className="font-display text-xl">Grátis</h3>
+              <p className="mt-1 text-sm text-text-secondary">Pra sempre, com limites — dá pra testar o essencial.</p>
+            </div>
             <p className="font-numeric text-3xl font-semibold">R$ 0</p>
-            <p className="text-sm text-text-secondary">Pra sempre, com limites — dá pra testar o essencial.</p>
+            <ul className="space-y-2.5 text-sm">
+              {FREE_FEATURES.map((f) => (
+                <li key={f} className="flex items-start gap-2.5 text-text-secondary">
+                  <Check size={16} className="mt-0.5 shrink-0 text-neon-green" /> {f}
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/signup"
+              className="mt-auto rounded-pill border border-border-glassStrong px-6 py-3 text-center text-sm font-semibold hover:bg-white/5"
+            >
+              Começar grátis
+            </Link>
           </GlassCard>
           {PLANS.map((plan) => {
             const pricing = getCyclePricing(plan.id, "monthly");
@@ -311,19 +403,31 @@ export default function HomePage() {
                     Mais popular
                   </span>
                 )}
-                <h3 className="font-display text-xl">{plan.name}</h3>
+                <div>
+                  <h3 className="font-display text-xl">{plan.name}</h3>
+                  <p className="mt-1 text-sm text-text-secondary">{plan.tagline}</p>
+                </div>
                 <p className="font-numeric text-3xl font-semibold">
-                  R$ {pricing.price.toFixed(2).replace(".", ",")}
+                  {formatBRL(pricing.price)}
                   <span className="text-sm font-normal text-text-muted"> /mês</span>
                 </p>
-                <p className="text-sm text-text-secondary">{plan.tagline}</p>
+                <ul className="space-y-2.5 text-sm">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2.5 text-text-secondary">
+                      <Check size={16} className="mt-0.5 shrink-0 text-neon-green" /> {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/pricing" className="neon-btn mt-auto">
+                  Assinar {plan.name}
+                </Link>
               </GlassCard>
             );
           })}
         </div>
         <div className="mt-8 text-center">
-          <Link href="/pricing" className="neon-btn">
-            Ver todos os detalhes dos planos <ArrowRight size={16} />
+          <Link href="/pricing" className="text-sm text-text-secondary hover:text-text-primary">
+            Comparar tudo — mensal, anual e Pix <ArrowRight size={14} className="inline" />
           </Link>
         </div>
       </section>
