@@ -74,11 +74,14 @@ export function LandingHero() {
 
   return (
     <div className="relative overflow-hidden">
-      {/* Fundo animado: blobs neon suaves atrás do conteúdo */}
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      {/* Fundo animado: blobs neon suaves atrás do conteúdo. As três posições são as do
+          Figma — todos os blobs ficam dentro do hero, senão o overflow-hidden corta o
+          degradê no meio e vira uma linha horizontal dura na borda de baixo. A máscara
+          apaga o rastro do blur antes da borda, porque a animação ainda desloca os blobs. */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden [mask-image:linear-gradient(to_bottom,#000_60%,transparent_97%)]">
         <div className="absolute left-[10%] top-[-10%] h-[420px] w-[420px] animate-blob-1 bg-neon-purple/20 blur-[110px]" />
         <div className="absolute right-[5%] top-[5%] h-[380px] w-[380px] animate-blob-2 bg-neon-pink/20 blur-[110px]" />
-        <div className="absolute bottom-[-15%] left-[30%] h-[400px] w-[400px] animate-blob-3 bg-neon-orange/15 blur-[110px]" />
+        <div className="absolute left-[37%] top-[9%] h-[400px] w-[400px] animate-blob-3 bg-neon-orange/15 blur-[110px]" />
       </div>
 
       {/* Mockups decorativos flanqueando o hero — inclinados e encostados nas bordas, como no Figma */}
