@@ -9,7 +9,7 @@ import { AffiliateDetailModal } from "@/components/admin/AffiliateDetailModal";
 import { TopAffiliatesChart } from "@/components/charts/TopAffiliatesChart";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
-import { getPlan } from "@/lib/plans";
+import { getCyclePricing } from "@/lib/plans";
 import { AFFILIATE_COMMISSION_RATE } from "@/lib/affiliates";
 import { Search, Download, Loader2, Wallet, Gift, Users, TrendingUp } from "lucide-react";
 import type { AdminSubscriberRow, AffiliateCommission } from "@/lib/types";
@@ -59,7 +59,7 @@ export default function AdminAffiliatesPage() {
     return affiliateSubs.map((subscriber) => {
       const referredCount = subscribers.filter((s) => s.referred_by === subscriber.user_id).length;
       const ownCommissions = commissions.filter((c) => c.affiliate_user_id === subscriber.user_id);
-      const revenueGenerated = ownCommissions.reduce((sum, c) => sum + getPlan(c.plan_id).price, 0);
+      const revenueGenerated = ownCommissions.reduce((sum, c) => sum + getCyclePricing(c.plan_id, "monthly").price, 0);
       const commissionPending = ownCommissions.filter((c) => c.status === "pending").reduce((sum, c) => sum + c.amount, 0);
       const commissionPaid = ownCommissions.filter((c) => c.status === "paid").reduce((sum, c) => sum + c.amount, 0);
       return {

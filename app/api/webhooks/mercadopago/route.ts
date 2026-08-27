@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { decodeExternalReference, getPlan, type PlanId } from "@/lib/plans";
+import { decodeExternalReference, getCyclePricing, type PlanTier, type BillingCycle } from "@/lib/plans";
 import { AFFILIATE_COMMISSION_RATE } from "@/lib/affiliates";
 
 function adminClient() {
@@ -17,7 +17,7 @@ function adminClient() {
  * derrubar o webhook (a assinatura em si já foi confirmada antes de chamar
  * isso), só loga e segue.
  */
-async function maybeRecordAffiliateCommission(supabase: SupabaseClient, userId: string, planId: PlanId) {
+async function maybeRecordAffiliateCommission(supabase: SupabaseClient, userId: string, tier: PlanTier, cycle: BillingCycle) {
   try {
     const { data: profile } = await supabase
       .from("profiles")
@@ -40,11 +40,11 @@ async function maybeRecordAffiliateCommission(supabase: SupabaseClient, userId: 
       .maybeSingle();
 
     const commissionRate = affiliateProfile?.affiliate_commission_rate ?? AFFILIATE_COMMISSION_RATE;
-    const amount = getPlan(planId).price * commissionRate;
+    const amount = getCyclePricing(tier, cycle).price * commissionRate;
     const { error } = await supabase.from("affiliate_commissions").insert({
       affiliate_user_id: profile.referred_by,
       referred_user_id: userId,
-      plan_id: planId,
+      plan_id: tier,
       amount,
       status: "pending",
     });
@@ -90,11 +90,11 @@ const MP_STATUS_TO_SUBSCRIPTION_STATUS: Record<string, "active" | "paused" | "ca
  * (nunca confiamos só no corpo do POST). Dois fluxos possíveis, identificados pelo `topic`:
  *
  *  - "subscription_preapproval" / "preapproval" → assinatura automática por cartão.
- *    external_reference no formato "userId|planId|card".
+ *    external_reference no formato "userId|tier|cycle|card".
  *
  *  - "payment" → pagamento avulso via Pix (renovação manual).
- *    external_reference no formato "userId|planId|pix".
- *    Quando aprovado, estende profiles.paid_until em +30 (mensal) ou +90 (trimestral) dias.
+ *    external_reference no formato "userId|tier|cycle|pix".
+ *    Quando aprovado, estende profiles.paid_until em +30 (mensal) ou +360 (anual) dias.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true, skipped: "unrecognized_reference" }, { status: 200 });
       }
 
-      const { userId, planId } = decodeExternalReference(rawRef);
+      const { userId, tier, cycle } = decodeExternalReference(rawRef);
       const mpStatus: string = subscription.status;
       const subscriptionStatus = MP_STATUS_TO_SUBSCRIPTION_STATUS[mpStatus] ?? "inactive";
       const isEffectivelyActive = subscriptionStatus === "active";
@@ -137,13 +137,13 @@ export async function POST(req: NextRequest) {
         .eq("id", userId)
         .maybeSingle();
 
-      const toTier = isEffectivelyActive ? planId : "free";
+      const toTier = isEffectivelyActive ? tier : "free";
 
       const { error } = await supabase
         .from("profiles")
         .update({
           subscription_tier: toTier,
-          billing_cycle: isEffectivelyActive ? planId : null,
+          billing_cycle: isEffectivelyActive ? cycle : null,
           subscription_status: subscriptionStatus,
           payment_method: isEffectivelyActive ? "card" : null,
           paid_until: null,
@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
       );
 
       if (isEffectivelyActive) {
-        await maybeRecordAffiliateCommission(supabase, userId, planId);
+        await maybeRecordAffiliateCommission(supabase, userId, tier, cycle);
       }
     }
 
@@ -187,14 +187,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true, skipped: "unrecognized_reference" }, { status: 200 });
       }
 
-      const { userId, planId, method } = decodeExternalReference(rawRef);
+      const { userId, tier, cycle, method } = decodeExternalReference(rawRef);
 
       if (method !== "pix") {
         return NextResponse.json({ received: true, skipped: "not_pix" }, { status: 200 });
       }
 
       if (payment.status === "approved") {
-        const periodDays = getPlan(planId).frequencyMonths * 30;
+        const periodDays = getCyclePricing(tier, cycle).frequencyMonths * 30;
         const paidUntil = new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000).toISOString();
 
         const { data: beforeProfile } = await supabase
@@ -206,8 +206,8 @@ export async function POST(req: NextRequest) {
         const { error } = await supabase
           .from("profiles")
           .update({
-            subscription_tier: planId,
-            billing_cycle: planId,
+            subscription_tier: tier,
+            billing_cycle: cycle,
             subscription_status: "active",
             payment_method: "pix",
             paid_until: paidUntil,
@@ -225,10 +225,10 @@ export async function POST(req: NextRequest) {
           beforeProfile
             ? { tier: beforeProfile.subscription_tier, status: beforeProfile.subscription_status }
             : null,
-          { tier: planId, status: "active" }
+          { tier, status: "active" }
         );
 
-        await maybeRecordAffiliateCommission(supabase, userId, planId);
+        await maybeRecordAffiliateCommission(supabase, userId, tier, cycle);
       }
     }
 

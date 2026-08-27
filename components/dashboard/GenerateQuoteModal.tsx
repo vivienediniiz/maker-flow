@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
+import { getMonthlyQuoteCount, canCreateMoreQuotes, limitFor } from "@/lib/entitlements";
 import { formatBRL } from "@/lib/utils";
 import type { Client } from "@/lib/types";
 
@@ -42,6 +44,7 @@ export function GenerateQuoteModal({
   onGenerated?: () => void;
 }) {
   const supabase = createClient();
+  const { tier } = useSubscription();
   const [mode, setMode] = useState<"select" | "new">("select");
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -125,11 +128,24 @@ export function GenerateQuoteModal({
     const container = document.createElement("div");
     container.style.width = "800px";
     container.style.padding = "40px";
+    container.style.position = "relative";
     container.style.fontFamily = "'Segoe UI', Arial, sans-serif";
     container.style.background = "#FFFFFF";
     container.style.color = "#1A1625";
 
+    // Plano Grátis: PDF sai com marca d'água (é o motor de aquisição gratuito
+    // do produto — cada orçamento enviado ao cliente do maker vira um anúncio).
+    const watermarkHtml =
+      tier === "free"
+        ? `<div style="position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:50; display:flex; align-items:center; justify-content:center;">
+             <div style="transform:rotate(-30deg); font-size:56px; font-weight:800; color:rgba(170,23,219,0.12); white-space:nowrap; letter-spacing:2px;">
+               STUDIOMAKER · GRÁTIS · STUDIOMAKER · GRÁTIS
+             </div>
+           </div>`
+        : "";
+
     container.innerHTML = `
+      ${watermarkHtml}
       <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid ${studio.accentColor}; padding-bottom:16px; margin-bottom:24px;">
         <div style="display:flex; align-items:center; gap:14px;">
           ${
@@ -251,6 +267,15 @@ export function GenerateQuoteModal({
 
     if (!user) {
       setError("Sessão expirada — faça login de novo.");
+      setSaving(false);
+      return;
+    }
+
+    const monthlyCount = await getMonthlyQuoteCount(supabase, user.id);
+    if (!canCreateMoreQuotes(tier, monthlyCount)) {
+      setError(
+        `Você atingiu o limite de ${limitFor(tier, "quotesPerMonth")} orçamentos/vendas este mês do seu plano. Assine um plano maior em /dashboard/subscription pra continuar.`
+      );
       setSaving(false);
       return;
     }

@@ -173,7 +173,7 @@ export default function AffiliatesPage() {
                     <div key={c.id} className="flex items-center justify-between gap-3 px-4 py-3">
                       <div className="min-w-0">
                         <p className="text-sm text-text-primary">
-                          Plano {c.plan_id === "monthly" ? getPlan("monthly").name : getPlan("quarterly").name}
+                          Plano {getPlan(c.plan_id).name}
                         </p>
                         <p className="text-xs text-text-muted">{new Date(c.created_at).toLocaleDateString("pt-BR")}</p>
                       </div>

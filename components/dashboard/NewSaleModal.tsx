@@ -9,7 +9,9 @@ import { NewProductModal } from "@/components/dashboard/NewProductModal";
 import { NewClientModal } from "@/components/dashboard/NewClientModal";
 import { ShippingQuoteWidget, type ShippingQuoteSelection } from "@/components/dashboard/ShippingQuoteWidget";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
+import { getMonthlyQuoteCount, canCreateMoreQuotes, limitFor } from "@/lib/entitlements";
 import { formatBRL, cn } from "@/lib/utils";
 import { buildPriceTierRanges } from "@/lib/priceTiers";
 import type { Client, Product, QuoteWithClient, QuotePaymentMethod, QuoteStatus, QuoteChannel, Coupon, QuoteDiscountType, Filament, Supply } from "@/lib/types";
@@ -93,6 +95,7 @@ export function NewSaleModal({
   onCreated,
 }: NewSaleModalProps) {
   const supabase = createClient();
+  const { tier } = useSubscription();
   const isEditing = !!quote;
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState("");
@@ -543,6 +546,17 @@ export function NewSaleModal({
       setError("Sessão expirada — faça login de novo.");
       setSaving(false);
       return;
+    }
+
+    if (!isEditing) {
+      const monthlyCount = await getMonthlyQuoteCount(supabase, user.id);
+      if (!canCreateMoreQuotes(tier, monthlyCount)) {
+        setError(
+          `Você atingiu o limite de ${limitFor(tier, "quotesPerMonth")} orçamentos/vendas este mês do seu plano. Assine um plano maior em /dashboard/subscription pra continuar.`
+        );
+        setSaving(false);
+        return;
+      }
     }
 
     const appliedTierLabel =

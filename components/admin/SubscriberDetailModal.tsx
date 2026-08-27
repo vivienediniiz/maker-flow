@@ -5,7 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
-import { getPlan, planDisplayLabel } from "@/lib/plans";
+import { getCyclePricing, planDisplayLabel, type PlanTier, type BillingCycle } from "@/lib/plans";
 import { Loader2, Copy, Check, Ban, RefreshCw, Wallet, Mail, StickyNote } from "lucide-react";
 import type { AdminSubscriberRow, SubscriptionEvent } from "@/lib/types";
 
@@ -25,8 +25,8 @@ const STATUS_STYLES: Record<string, string> = {
 
 function monthlyValue(row: AdminSubscriberRow): string {
   if (row.subscription_tier === "free") return "—";
-  const plan = getPlan(row.subscription_tier);
-  return plan.frequencyMonths === 1 ? `${formatBRL(plan.price)}/mês` : `${formatBRL(plan.price)} a cada ${plan.frequencyMonths} meses`;
+  const pricing = getCyclePricing(row.subscription_tier as PlanTier, (row.billing_cycle as BillingCycle) ?? "monthly");
+  return pricing.frequencyMonths === 1 ? `${formatBRL(pricing.price)}/mês` : `${formatBRL(pricing.price)}/ano`;
 }
 
 /** Ações que mexem em cobrança de verdade (cancelar/suspender/reembolsar/renovar) ainda não estão

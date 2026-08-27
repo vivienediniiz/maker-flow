@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
+import { getMonthlyQuoteCount, canCreateMoreQuotes, limitFor } from "@/lib/entitlements";
 import { formatBRL } from "@/lib/utils";
 import type { QuoteChannel } from "@/lib/types";
 
@@ -37,7 +38,7 @@ export function QuickSaleModal({
   onConfirm?: (data: { quantity: number; channel: string; stockAdjustedAutomatically: boolean }) => void;
 }) {
   const supabase = createClient();
-  const { paid } = useSubscription();
+  const { paid, tier } = useSubscription();
   const [quantity, setQuantity] = useState(1);
   const [channel, setChannel] = useState("presencial");
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +61,15 @@ export function QuickSaleModal({
 
     if (!user) {
       setError("Sessão expirada — faça login de novo.");
+      setSaving(false);
+      return;
+    }
+
+    const monthlyCount = await getMonthlyQuoteCount(supabase, user.id);
+    if (!canCreateMoreQuotes(tier, monthlyCount)) {
+      setError(
+        `Você atingiu o limite de ${limitFor(tier, "quotesPerMonth")} orçamentos/vendas este mês do seu plano. Assine um plano maior em /dashboard/subscription pra continuar.`
+      );
       setSaving(false);
       return;
     }

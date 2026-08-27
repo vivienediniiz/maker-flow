@@ -23,7 +23,7 @@ import { BrowserFrame } from "@/components/marketing/BrowserFrame";
 import { LandingHero } from "@/components/marketing/LandingHero";
 import { HowItWorksSection } from "@/components/marketing/HowItWorksSection";
 import { StoreShowcaseSection } from "@/components/marketing/StoreShowcaseSection";
-import { PLANS } from "@/lib/plans";
+import { PLANS, getCyclePricing } from "@/lib/plans";
 
 const PROBLEMS = [
   {
@@ -298,28 +298,28 @@ export default function HomePage() {
             <p className="font-numeric text-3xl font-semibold">R$ 0</p>
             <p className="text-sm text-text-secondary">Pra sempre, com limites — dá pra testar o essencial.</p>
           </GlassCard>
-          {PLANS.map((plan) => (
-            <GlassCard
-              key={plan.id}
-              padding="lg"
-              className={`flex flex-col gap-4 ${plan.highlighted ? "shadow-neon-glow ring-1 ring-neon-pink/40" : ""}`}
-            >
-              {plan.highlighted && (
-                <span className="w-fit rounded-pill bg-neon-gradient px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">
-                  Mais popular
-                </span>
-              )}
-              <h3 className="font-display text-xl">{plan.name}</h3>
-              <p className="font-numeric text-3xl font-semibold">
-                R$ {plan.price.toFixed(2).replace(".", ",")}
-                <span className="text-sm font-normal text-text-muted">
-                  {" "}
-                  / {plan.frequencyMonths === 1 ? "mês" : `${plan.frequencyMonths} meses`}
-                </span>
-              </p>
-              <p className="text-sm text-text-secondary">{plan.tagline}</p>
-            </GlassCard>
-          ))}
+          {PLANS.map((plan) => {
+            const pricing = getCyclePricing(plan.id, "monthly");
+            return (
+              <GlassCard
+                key={plan.id}
+                padding="lg"
+                className={`flex flex-col gap-4 ${plan.highlighted ? "shadow-neon-glow ring-1 ring-neon-pink/40" : ""}`}
+              >
+                {plan.highlighted && (
+                  <span className="w-fit rounded-pill bg-neon-gradient px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">
+                    Mais popular
+                  </span>
+                )}
+                <h3 className="font-display text-xl">{plan.name}</h3>
+                <p className="font-numeric text-3xl font-semibold">
+                  R$ {pricing.price.toFixed(2).replace(".", ",")}
+                  <span className="text-sm font-normal text-text-muted"> /mês</span>
+                </p>
+                <p className="text-sm text-text-secondary">{plan.tagline}</p>
+              </GlassCard>
+            );
+          })}
         </div>
         <div className="mt-8 text-center">
           <Link href="/pricing" className="neon-btn">

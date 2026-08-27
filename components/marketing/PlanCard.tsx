@@ -3,20 +3,23 @@
 import { Check, Loader2 } from "lucide-react";
 import { cn, formatBRL } from "@/lib/utils";
 import { NeonButton } from "@/components/ui/NeonButton";
-import type { Plan } from "@/lib/plans";
+import { getCyclePricing, type Plan, type BillingCycle } from "@/lib/plans";
 
 export function PlanCard({
   plan,
+  cycle,
   loading,
   onSubscribeCard,
   onPayPix,
 }: {
   plan: Plan;
+  cycle: BillingCycle;
   loading: boolean;
   onSubscribeCard: () => void;
   onPayPix: () => void;
 }) {
-  const frequencyLabel = plan.frequencyMonths === 1 ? "/mês" : `/${plan.frequencyMonths} meses`;
+  const pricing = getCyclePricing(plan.id, cycle);
+  const frequencyLabel = pricing.frequencyMonths === 1 ? "/mês" : "/ano";
 
   return (
     <div
@@ -37,8 +40,13 @@ export function PlanCard({
       </div>
 
       <div className="flex items-baseline gap-1.5">
-        <span className="font-numeric text-4xl font-semibold text-text-primary">{formatBRL(plan.price)}</span>
+        <span className="font-numeric text-4xl font-semibold text-text-primary">{formatBRL(pricing.price)}</span>
         <span className="text-sm text-text-muted">{frequencyLabel}</span>
+        {pricing.discountLabel && (
+          <span className="rounded-pill bg-neon-green/15 px-2 py-0.5 text-[11px] font-semibold text-neon-green">
+            {pricing.discountLabel}
+          </span>
+        )}
       </div>
 
       <ul className="space-y-3 text-sm">

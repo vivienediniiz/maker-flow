@@ -14,7 +14,7 @@ import { GlassAccordion } from "@/components/ui/GlassAccordion";
 import { FinancialChart } from "@/components/charts/FinancialChart";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { formatBRL } from "@/lib/utils";
-import { FREE_LIMITS, isPaid } from "@/lib/entitlements";
+import { TIER_LIMITS, isPaid } from "@/lib/entitlements";
 import { DollarSign, TrendingUp, Layers, Server, Plus, Package, ClipboardList, Users } from "lucide-react";
 import type { Printer, SubscriptionTier, Quote } from "@/lib/types";
 
@@ -224,10 +224,10 @@ export default async function DashboardPage() {
           <OnboardingChecklistCard />
 
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard label="Clientes" value={`${counts.clients}/${FREE_LIMITS.clients}`} icon={Users} accent="pink" />
-            <KpiCard label="Produtos" value={`${counts.products}/${FREE_LIMITS.products}`} icon={Package} accent="orange" />
+            <KpiCard label="Clientes" value={`${counts.clients}/${TIER_LIMITS.free.clients}`} icon={Users} accent="pink" />
+            <KpiCard label="Produtos" value={`${counts.products}/${TIER_LIMITS.free.products}`} icon={Package} accent="orange" />
             <KpiCard label="Filamento em Estoque" value={`${filamentStockKg.toFixed(1)} kg`} icon={Layers} accent="green" />
-            <KpiCard label="Rolos de Filamento" value={`${counts.filaments}/${FREE_LIMITS.filaments}`} icon={Layers} accent="purple" />
+            <KpiCard label="Rolos de Filamento" value={`${counts.filaments}/${TIER_LIMITS.free.filaments}`} icon={Layers} accent="purple" />
           </section>
 
           <section>

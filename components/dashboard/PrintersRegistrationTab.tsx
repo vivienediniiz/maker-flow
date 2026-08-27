@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2, Lock } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardRow } from "@/components/ui/CardRow";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { PrinterAssetModal } from "@/components/dashboard/PrinterAssetModal";
 import { PrinterAssetDetailModal } from "@/components/dashboard/PrinterAssetDetailModal";
+import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
+import { canCreateMore, limitFor } from "@/lib/entitlements";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import {
@@ -23,11 +25,13 @@ type PrinterAssetRow = PrinterAsset & { branches: { name: string } | null };
 export function PrintersRegistrationTab() {
   const supabase = createClient();
   const confirm = useConfirm();
+  const { tier } = useSubscription();
   const [assets, setAssets] = useState<PrinterAssetRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<PrinterAsset | null>(null);
   const [detailAsset, setDetailAsset] = useState<PrinterAssetRow | null>(null);
+  const canCreate = canCreateMore(tier, "printers", assets.length);
 
   useEffect(() => {
     loadAssets();
@@ -82,10 +86,27 @@ export function PrintersRegistrationTab() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-display text-lg">Impressoras</h3>
-        <NeonButton size="sm" onClick={openCreate} className="whitespace-nowrap">
-          <Plus size={14} /> Nova Impressora
+        <NeonButton
+          size="sm"
+          onClick={() => canCreate && openCreate()}
+          disabled={!canCreate}
+          className={cn("whitespace-nowrap", !canCreate && "opacity-40")}
+          title={!canCreate ? "Limite de impressoras do seu plano atingido" : undefined}
+        >
+          {canCreate ? <Plus size={14} /> : <Lock size={14} />} Nova Impressora
         </NeonButton>
       </div>
+
+      {!canCreate && (
+        <p className="text-xs text-amber-400">
+          Seu plano permite só {limitFor(tier, "printers")} impressora{limitFor(tier, "printers") === 1 ? "" : "s"} cadastrada
+          {limitFor(tier, "printers") === 1 ? "" : "s"}.{" "}
+          <a href="/dashboard/subscription" className="underline hover:text-amber-300">
+            Assine um plano
+          </a>{" "}
+          pra cadastrar mais.
+        </p>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-16 text-text-muted">

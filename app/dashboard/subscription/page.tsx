@@ -7,8 +7,9 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { PlanCard } from "@/components/marketing/PlanCard";
 import { PlanComparisonTable } from "@/components/marketing/PlanComparisonTable";
 import { PixCheckoutModal } from "@/components/marketing/PixCheckoutModal";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { createClient } from "@/lib/supabase/client";
-import { PLANS, getPlan, planDisplayLabel, type PlanId } from "@/lib/plans";
+import { PLANS, getPlan, getCyclePricing, planDisplayLabel, type PlanTier, type BillingCycle } from "@/lib/plans";
 import { trialDaysRemaining } from "@/lib/trial";
 import { pixBillingState, pixDaysUntilDue } from "@/lib/pix";
 import type { Profile } from "@/lib/types";
@@ -17,9 +18,10 @@ export default function SubscriptionPage() {
   const supabase = createClient();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
+  const [cycle, setCycle] = useState<BillingCycle>("monthly");
+  const [loadingPlan, setLoadingPlan] = useState<PlanTier | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pixTarget, setPixTarget] = useState<PlanId | null>(null);
+  const [pixTarget, setPixTarget] = useState<PlanTier | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -39,14 +41,14 @@ export default function SubscriptionPage() {
     setLoading(false);
   }
 
-  async function handleSubscribeCard(planId: PlanId) {
+  async function handleSubscribeCard(tier: PlanTier) {
     setError(null);
-    setLoadingPlan(planId);
+    setLoadingPlan(tier);
     try {
       const res = await fetch("/api/mercadopago/create-preapproval", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ tier, cycle }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -135,11 +137,23 @@ export default function SubscriptionPage() {
 
           {error && <p className="mx-auto mb-4 max-w-md text-center text-sm text-red-400">{error}</p>}
 
+          <div className="mb-6 flex justify-center">
+            <SegmentedControl
+              value={cycle}
+              onChange={setCycle}
+              options={[
+                { value: "monthly", label: "Mensal" },
+                { value: "annual", label: "Anual (-17%)" },
+              ]}
+            />
+          </div>
+
           <div className="mx-auto grid max-w-3xl grid-cols-1 gap-6 md:grid-cols-2">
             {PLANS.map((plan) => (
               <PlanCard
                 key={plan.id}
                 plan={plan}
+                cycle={cycle}
                 loading={loadingPlan === plan.id}
                 onSubscribeCard={() => handleSubscribeCard(plan.id)}
                 onPayPix={() => setPixTarget(plan.id)}
@@ -158,9 +172,10 @@ export default function SubscriptionPage() {
         <PixCheckoutModal
           open={!!pixTarget}
           onClose={() => setPixTarget(null)}
-          planId={pixTarget}
+          tier={pixTarget}
+          cycle={cycle}
           planName={getPlan(pixTarget).name}
-          amount={getPlan(pixTarget).price}
+          amount={getCyclePricing(pixTarget, cycle).price}
           onApproved={handlePixApproved}
         />
       )}

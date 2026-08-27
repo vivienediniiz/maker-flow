@@ -6,7 +6,7 @@ import { GlassAccordion } from "@/components/ui/GlassAccordion";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
-import { getPlan } from "@/lib/plans";
+import { getCyclePricing, type PlanTier, type BillingCycle } from "@/lib/plans";
 import { RevenueSubscribersChart, type RevenueSubscribersPoint } from "@/components/charts/RevenueSubscribersChart";
 import { ChurnRateChart, type ChurnPoint } from "@/components/charts/ChurnRateChart";
 import { DollarSign, Users, Gift, TrendingUp, TrendingDown, Activity, Loader2 } from "lucide-react";
@@ -62,15 +62,15 @@ export default function AdminOverviewPage() {
   );
   const cancelledSubs = useMemo(() => subscribers.filter((s) => s.subscription_status === "cancelled"), [subscribers]);
 
-  const monthlyCount = useMemo(() => activeSubs.filter((s) => s.subscription_tier === "monthly").length, [activeSubs]);
-  const quarterlyCount = useMemo(() => activeSubs.filter((s) => s.subscription_tier === "quarterly").length, [activeSubs]);
+  const starterCount = useMemo(() => activeSubs.filter((s) => s.subscription_tier === "starter").length, [activeSubs]);
+  const proCount = useMemo(() => activeSubs.filter((s) => s.subscription_tier === "pro").length, [activeSubs]);
 
   const mrr = useMemo(
     () =>
       activeSubs.reduce((sum, s) => {
-        if (s.subscription_tier === "monthly") return sum + getPlan("monthly").price;
-        if (s.subscription_tier === "quarterly") return sum + getPlan("quarterly").price / 3;
-        return sum;
+        if (s.subscription_tier === "free") return sum;
+        const pricing = getCyclePricing(s.subscription_tier as PlanTier, (s.billing_cycle as BillingCycle) ?? "monthly");
+        return sum + pricing.price / pricing.frequencyMonths;
       }, 0),
     [activeSubs]
   );
@@ -181,15 +181,15 @@ export default function AdminOverviewPage() {
 
       <div className="grid grid-cols-1 gap-4 rounded-2xl border border-border-glass bg-white/[0.02] p-4 sm:grid-cols-3">
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-text-muted">Plano Mensal</p>
+          <p className="text-[10px] uppercase tracking-wider text-text-muted">Plano Starter</p>
           <p className="font-numeric text-lg font-semibold text-text-primary">
-            {monthlyCount} <span className="text-xs font-normal text-text-muted">· {formatBRL(getPlan("monthly").price)}/mês</span>
+            {starterCount} <span className="text-xs font-normal text-text-muted">· a partir de {formatBRL(getCyclePricing("starter", "monthly").price)}/mês</span>
           </p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-text-muted">Plano Trimestral</p>
+          <p className="text-[10px] uppercase tracking-wider text-text-muted">Plano Pro</p>
           <p className="font-numeric text-lg font-semibold text-text-primary">
-            {quarterlyCount} <span className="text-xs font-normal text-text-muted">· {formatBRL(getPlan("quarterly").price)}/3 meses</span>
+            {proCount} <span className="text-xs font-normal text-text-muted">· a partir de {formatBRL(getCyclePricing("pro", "monthly").price)}/mês</span>
           </p>
         </div>
         <div>

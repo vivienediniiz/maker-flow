@@ -1,7 +1,6 @@
-export type SubscriptionTier = "free" | "monthly" | "quarterly";
-// Legado — billing_cycle na prática espelha o próprio subscription_tier
-// ("monthly"/"quarterly" não são mais um eixo independente de plano).
-export type BillingCycle = "monthly" | "quarterly";
+export type SubscriptionTier = "free" | "starter" | "pro";
+// Eixo independente de novo: cada tier pago (starter/pro) tem preço mensal E anual.
+export type BillingCycle = "monthly" | "annual";
 export type SubscriptionStatus = "inactive" | "active" | "paused" | "cancelled";
 
 export type PaymentMethodType = "card" | "pix" | null;
@@ -216,8 +215,8 @@ export interface AffiliateCommission {
   id: string;
   affiliate_user_id: string;
   referred_user_id: string;
-  /** Mesmo union de PlanId em lib/plans.ts (não importado aqui pra evitar ciclo — plans.ts já importa de types.ts). */
-  plan_id: "monthly" | "quarterly";
+  /** Mesmo union de PlanTier em lib/plans.ts (não importado aqui pra evitar ciclo — plans.ts já importa de types.ts). */
+  plan_id: "starter" | "pro";
   amount: number;
   status: "pending" | "paid";
   created_at: string;

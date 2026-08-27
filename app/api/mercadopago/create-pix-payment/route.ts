@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getPlan, encodeExternalReference, type PlanId } from "@/lib/plans";
+import { getCyclePricing, encodeExternalReference, type PlanTier, type BillingCycle } from "@/lib/plans";
 
 const BodySchema = z.object({
-  planId: z.enum(["monthly", "quarterly"]),
+  tier: z.enum(["starter", "pro"]),
+  cycle: z.enum(["monthly", "annual"]),
 });
 
 /**
@@ -36,15 +37,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Payload inválido", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const planId = parsed.data.planId as PlanId;
-  const plan = getPlan(planId);
-  const amount = plan.price;
+  const tier = parsed.data.tier as PlanTier;
+  const cycle = parsed.data.cycle as BillingCycle;
+  const cyclePricing = getCyclePricing(tier, cycle);
+  const amount = cyclePricing.price;
 
   const paymentBody = {
     transaction_amount: amount,
-    description: `StudioMaker - Plano ${plan.name}`,
+    description: `StudioMaker - Plano ${tier === "pro" ? "Pro" : "Starter"} (${cyclePricing.label})`,
     payment_method_id: "pix",
-    external_reference: encodeExternalReference(user.id, planId, "pix"),
+    external_reference: encodeExternalReference(user.id, tier, cycle, "pix"),
     payer: { email: user.email },
   };
 
@@ -53,7 +55,7 @@ export async function POST(req: NextRequest) {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
-      "X-Idempotency-Key": `${user.id}-${planId}-${Date.now()}`,
+      "X-Idempotency-Key": `${user.id}-${tier}-${cycle}-${Date.now()}`,
     },
     body: JSON.stringify(paymentBody),
   });

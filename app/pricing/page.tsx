@@ -4,20 +4,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ArrowLeft } from "lucide-react";
-import { PLANS, type PlanId, getPlan } from "@/lib/plans";
+import { PLANS, getPlan, getCyclePricing, type PlanTier, type BillingCycle } from "@/lib/plans";
 import { PlanCard } from "@/components/marketing/PlanCard";
 import { PlanComparisonTable } from "@/components/marketing/PlanComparisonTable";
 import { PixCheckoutModal } from "@/components/marketing/PixCheckoutModal";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { AppLogo } from "@/components/ui/AppLogo";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { createClient } from "@/lib/supabase/client";
 
 export default function PricingPage() {
   const router = useRouter();
   const supabase = createClient();
-  const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
+  const [cycle, setCycle] = useState<BillingCycle>("monthly");
+  const [loadingPlan, setLoadingPlan] = useState<PlanTier | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pixTarget, setPixTarget] = useState<PlanId | null>(null);
+  const [pixTarget, setPixTarget] = useState<PlanTier | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -35,16 +37,16 @@ export default function PricingPage() {
     return true;
   }
 
-  async function handleSubscribeCard(planId: PlanId) {
+  async function handleSubscribeCard(tier: PlanTier) {
     setError(null);
     if (!(await requireSession())) return;
-    setLoadingPlan(planId);
+    setLoadingPlan(tier);
 
     try {
       const res = await fetch("/api/mercadopago/create-preapproval", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ tier, cycle }),
       });
       const data = await res.json();
 
@@ -65,10 +67,10 @@ export default function PricingPage() {
     }
   }
 
-  async function handlePayPix(planId: PlanId) {
+  async function handlePayPix(tier: PlanTier) {
     setError(null);
     if (!(await requireSession())) return;
-    setPixTarget(planId);
+    setPixTarget(tier);
   }
 
   function handlePixApproved() {
@@ -103,9 +105,20 @@ export default function PricingPage() {
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-text-secondary">
             14 dias de acesso completo, sem pedir cartão. Depois, continue no plano Grátis pra sempre, ou assine
-            Mensal/Trimestral pra manter tudo liberado. Pague por cartão (automático) ou Pix (manual). Cancele
-            quando quiser.
+            Starter/Pro pra manter tudo liberado. Pague por cartão (automático) ou Pix (manual). Cancele quando
+            quiser.
           </p>
+        </div>
+
+        <div className="mt-8 flex justify-center">
+          <SegmentedControl
+            value={cycle}
+            onChange={setCycle}
+            options={[
+              { value: "monthly", label: "Mensal" },
+              { value: "annual", label: "Anual (-17%)" },
+            ]}
+          />
         </div>
 
         {error && (
@@ -122,7 +135,13 @@ export default function PricingPage() {
               <span className="font-numeric text-4xl font-semibold text-text-primary">R$ 0</span>
             </div>
             <ul className="space-y-3 text-sm">
-              {["Até 10 clientes e 10 produtos", "Até 5 rolos de filamento", "1 filial (matriz)", "Vendas manuais"].map((f) => (
+              {[
+                "5 orçamentos/vendas por mês",
+                "Até 15 clientes e 10 produtos",
+                "Até 5 rolos de filamento",
+                "1 impressora e 1 filial (matriz)",
+                "PDF de orçamento com marca d'água",
+              ].map((f) => (
                 <li key={f} className="flex items-start gap-2.5 text-text-secondary">
                   <Check size={16} className="mt-0.5 shrink-0 text-neon-green" />
                   {f}
@@ -138,6 +157,7 @@ export default function PricingPage() {
             <PlanCard
               key={plan.id}
               plan={plan}
+              cycle={cycle}
               loading={loadingPlan === plan.id}
               onSubscribeCard={() => handleSubscribeCard(plan.id)}
               onPayPix={() => handlePayPix(plan.id)}
@@ -149,6 +169,10 @@ export default function PricingPage() {
           <h2 className="mb-6 text-center font-display text-2xl">O que cada plano inclui</h2>
           <PlanComparisonTable />
         </div>
+
+        <p className="mx-auto mt-8 max-w-2xl text-center text-xs text-text-muted">
+          Cancele quando quiser · Seus dados nunca são apagados no downgrade · Pix ou cartão
+        </p>
       </main>
 
       <footer className="space-y-2 border-t border-border-glass px-6 py-8 text-center text-xs text-text-muted md:px-12">
@@ -171,9 +195,10 @@ export default function PricingPage() {
         <PixCheckoutModal
           open={!!pixTarget}
           onClose={() => setPixTarget(null)}
-          planId={pixTarget}
+          tier={pixTarget}
+          cycle={cycle}
           planName={getPlan(pixTarget).name}
-          amount={getPlan(pixTarget).price}
+          amount={getCyclePricing(pixTarget, cycle).price}
           onApproved={handlePixApproved}
         />
       )}

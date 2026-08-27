@@ -8,7 +8,7 @@ import { SubscriberDetailModal } from "@/components/admin/SubscriberDetailModal"
 import { PlanDistributionChart } from "@/components/charts/PlanDistributionChart";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
-import { getPlan, planDisplayLabel } from "@/lib/plans";
+import { getCyclePricing, planDisplayLabel, type PlanTier, type BillingCycle } from "@/lib/plans";
 import { Search, Download, Loader2, ArrowUpDown, UserCheck, UserX, UserMinus, Users } from "lucide-react";
 import type { AdminSubscriberRow, SubscriptionTier, SubscriptionStatus } from "@/lib/types";
 
@@ -30,16 +30,17 @@ const STATUS_STYLES: Record<SubscriptionStatus, string> = {
 
 const PLAN_STYLES: Record<SubscriptionTier, string> = {
   free: "bg-white/10 text-text-secondary border-white/10",
-  monthly: "bg-neon-pink/15 text-neon-pink border-neon-pink/30",
-  quarterly: "bg-neon-purple/15 text-neon-purple border-neon-purple/30",
+  starter: "bg-neon-pink/15 text-neon-pink border-neon-pink/30",
+  pro: "bg-neon-purple/15 text-neon-purple border-neon-purple/30",
 };
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
-function monthlyPrice(tier: SubscriptionTier): number {
+/** Normaliza pro valor mensal-equivalente, considerando o ciclo real do assinante (mensal ou anual/12). */
+function monthlyPrice(tier: SubscriptionTier, cycle: BillingCycle | null): number {
   if (tier === "free") return 0;
-  const plan = getPlan(tier);
-  return plan.frequencyMonths === 1 ? plan.price : plan.price / plan.frequencyMonths;
+  const pricing = getCyclePricing(tier as PlanTier, cycle ?? "monthly");
+  return pricing.price / pricing.frequencyMonths;
 }
 
 export default function AdminSubscribersPage() {
@@ -71,15 +72,15 @@ export default function AdminSubscribersPage() {
     const active = subscribers.filter((s) => s.subscription_status === "active").length;
     const paused = subscribers.filter((s) => s.subscription_status === "paused").length;
     const cancelled = subscribers.filter((s) => s.subscription_status === "cancelled").length;
-    const monthly = subscribers.filter((s) => s.subscription_status === "active" && s.subscription_tier === "monthly").length;
-    const quarterly = subscribers.filter((s) => s.subscription_status === "active" && s.subscription_tier === "quarterly").length;
-    return { active, paused, cancelled, monthly, quarterly };
+    const starter = subscribers.filter((s) => s.subscription_status === "active" && s.subscription_tier === "starter").length;
+    const pro = subscribers.filter((s) => s.subscription_status === "active" && s.subscription_tier === "pro").length;
+    return { active, paused, cancelled, starter, pro };
   }, [subscribers]);
 
   const pieData = useMemo(
     () => [
-      { name: "Mensal", value: stats.monthly, color: "#FF4EDF" },
-      { name: "Trimestral", value: stats.quarterly, color: "#AA17DB" },
+      { name: "Starter", value: stats.starter, color: "#FF4EDF" },
+      { name: "Pro", value: stats.pro, color: "#AA17DB" },
     ],
     [stats]
   );
@@ -102,7 +103,7 @@ export default function AdminSubscribersPage() {
     rows = [...rows].sort((a, b) => {
       let cmp = 0;
       if (sortKey === "full_name") cmp = (a.full_name ?? "").localeCompare(b.full_name ?? "");
-      else if (sortKey === "subscription_tier") cmp = monthlyPrice(a.subscription_tier) - monthlyPrice(b.subscription_tier);
+      else if (sortKey === "subscription_tier") cmp = monthlyPrice(a.subscription_tier, a.billing_cycle) - monthlyPrice(b.subscription_tier, b.billing_cycle);
       else if (sortKey === "subscription_status") cmp = a.subscription_status.localeCompare(b.subscription_status);
       else if (sortKey === "created_at") cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       else if (sortKey === "paid_until") cmp = new Date(a.paid_until ?? 0).getTime() - new Date(b.paid_until ?? 0).getTime();
@@ -153,7 +154,7 @@ export default function AdminSubscribersPage() {
         s.phone ?? "",
         planDisplayLabel(s.subscription_tier),
         STATUS_LABELS[s.subscription_status],
-        String(monthlyPrice(s.subscription_tier)),
+        String(monthlyPrice(s.subscription_tier, s.billing_cycle)),
         new Date(s.created_at).toLocaleDateString("pt-BR"),
         s.paid_until ? new Date(s.paid_until).toLocaleDateString("pt-BR") : "",
       ]),
@@ -195,12 +196,12 @@ export default function AdminSubscribersPage() {
           <h3 className="font-display text-base">Distribuição por Plano</h3>
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between rounded-xl border border-border-glass bg-white/[0.02] px-4 py-2.5">
-              <span className="text-text-secondary">Mensal · {formatBRL(getPlan("monthly").price)}/mês</span>
-              <span className="font-numeric font-semibold text-text-primary">{stats.monthly}</span>
+              <span className="text-text-secondary">Starter · a partir de {formatBRL(getCyclePricing("starter", "monthly").price)}/mês</span>
+              <span className="font-numeric font-semibold text-text-primary">{stats.starter}</span>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-border-glass bg-white/[0.02] px-4 py-2.5">
-              <span className="text-text-secondary">Trimestral · {formatBRL(getPlan("quarterly").price)}/3 meses</span>
-              <span className="font-numeric font-semibold text-text-primary">{stats.quarterly}</span>
+              <span className="text-text-secondary">Pro · a partir de {formatBRL(getCyclePricing("pro", "monthly").price)}/mês</span>
+              <span className="font-numeric font-semibold text-text-primary">{stats.pro}</span>
             </div>
           </div>
         </GlassCard>
@@ -229,8 +230,8 @@ export default function AdminSubscribersPage() {
         <select value={planFilter} onChange={(e) => setPlanFilter(e.target.value as typeof planFilter)} className="glass-input">
           <option value="all" className="bg-bg-raised">Todos os planos</option>
           <option value="free" className="bg-bg-raised">Grátis</option>
-          <option value="monthly" className="bg-bg-raised">Mensal</option>
-          <option value="quarterly" className="bg-bg-raised">Trimestral</option>
+          <option value="starter" className="bg-bg-raised">Starter</option>
+          <option value="pro" className="bg-bg-raised">Pro</option>
         </select>
         <NeonButton type="button" variant="outline" size="sm" onClick={handleExportCsv}>
           <Download size={14} /> Exportar CSV{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
@@ -295,7 +296,7 @@ export default function AdminSubscribersPage() {
                       </span>
                     </td>
                     <td className="font-numeric px-6 py-4 text-text-secondary">
-                      {s.subscription_tier === "free" ? "—" : formatBRL(monthlyPrice(s.subscription_tier))}
+                      {s.subscription_tier === "free" ? "—" : formatBRL(monthlyPrice(s.subscription_tier, s.billing_cycle))}
                     </td>
                     <td className="px-6 py-4 text-xs text-text-muted">{new Date(s.created_at).toLocaleDateString("pt-BR")}</td>
                     <td className="px-6 py-4 text-xs text-text-muted">

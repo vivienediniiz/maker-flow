@@ -8,7 +8,7 @@ import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { buildAffiliateLink, AFFILIATE_COMMISSION_RATE } from "@/lib/affiliates";
-import { getPlan, planDisplayLabel } from "@/lib/plans";
+import { getCyclePricing, planDisplayLabel } from "@/lib/plans";
 import { Copy, Check, Loader2, Wallet, Mail } from "lucide-react";
 import type { AdminSubscriberRow, AffiliateCommission, SubscriptionTier, SubscriptionStatus } from "@/lib/types";
 
@@ -67,7 +67,7 @@ export function AffiliateDetailModal({
   if (!affiliate) return null;
 
   const effectiveRate = affiliate.affiliate_commission_rate ?? AFFILIATE_COMMISSION_RATE;
-  const revenueGenerated = commissions.reduce((sum, c) => sum + getPlan(c.plan_id).price, 0);
+  const revenueGenerated = commissions.reduce((sum, c) => sum + getCyclePricing(c.plan_id, "monthly").price, 0);
   const pending = commissions.filter((c) => c.status === "pending");
   const paid = commissions.filter((c) => c.status === "paid");
   const pendingTotal = pending.reduce((sum, c) => sum + c.amount, 0);
