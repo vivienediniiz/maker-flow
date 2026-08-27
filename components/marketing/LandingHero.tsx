@@ -3,43 +3,30 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, DollarSign, Printer, Package, Rocket, type LucideIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { BrowserFrame } from "./BrowserFrame";
+import { CalculatorMockup } from "./mockups/CalculatorMockup";
+import { SidebarMockup } from "./mockups/SidebarMockup";
 
-const PHRASES: { title: string; subtitle: string; icon: LucideIcon }[] = [
-  {
-    title: "Precifique, produza e venda — tudo em um só lugar.",
-    subtitle:
-      "Gestão completa para estúdios de impressão 3D: orçamentos inteligentes, pedidos, estoque e insights financeiros em tempo real.",
-    icon: DollarSign,
-  },
-  {
-    title: "Sua impressora. Seus números. Seu controle.",
-    subtitle: "Acompanhe cada impressão em tempo real e transforme filamento em lucro previsível.",
-    icon: Printer,
-  },
-  {
-    title: "Do orçamento à entrega, sem planilha nenhuma.",
-    subtitle: "Automatize cotações, controle de estoque e vendas em todos os seus canais, num só painel.",
-    icon: Package,
-  },
-  {
-    title: "Feito por quem faz. Pensado pra quem cresce.",
-    subtitle:
-      "StudioMaker é o ERP que entende a rotina de um estúdio 3D — porque foi construído por dentro de um.",
-    icon: Rocket,
-  },
+const EYEBROW =
+  "Gestão completa para estúdios de impressão 3D: orçamentos inteligentes, pedidos, estoque e insights financeiros em tempo real.";
+
+const HEADLINE = "Calculadora de impressão 3D: custo real e preço que protege seu lucro.";
+
+const PHRASES: { title: string; icon: LucideIcon }[] = [
+  { title: "Precifique, produza e venda — tudo em um só lugar.", icon: DollarSign },
+  { title: "Sua impressora. Seus números. Seu controle.", icon: Printer },
+  { title: "Do orçamento à entrega, sem planilha nenhuma.", icon: Package },
+  { title: "Feito por quem faz. Pensado pra quem cresce.", icon: Rocket },
 ];
 
 const TYPE_MS = 42;
 const ERASE_MS = 18;
 const HOLD_MS = 3400;
-const SUBTITLE_DELAY_MS = 300;
 const NEXT_PHRASE_DELAY_MS = 350;
 
 function useTypewriter() {
   const [phraseIdx, setPhraseIdx] = useState(0);
   const [typed, setTyped] = useState("");
-  const [showSubtitle, setShowSubtitle] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,16 +43,8 @@ function useTypewriter() {
       if (charIdx < PHRASES[idx].title.length) {
         schedule(() => typeTitle(idx, charIdx + 1), TYPE_MS);
       } else {
-        schedule(() => {
-          setShowSubtitle(true);
-          schedule(() => holdAndErase(idx), HOLD_MS);
-        }, SUBTITLE_DELAY_MS);
+        schedule(() => eraseTitle(idx, PHRASES[idx].title.length), HOLD_MS);
       }
-    }
-
-    function holdAndErase(idx: number) {
-      setShowSubtitle(false);
-      schedule(() => eraseTitle(idx, PHRASES[idx].title.length), SUBTITLE_DELAY_MS);
     }
 
     function eraseTitle(idx: number, charIdx: number) {
@@ -86,11 +65,11 @@ function useTypewriter() {
     };
   }, []);
 
-  return { phrase: PHRASES[phraseIdx], typed, showSubtitle };
+  return { phrase: PHRASES[phraseIdx], typed };
 }
 
 export function LandingHero() {
-  const { phrase, typed, showSubtitle } = useTypewriter();
+  const { phrase, typed } = useTypewriter();
   const PhraseIcon = phrase.icon;
 
   return (
@@ -102,22 +81,34 @@ export function LandingHero() {
         <div className="absolute bottom-[-15%] left-[30%] h-[400px] w-[400px] animate-blob-3 bg-neon-orange/15 blur-[110px]" />
       </div>
 
-      <main className="px-6 pt-16 text-center md:px-12 md:pt-24">
+      {/* Mockups decorativos flanqueando o hero — mesmo código reaproveitado do "Veja como funciona" */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[-8%] top-1/2 z-0 hidden w-72 -translate-y-1/2 opacity-25 blur-[0.5px] lg:block xl:w-80"
+      >
+        <BrowserFrame className="scale-90">
+          <CalculatorMockup />
+        </BrowserFrame>
+      </div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-[-8%] top-1/2 z-0 hidden w-72 -translate-y-1/2 opacity-25 blur-[0.5px] lg:block xl:w-80"
+      >
+        <BrowserFrame className="scale-90">
+          <SidebarMockup />
+        </BrowserFrame>
+      </div>
+
+      <main className="relative z-10 px-6 pt-16 text-center md:px-12 md:pt-24">
         <div className="mx-auto flex max-w-2xl flex-col items-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border-glass bg-white/5">
             <PhraseIcon size={22} className="text-neon-pink" />
           </div>
-          <h1 className="font-display mt-6 min-h-[7.5rem] text-4xl leading-tight md:min-h-[8.5rem] md:text-5xl xl:text-6xl">
+          <p className="mt-5 max-w-xl text-sm text-text-secondary">{EYEBROW}</p>
+          <h1 className="font-display mt-4 text-4xl leading-tight md:text-5xl xl:text-6xl">{HEADLINE}</h1>
+          <p className="mt-4 min-h-[2rem] max-w-xl text-lg text-text-secondary md:text-xl">
             {typed}
-            <span className="animate-caret-blink ml-0.5 inline-block h-[0.9em] w-[3px] translate-y-1 bg-neon-pink align-middle" />
-          </h1>
-          <p
-            className={cn(
-              "mt-4 max-w-xl text-text-secondary transition-opacity duration-500",
-              showSubtitle ? "opacity-100" : "opacity-0"
-            )}
-          >
-            {phrase.subtitle}
+            <span className="animate-caret-blink ml-0.5 inline-block h-[0.85em] w-[2px] translate-y-0.5 bg-neon-pink align-middle" />
           </p>
         </div>
 
