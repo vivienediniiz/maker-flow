@@ -69,7 +69,7 @@ const FEATURES = [
     title: "Vendas Multicanal",
     description:
       "Mercado Livre, Mercado Pago, Shopee e TikTok Shop sincronizam sozinhos: pedido novo em qualquer uma dessas plataformas cai automaticamente em Vendas, sem importar nada. Fez venda pelo WhatsApp ou Instagram? Cadastra manual em segundos. Tudo no mesmo painel, com filtro por canal e status.",
-    frameTitle: "app.studiomaker.com.br/orders",
+    frameTitle: "studiomaker3d.com.br/orders",
     Mockup: SalesMockup,
   },
   {
@@ -77,7 +77,7 @@ const FEATURES = [
     title: "Prateleira de Filamentos",
     description:
       "Estoque visual, por combinação real de marca, material e cor — cada carretel mostra o nível de sobra em tempo real. Alerta automático quando um rolo tá acabando, e histórico completo de toda compra e todo consumo.",
-    frameTitle: "app.studiomaker.com.br/filaments",
+    frameTitle: "studiomaker3d.com.br/filaments",
     Mockup: FilamentShelfMockup,
   },
   {
@@ -85,7 +85,7 @@ const FEATURES = [
     title: "Controle Patrimonial de Impressoras",
     description:
       "Cada impressora do seu farm cadastrada com data de compra, valor pago, nota fiscal, garantia e histórico de manutenção. Não é só ver status de impressão — é saber quanto cada máquina custou e quando vence a garantia.",
-    frameTitle: "app.studiomaker.com.br/registrations",
+    frameTitle: "studiomaker3d.com.br/registrations",
     Mockup: PrintersMockup,
   },
   {
@@ -93,7 +93,7 @@ const FEATURES = [
     title: "Financeiro Completo",
     description:
       "Receita bruta, custos totais e lucro líquido real — sem estimativa. Lance despesas fixas, insumos e compras extras, e veja o lucro de verdade mês a mês, com gráfico de evolução e exportação em CSV.",
-    frameTitle: "app.studiomaker.com.br/finance",
+    frameTitle: "studiomaker3d.com.br/finance",
     Mockup: FinanceMockup,
   },
   {
@@ -101,7 +101,7 @@ const FEATURES = [
     title: "Frete Integrado",
     description:
       "Cote o frete direto no painel, sem abrir outro site. Com o Melhor Envio conectado, você emite a etiqueta e o rastreio já entra automaticamente na venda — inclusive pra avisar o cliente pelo WhatsApp assim que o pedido sair.",
-    frameTitle: "app.studiomaker.com.br/shipping",
+    frameTitle: "studiomaker3d.com.br/shipping",
     Mockup: ShippingMockup,
   },
   {
@@ -109,7 +109,7 @@ const FEATURES = [
     title: "Insights & BI",
     description:
       "Produto mais lucrativo, cliente que mais compra, filamento mais usado, taxa de recompra — tudo calculado a partir das suas vendas reais, pra decidir o que produzir e pra quem vender com dado, não achismo.",
-    frameTitle: "app.studiomaker.com.br/insights",
+    frameTitle: "studiomaker3d.com.br/insights",
     Mockup: InsightsMockup,
   },
 ];

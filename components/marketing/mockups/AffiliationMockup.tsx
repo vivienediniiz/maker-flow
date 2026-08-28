@@ -38,7 +38,7 @@ export function AffiliationMockup() {
         )}
       >
         <span className="truncate text-[9px] text-text-secondary">
-          maker-flow.netlify.app/signup?ref=studio-diniz
+          studiomaker3d.com.br/signup?ref=studio-diniz
         </span>
         <Copy size={12} className="shrink-0 text-neon-pink" />
       </div>

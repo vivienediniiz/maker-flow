@@ -35,7 +35,7 @@ export function StoreMockup() {
           active === 0 && "ring-2 ring-neon-pink/60"
         )}
       >
-        <span className="truncate text-[10px] text-text-secondary">maker-flow.netlify.app/loja/studio-diniz</span>
+        <span className="truncate text-[10px] text-text-secondary">studiomaker3d.com.br/loja/studio-diniz</span>
         <Copy size={12} className="shrink-0 text-neon-pink" />
       </div>
 

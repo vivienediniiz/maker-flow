@@ -16,7 +16,7 @@ interface BrowserFrameProps {
 }
 
 export function BrowserFrame({
-  title = "app.studiomaker.com.br",
+  title = "studiomaker3d.com.br",
   className,
   children,
   src,

@@ -19,7 +19,7 @@ export function StoreShowcaseSection() {
         className="grid grid-cols-1 items-center gap-8 md:grid-cols-2 md:gap-12"
       >
         <div>
-          <BrowserFrame title="app.studiomaker.com.br/loja/studio-diniz" className="mx-auto max-w-md">
+          <BrowserFrame title="studiomaker3d.com.br/loja/studio-diniz" className="mx-auto max-w-md">
             <div className="min-h-[340px]">
               <StoreMockup />
             </div>

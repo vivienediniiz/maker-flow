@@ -31,7 +31,7 @@ export function HowItWorksSection() {
         className="mt-14"
       >
         <BrowserFrame
-          title="app.studiomaker.com.br/dashboard"
+          title="studiomaker3d.com.br/dashboard"
           src="/landing/dashboard.png"
           alt="Dashboard real do StudioMaker"
           width={1895}

@@ -9,9 +9,9 @@ import { IntegrationsMockup } from "./mockups/IntegrationsMockup";
 // Três telas flutuantes, sem título — alinhadas pelo centro vertical (é assim
 // que estão no Figma: larguras iguais de 336px, gap de 78px, alturas naturais).
 const SCREENS = [
-  { title: "app.studiomaker.com.br/calculator", Mockup: CalculatorMockup },
-  { title: "app.studiomaker.com.br/affiliates", Mockup: AffiliationMockup },
-  { title: "app.studiomaker.com.br/integrations", Mockup: IntegrationsMockup },
+  { title: "studiomaker3d.com.br/calculator", Mockup: CalculatorMockup },
+  { title: "studiomaker3d.com.br/affiliates", Mockup: AffiliationMockup },
+  { title: "studiomaker3d.com.br/integrations", Mockup: IntegrationsMockup },
 ];
 
 export function ScreensShowcaseSection() {
