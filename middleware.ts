@@ -2,6 +2,19 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // Raiz do site é a landing. Quem já tem sessão vai direto pro app, mas a
+  // checagem é só a presença do cookie de auth — de propósito, sem chamar o
+  // Supabase: essa é a página mais visitada e a que precisa carregar mais
+  // rápido, e uma ida à rede em todo acesso anônimo sairia cara à toa.
+  // Cookie vencido no pior caso manda pro /dashboard, que aí sim revalida de
+  // verdade e devolve pro login.
+  if (request.nextUrl.pathname === "/") {
+    const hasSession = request.cookies.getAll().some((c) => /^sb-.+-auth-token/.test(c.name));
+    return hasSession
+      ? NextResponse.redirect(new URL("/dashboard", request.url))
+      : NextResponse.next();
+  }
+
   let response = NextResponse.next({ request: { headers: request.headers } });
 
   const supabase = createServerClient(
@@ -27,21 +40,6 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  // Raiz do site: quem não tem sessão vê a landing, quem tem vai pro app.
-  // Sem isso, `studiomaker3d.com.br` levava todo visitante direto pro login —
-  // quem nunca ouviu falar do produto não via preço nem funcionalidade.
-  //
-  // A decisão fica aqui e não no splash (app/page.tsx) porque lá ela roda no
-  // navegador: o visitante baixaria a página toda, veria a logo, e só então
-  // seria redirecionado. Aqui é no servidor, sem piscar, e um crawler recebe
-  // redirect em vez de uma tela de logo sem conteúdo.
-  //
-  // O `from` preserva o splash nas entradas internas: `logo` (clique na
-  // logo), `logout` (botão Sair) e `app` (start_url do PWA instalado).
-  if (request.nextUrl.pathname === "/" && !request.nextUrl.searchParams.has("from")) {
-    return NextResponse.redirect(new URL(user ? "/dashboard" : "/home", request.url));
-  }
 
   // Protect all /dashboard and /admin routes. A checagem de is_admin em si
   // (quem pode ver /admin de fato) fica em app/admin/layout.tsx — aqui só

@@ -10,7 +10,7 @@ interface AppLogoProps {
 }
 
 // Logo clicável usada em qualquer lugar da aplicação: em vez de navegar
-// direto, sempre passa pela splash (`/?from=logo`, 2s) antes de cair no
+// direto, sempre passa pela splash (`/splash?from=logo`, 2s) antes de cair no
 // dashboard ou login — reforça a marca e força uma atualização do app.
 export function AppLogo({
   wrapperClassName = "flex items-center gap-2",
@@ -21,7 +21,7 @@ export function AppLogo({
   const router = useRouter();
 
   return (
-    <button type="button" onClick={() => router.push("/?from=logo")} className={wrapperClassName}>
+    <button type="button" onClick={() => router.push("/splash?from=logo")} className={wrapperClassName}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/logo-icon.png" alt="StudioMaker" className={iconClassName} />
       {showLabel && <span className={textClassName}>StudioMaker</span>}

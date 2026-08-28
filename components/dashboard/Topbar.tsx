@@ -58,7 +58,7 @@ export function Topbar({ title, searchValue, onSearchChange, searchPlaceholder }
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    router.push("/?from=logout");
+    router.push("/splash?from=logout");
     router.refresh();
   }
 
