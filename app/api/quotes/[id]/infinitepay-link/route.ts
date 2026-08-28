@@ -4,7 +4,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createInfinitePayCheckoutLink } from "@/lib/infinitePay";
 import { apiError } from "@/lib/apiError";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://maker-flow.netlify.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://studiomaker3d.com.br";
 const INFINITEPAY_HANDLE = process.env.INFINITEPAY_HANDLE;
 // Mesma trava da Loja Online: InfinitePay não é multi-tenant (um handle só,
 // sem OAuth por maker) — só o maker dono desse slug pode gerar link, senão

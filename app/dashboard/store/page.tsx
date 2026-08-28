@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 import { slugify } from "@/lib/slug";
 import { ExternalLink, Copy, Check, AlertTriangle, Loader2 } from "lucide-react";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://maker-flow.netlify.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://studiomaker3d.com.br";
 
 export default function StorePage() {
   const supabase = createClient();

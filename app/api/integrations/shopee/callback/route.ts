@@ -86,5 +86,5 @@ export async function GET(req: NextRequest) {
     { onConflict: "user_id,platform" }
   );
 
-  return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL || "https://maker-flow.netlify.app"}/dashboard/integrations`);
+  return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL || "https://studiomaker3d.com.br"}/dashboard/integrations`);
 }

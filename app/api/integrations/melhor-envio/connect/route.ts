@@ -7,7 +7,7 @@ import { melhorEnvioAuthorizeUrl } from "@/lib/melhorEnvio";
 // resposta de todo mundo (foi exatamente isso que aconteceu em producao).
 export const dynamic = "force-dynamic";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://maker-flow.netlify.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://studiomaker3d.com.br";
 
 /**
  * Fluxo OAuth: o maker clica "Conectar", é redirecionado pro Melhor Envio,

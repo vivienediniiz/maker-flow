@@ -7,7 +7,7 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 // na rota equivalente do Melhor Envio).
 export const dynamic = "force-dynamic";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://maker-flow.netlify.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://studiomaker3d.com.br";
 
 /**
  * Fluxo OAuth do Mercado Livre (marketplace, diferente do Mercado Pago que

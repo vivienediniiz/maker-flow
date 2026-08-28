@@ -7,7 +7,7 @@ import { exchangeMercadoPagoCode } from "@/lib/mercadoPago";
 // Nunca cachear: cada chamada troca um `code` de uso único por um token real.
 export const dynamic = "force-dynamic";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://maker-flow.netlify.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://studiomaker3d.com.br";
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);

@@ -9,7 +9,7 @@ import type { StoreProfilePublic } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://maker-flow.netlify.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://studiomaker3d.com.br";
 // Único vendedor autorizado a usar InfinitePay — handle não é secreto (a
 // própria InfinitePay trata como público), mas o botão só aparece/funciona
 // pra essa loja específica, pra não desviar pagamento de outro vendedor pra
