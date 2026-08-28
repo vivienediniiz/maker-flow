@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { BrowserFrame } from "./BrowserFrame";
+import { DashboardMockupLarge } from "./mockups/DashboardMockupLarge";
 
 export function HowItWorksSection() {
   return (
@@ -22,7 +23,9 @@ export function HowItWorksSection() {
         </p>
       </motion.div>
 
-      {/* Uma única tela, em largura cheia: o dashboard real (screenshot, não mockup em código). */}
+      {/* Uma única tela, em largura cheia: o dashboard real reconstruído em
+          código (DashboardMockupLarge), não screenshot — assim anima, fica
+          nítido em qualquer densidade de tela e acompanha mudanças do produto. */}
       <motion.div
         initial={{ opacity: 0, y: 28 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -30,14 +33,9 @@ export function HowItWorksSection() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="mt-14"
       >
-        <BrowserFrame
-          title="studiomaker3d.com.br/dashboard"
-          src="/landing/dashboard.png"
-          alt="Dashboard real do StudioMaker"
-          width={1895}
-          height={905}
-          sizes="(max-width: 768px) 100vw, 1056px"
-        />
+        <BrowserFrame title="studiomaker3d.com.br/dashboard">
+          <DashboardMockupLarge />
+        </BrowserFrame>
       </motion.div>
     </section>
   );
