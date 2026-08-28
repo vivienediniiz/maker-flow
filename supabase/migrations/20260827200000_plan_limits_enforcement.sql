@@ -18,6 +18,7 @@ create or replace function public.plan_limit(p_tier text, p_resource text)
 returns numeric
 language sql
 immutable
+set search_path = ''
 as $$
   select case p_tier
     when 'free' then case p_resource
