@@ -5,6 +5,16 @@ const nextConfig = {
   experimental: {
     serverActions: { bodySizeLimit: "2mb" },
   },
+  async redirects() {
+    return [
+      // A landing morava em /home antes de mudar pra raiz. Fica aqui, e não
+      // numa page.tsx com redirect(): a rota era estática, e o 308 gerado
+      // por ela chegava em produção sem o cabeçalho Location — o navegador
+      // recebia "mudou de endereço" e nenhum endereço. Redirecionamento de
+      // URL é configuração, não página.
+      { source: "/home", destination: "/", permanent: true },
+    ];
+  },
 };
 
 // Sem isso, instrumentation-client.ts nunca é injetado no bundle do
