@@ -139,7 +139,7 @@ export async function melhorEnvioFetchForIntegration(
         ...(init?.headers ?? {}),
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
-        "User-Agent": "StudioMaker (suporte@studiomaker.app)",
+        "User-Agent": "StudioMaker (viviennydiniz@gmail.com)",
       },
     });
 
