@@ -58,8 +58,19 @@ export async function POST(req: NextRequest) {
       secret: webhookSecret,
     });
     if (!validSignature) {
+      // Esse caminho é impossível de testar antes da primeira venda real de um
+      // maker (o simulador do MP não casa com nenhuma integração e sai antes
+      // daqui), e um segredo errado descarta venda de verdade sem sinal
+      // nenhum — então deixa rastro explícito no log.
+      console.error(
+        `[webhook] mercado-pago: ASSINATURA INVÁLIDA pro pedido ${resourceId} (conta MP ${mpUserId}, integração ${integration.id}) — venda DESCARTADA. Conferir MERCADO_PAGO_VENDAS_WEBHOOK_SECRET contra a assinatura secreta do app "MakerFlow Vendas".`
+      );
       return NextResponse.json({ error: "Assinatura inválida" }, { status: 401 });
     }
+  } else {
+    console.warn(
+      "[webhook] mercado-pago: MERCADO_PAGO_VENDAS_WEBHOOK_SECRET ausente — processando sem validar assinatura."
+    );
   }
 
   try {
