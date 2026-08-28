@@ -3,20 +3,6 @@
 @tailwind utilities;
 
 @layer base {
-  /* Tokens de timing — fonte única de duração e curva. As animações que os
-     consomem estão no tailwind.config.ts (animate-fade-in, animate-slide-in,
-     animate-skeleton, animate-value-change), junto das outras keyframes do
-     projeto. A curva --easing-out é a mesma que a landing usa no
-     framer-motion, pra CSS e JS não desencontrarem. */
-  :root {
-    --duration-fast: 150ms;
-    --duration-base: 300ms;
-    --duration-slow: 600ms;
-    --easing-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-    --easing-out: cubic-bezier(0.16, 1, 0.3, 1);
-    --easing-in: cubic-bezier(0.4, 0, 1, 1);
-  }
-
   html {
     color-scheme: dark;
   }
@@ -121,20 +107,5 @@
     height: 6px;
     border-radius: 999px;
     background: transparent;
-  }
-}
-
-/* Movimento reduzido: rede de segurança global. Vale pra qualquer animação
-   CSS do app, inclusive as que forem escritas depois sem ninguém lembrar
-   desse cuidado. Não substitui o `useReducedMotion` do framer-motion —
-   animação feita em JS não passa por regra de CSS — os dois se completam.
-   Fica fora dos @layer de propósito: precisa ganhar de tudo. */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
   }
 }

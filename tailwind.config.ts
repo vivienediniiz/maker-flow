@@ -62,25 +62,6 @@ const config: Config = {
         pill: "999px",
       },
       keyframes: {
-        // Camada de animações do design system — duração e curva vem dos
-        // tokens em globals.css, pra timing ficar consistente entre CSS e o
-        // que o framer-motion usa nas seções da landing.
-        "skeleton-pulse": {
-          "0%, 100%": { opacity: "0.6" },
-          "50%": { opacity: "0.3" },
-        },
-        "fade-in": {
-          from: { opacity: "0" },
-          to: { opacity: "1" },
-        },
-        "slide-in-up": {
-          from: { opacity: "0", transform: "translateY(12px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
-        },
-        "value-pulse": {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.7" },
-        },
         "pulse-glow": {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.6" },
@@ -167,10 +148,6 @@ const config: Config = {
         },
       },
       animation: {
-        skeleton: "skeleton-pulse 2s var(--easing-in-out) infinite",
-        "fade-in": "fade-in var(--duration-base) var(--easing-in-out)",
-        "slide-in": "slide-in-up var(--duration-base) var(--easing-out)",
-        "value-change": "value-pulse var(--duration-fast) var(--easing-in-out)",
         "pulse-glow": "pulse-glow 2.4s ease-in-out infinite",
         shimmer: "shimmer 2.5s linear infinite",
         "blob-1": "blob-1 26s ease-in-out infinite",
