@@ -84,11 +84,11 @@ export function BranchesRegistrationTab() {
 
       {!canCreate && (
         <p className="text-xs text-amber-400">
-          O plano Grátis permite só {limitFor(tier, "branches")} filial (a matriz).{" "}
+          Seu plano permite só {limitFor(tier, "branches")} filia{limitFor(tier, "branches") === 1 ? "l" : "is"}.{" "}
           <a href="/dashboard/subscription" className="underline hover:text-amber-300">
-            Assine um plano
+            Assine um plano maior
           </a>{" "}
-          pra ter filiais ilimitadas.
+          pra cadastrar mais.
         </p>
       )}
 

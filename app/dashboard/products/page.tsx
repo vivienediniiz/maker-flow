@@ -290,7 +290,7 @@ export default function ProductsPage() {
               onClick={() => canCreate && setModalOpen(true)}
               disabled={!canCreate}
               className={!canCreate ? "opacity-40" : undefined}
-              title={!canCreate ? `Limite do plano Grátis (${limitFor(tier, "products")} produtos) atingido` : undefined}
+              title={!canCreate ? `Limite do seu plano (${limitFor(tier, "products")} produtos) atingido` : undefined}
             >
               {canCreate ? <PackagePlus size={14} /> : <Lock size={14} />} Novo Produto
             </NeonButton>
@@ -299,11 +299,11 @@ export default function ProductsPage() {
 
         {!canCreate && (
           <p className="text-xs text-amber-400">
-            Você atingiu o limite de {limitFor(tier, "products")} produtos do plano Grátis.{" "}
+            Você atingiu o limite de {limitFor(tier, "products")} produtos do seu plano.{" "}
             <a href="/dashboard/subscription" className="underline hover:text-amber-300">
-              Assine um plano
+              Assine um plano maior
             </a>{" "}
-            pra cadastrar sem limite.
+            pra cadastrar mais.
           </p>
         )}
 

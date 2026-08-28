@@ -111,7 +111,7 @@ export default function FilamentsPage() {
               onClick={() => canCreate && openCreate()}
               disabled={!canCreate}
               className={!canCreate ? "opacity-40" : undefined}
-              title={!canCreate ? `Limite do plano Grátis (${limitFor(tier, "filaments")} rolos) atingido` : undefined}
+              title={!canCreate ? `Limite do seu plano (${limitFor(tier, "filaments")} rolos) atingido` : undefined}
             >
               {canCreate ? <Plus size={14} /> : <Lock size={14} />} Novo Filamento
             </NeonButton>
@@ -120,11 +120,11 @@ export default function FilamentsPage() {
 
         {!canCreate && (
           <p className="-mt-4 text-xs text-amber-400">
-            Você atingiu o limite de {limitFor(tier, "filaments")} rolos do plano Grátis.{" "}
+            Você atingiu o limite de {limitFor(tier, "filaments")} rolos do seu plano.{" "}
             <a href="/dashboard/subscription" className="underline hover:text-amber-300">
-              Assine um plano
+              Assine um plano maior
             </a>{" "}
-            pra cadastrar sem limite.
+            pra cadastrar mais.
           </p>
         )}
 

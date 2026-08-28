@@ -85,7 +85,7 @@ export default function ClientsPage() {
             onClick={() => canCreate && setModalOpen(true)}
             disabled={!canCreate}
             className={!canCreate ? "opacity-40" : undefined}
-            title={!canCreate ? `Limite do plano Grátis (${limitFor(tier, "clients")} clientes) atingido` : undefined}
+            title={!canCreate ? `Limite do seu plano (${limitFor(tier, "clients")} clientes) atingido` : undefined}
           >
             {canCreate ? <Plus size={16} /> : <Lock size={16} />} Novo Cliente
           </NeonButton>
@@ -93,11 +93,11 @@ export default function ClientsPage() {
 
         {!canCreate && (
           <p className="text-xs text-amber-400">
-            Você atingiu o limite de {limitFor(tier, "clients")} clientes do plano Grátis.{" "}
+            Você atingiu o limite de {limitFor(tier, "clients")} clientes do seu plano.{" "}
             <a href="/dashboard/subscription" className="underline hover:text-amber-300">
-              Assine um plano
+              Assine um plano maior
             </a>{" "}
-            pra cadastrar sem limite.
+            pra cadastrar mais.
           </p>
         )}
 
