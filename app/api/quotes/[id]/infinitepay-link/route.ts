@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { createInfinitePayCheckoutLink } from "@/lib/infinitePay";
+import { createInfinitePayCheckoutLink, InfinitePayError } from "@/lib/infinitePay";
 import { apiError } from "@/lib/apiError";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://studiomaker3d.com.br";
@@ -84,6 +84,18 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
     return NextResponse.json({ url: link.url });
   } catch (err) {
+    // 4xx = o InfinitePay recusou os dados, tentar de novo nunca vai
+    // funcionar. O caso comum é valor abaixo do mínimo aceito por cobrança
+    // (uma venda de centavos, por exemplo) — mandar "tente novamente" aí
+    // deixa a pessoa presa num loop sem saída.
+    if (err instanceof InfinitePayError && err.isRejected) {
+      return apiError(
+        "infinitepay-link",
+        err,
+        "O InfinitePay recusou essa cobrança. Confira o valor da venda — há um valor mínimo por cobrança.",
+        400
+      );
+    }
     return apiError("infinitepay-link", err, "Não foi possível gerar o link de pagamento agora. Tente novamente.");
   }
 }

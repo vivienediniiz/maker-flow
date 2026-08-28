@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createMercadoPagoPreferenceForIntegration } from "@/lib/mercadoPago";
-import { createInfinitePayCheckoutLink } from "@/lib/infinitePay";
+import { createInfinitePayCheckoutLink, InfinitePayError } from "@/lib/infinitePay";
 import { checkoutRateLimit, requestIp } from "@/lib/rateLimit";
 import { apiError } from "@/lib/apiError";
 import type { StoreProfilePublic } from "@/lib/types";
@@ -194,6 +194,18 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
 
       return NextResponse.json({ init_point: link.url });
     } catch (err) {
+      // 4xx = o InfinitePay recusou os dados da cobrança (valor abaixo do
+      // mínimo, por exemplo). Quem compra não tem como corrigir isso, então
+      // "tente novamente" só empurra pro mesmo erro — manda pro Mercado Pago,
+      // que é a outra forma de pagamento da mesma loja.
+      if (err instanceof InfinitePayError && err.isRejected) {
+        return apiError(
+          "checkout:infinitepay",
+          err,
+          "Não foi possível pagar com InfinitePay agora. Escolha Mercado Pago pra finalizar o pedido.",
+          400
+        );
+      }
       return apiError("checkout:infinitepay", err, "Não foi possível iniciar o pagamento. Tente novamente.");
     }
   }
