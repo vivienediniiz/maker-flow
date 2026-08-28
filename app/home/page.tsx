@@ -27,6 +27,10 @@ import { HowItWorksSection } from "@/components/marketing/HowItWorksSection";
 import { StoreShowcaseSection } from "@/components/marketing/StoreShowcaseSection";
 import { ScreensShowcaseSection } from "@/components/marketing/ScreensShowcaseSection";
 import { LiveCalculatorSection } from "@/components/marketing/LiveCalculatorSection";
+import { Reveal, RevealGroup, RevealItem } from "@/components/marketing/motion/Reveal";
+import { AnimatedHeading } from "@/components/marketing/motion/AnimatedHeading";
+import { Parallax } from "@/components/marketing/motion/Parallax";
+import { ScrollProgress } from "@/components/marketing/motion/ScrollProgress";
 import { SalesMockup } from "@/components/marketing/mockups/SalesMockup";
 import { FilamentShelfMockup } from "@/components/marketing/mockups/FilamentShelfMockup";
 import { PrintersMockup } from "@/components/marketing/mockups/PrintersMockup";
@@ -219,6 +223,7 @@ const FAQ = [
 export default function HomePage() {
   return (
     <div className="min-h-screen">
+      <ScrollProgress />
       <header className="sticky top-0 z-40 border-b border-border-glass bg-bg/80 backdrop-blur-xl">
         <div className="flex items-center justify-between px-4 py-4 sm:px-6 md:px-12">
           <AppLogo iconClassName="h-8 w-8 sm:h-9 sm:w-9" textClassName="font-display text-base tracking-wide sm:text-lg" />
@@ -256,71 +261,90 @@ export default function HomePage() {
       {/* O Problema */}
       <section className="mx-auto mt-28 max-w-5xl px-6 md:px-12">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-display text-3xl md:text-4xl">
-            Você não abriu um estúdio de impressão 3D pra virar <span className="neon-text">contador</span>
-          </h2>
-          <p className="mt-4 text-text-secondary">
-            Mas sem controle real de custo, estoque e vendas, é exatamente isso que a rotina vira — e a margem some
-            no processo.
-          </p>
+          <AnimatedHeading
+            className="font-display text-3xl md:text-4xl"
+            segments={["Você não abriu um estúdio de impressão 3D pra virar", { text: "contador", neon: true }]}
+          />
+          <Reveal delay={0.15}>
+            <p className="mt-4 text-text-secondary">
+              Mas sem controle real de custo, estoque e vendas, é exatamente isso que a rotina vira — e a margem some
+              no processo.
+            </p>
+          </Reveal>
         </div>
-        <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <RevealGroup className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2">
           {PROBLEMS.map((p) => (
-            <GlassCard key={p.title} padding="md" className="space-y-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">
-                <p.icon size={18} />
-              </div>
-              <p className="font-display text-base">{p.title}</p>
-              <p className="text-sm leading-relaxed text-text-secondary">{p.description}</p>
-            </GlassCard>
+            <RevealItem key={p.title}>
+              <GlassCard padding="md" className="h-full space-y-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">
+                  <p.icon size={18} />
+                </div>
+                <p className="font-display text-base">{p.title}</p>
+                <p className="text-sm leading-relaxed text-text-secondary">{p.description}</p>
+              </GlassCard>
+            </RevealItem>
           ))}
-        </div>
+        </RevealGroup>
       </section>
 
       {/* Funcionalidades */}
       <section id="ferramentas" className="mx-auto mt-28 max-w-5xl px-6 md:px-12">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-display text-3xl md:text-4xl">
-            O sistema de verdade, <span className="neon-text">funcionando</span>
-          </h2>
-          <p className="mt-4 text-text-secondary">
-            Sem mockup genérico — as telas abaixo são o próprio StudioMaker, do jeito que ele roda hoje.
-          </p>
+          <AnimatedHeading
+            className="font-display text-3xl md:text-4xl"
+            segments={["O sistema de verdade,", { text: "funcionando", neon: true }]}
+          />
+          <Reveal delay={0.15}>
+            <p className="mt-4 text-text-secondary">
+              Sem mockup genérico — as telas abaixo são o próprio StudioMaker, do jeito que ele roda hoje.
+            </p>
+          </Reveal>
         </div>
 
         <div className="mt-16 space-y-20 md:space-y-28">
           {FEATURES.map((f, i) => (
             <div key={f.title} className="grid grid-cols-1 items-center gap-8 md:grid-cols-2 md:gap-12">
-              <div className={i % 2 === 1 ? "md:order-2" : ""}>
-                <BrowserFrame title={f.frameTitle}>
-                  <f.Mockup />
-                </BrowserFrame>
-              </div>
-              <div className={i % 2 === 1 ? "md:order-1" : ""}>
+              {/* O mockup entra pelo lado onde ele está e ainda flutua de leve com o scroll */}
+              <Reveal direction={i % 2 === 1 ? "left" : "right"} className={i % 2 === 1 ? "md:order-2" : ""}>
+                <Parallax distance={22}>
+                  <BrowserFrame title={f.frameTitle}>
+                    <f.Mockup />
+                  </BrowserFrame>
+                </Parallax>
+              </Reveal>
+              <Reveal
+                direction={i % 2 === 1 ? "right" : "left"}
+                delay={0.12}
+                className={i % 2 === 1 ? "md:order-1" : ""}
+              >
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">
                   <f.icon size={20} />
                 </div>
                 <h3 className="font-display mt-4 text-2xl">{f.title}</h3>
                 <p className="mt-3 leading-relaxed text-text-secondary">{f.description}</p>
-              </div>
+              </Reveal>
             </div>
           ))}
         </div>
 
         {/* Mais recursos, sem mockup dedicado */}
         <div className="mt-20">
-          <p className="text-center text-sm uppercase tracking-wider text-text-muted">E também no seu painel</p>
-          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <Reveal>
+            <p className="text-center text-sm uppercase tracking-wider text-text-muted">E também no seu painel</p>
+          </Reveal>
+          <RevealGroup className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4" stagger={0.08}>
             {EXTRA_FEATURES.map((f) => (
-              <GlassCard key={f.title} hover padding="md" className="space-y-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">
-                  <f.icon size={16} />
-                </div>
-                <p className="font-display text-sm">{f.title}</p>
-                <p className="text-xs leading-relaxed text-text-secondary">{f.description}</p>
-              </GlassCard>
+              <RevealItem key={f.title}>
+                <GlassCard hover padding="md" className="h-full space-y-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">
+                    <f.icon size={16} />
+                  </div>
+                  <p className="font-display text-sm">{f.title}</p>
+                  <p className="text-xs leading-relaxed text-text-secondary">{f.description}</p>
+                </GlassCard>
+              </RevealItem>
             ))}
-          </div>
+          </RevealGroup>
         </div>
       </section>
 
@@ -329,50 +353,58 @@ export default function HomePage() {
       {/* Antes e depois */}
       <section className="mx-auto mt-28 max-w-4xl px-6 md:px-12">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-display text-3xl md:text-4xl">
-            Sua planilha <span className="neon-text">versus</span> o Studio Maker
-          </h2>
+          <AnimatedHeading
+            className="font-display text-3xl md:text-4xl"
+            segments={["Sua planilha", { text: "versus", neon: true }, "o Studio Maker"]}
+          />
         </div>
         <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <GlassCard padding="lg" className="space-y-4">
-            <p className="font-display text-sm uppercase tracking-wider text-text-muted">Planilha / no achismo</p>
-            <ul className="space-y-3">
-              {BEFORE_AFTER.before.map((item) => (
-                <li key={item} className="flex items-start gap-2.5 text-sm text-text-secondary">
-                  <X size={16} className="mt-0.5 shrink-0 text-text-muted" /> {item}
-                </li>
-              ))}
-            </ul>
-          </GlassCard>
-          <GlassCard padding="lg" className="space-y-4 ring-1 ring-neon-pink/30">
-            <p className="font-display text-sm uppercase tracking-wider text-neon-pink">Studio Maker</p>
-            <ul className="space-y-3">
-              {BEFORE_AFTER.after.map((item) => (
-                <li key={item} className="flex items-start gap-2.5 text-sm text-text-secondary">
-                  <Check size={16} className="mt-0.5 shrink-0 text-neon-green" /> {item}
-                </li>
-              ))}
-            </ul>
-          </GlassCard>
+          <Reveal direction="right">
+            <GlassCard padding="lg" className="h-full space-y-4">
+              <p className="font-display text-sm uppercase tracking-wider text-text-muted">Planilha / no achismo</p>
+              <ul className="space-y-3">
+                {BEFORE_AFTER.before.map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-text-secondary">
+                    <X size={16} className="mt-0.5 shrink-0 text-text-muted" /> {item}
+                  </li>
+                ))}
+              </ul>
+            </GlassCard>
+          </Reveal>
+          <Reveal direction="left" delay={0.12}>
+            <GlassCard padding="lg" className="h-full space-y-4 ring-1 ring-neon-pink/30">
+              <p className="font-display text-sm uppercase tracking-wider text-neon-pink">Studio Maker</p>
+              <ul className="space-y-3">
+                {BEFORE_AFTER.after.map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-text-secondary">
+                    <Check size={16} className="mt-0.5 shrink-0 text-neon-green" /> {item}
+                  </li>
+                ))}
+              </ul>
+            </GlassCard>
+          </Reveal>
         </div>
       </section>
 
       {/* Por que StudioMaker3D */}
       <section className="mx-auto mt-28 max-w-5xl px-6 md:px-12">
-        <h2 className="text-center font-display text-3xl md:text-4xl">
-          Por que <span className="neon-text">StudioMaker3D</span>
-        </h2>
-        <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-3">
+        <AnimatedHeading
+          className="text-center font-display text-3xl md:text-4xl"
+          segments={["Por que", { text: "StudioMaker3D", neon: true }]}
+        />
+        <RevealGroup className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-3" stagger={0.1}>
           {WHY_US.map((w) => (
-            <GlassCard key={w.title} padding="lg" className="space-y-3 text-center">
-              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">
-                <w.icon size={20} />
-              </div>
-              <p className="font-display text-base">{w.title}</p>
-              <p className="text-sm leading-relaxed text-text-secondary">{w.description}</p>
-            </GlassCard>
+            <RevealItem key={w.title}>
+              <GlassCard padding="lg" className="h-full space-y-3 text-center">
+                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-neon-gradient-soft text-neon-pink">
+                  <w.icon size={20} />
+                </div>
+                <p className="font-display text-base">{w.title}</p>
+                <p className="text-sm leading-relaxed text-text-secondary">{w.description}</p>
+              </GlassCard>
+            </RevealItem>
           ))}
-        </div>
+        </RevealGroup>
       </section>
 
       <ScreensShowcaseSection />
@@ -380,14 +412,17 @@ export default function HomePage() {
       {/* Planos */}
       <section id="planos" className="mx-auto mt-28 max-w-5xl px-6 md:px-12">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-display text-3xl md:text-4xl">Planos simples, sem pegadinha</h2>
-          <p className="mt-4 text-text-secondary">
-            14 dias de acesso completo pra testar tudo, sem pedir cartão. Depois, continue no Grátis pra sempre ou
-            assine pra manter tudo liberado. Valores mensais — ciclo anual com desconto disponível na assinatura.
-          </p>
+          <AnimatedHeading className="font-display text-3xl md:text-4xl" segments={["Planos simples, sem pegadinha"]} />
+          <Reveal delay={0.15}>
+            <p className="mt-4 text-text-secondary">
+              14 dias de acesso completo pra testar tudo, sem pedir cartão. Depois, continue no Grátis pra sempre ou
+              assine pra manter tudo liberado. Valores mensais — ciclo anual com desconto disponível na assinatura.
+            </p>
+          </Reveal>
         </div>
-        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-          <GlassCard padding="lg" className="flex flex-col gap-4">
+        <RevealGroup className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3" stagger={0.12}>
+          <RevealItem className="h-full">
+          <GlassCard padding="lg" className="flex h-full flex-col gap-4">
             <div>
               <h3 className="font-display text-xl">Grátis</h3>
               <p className="mt-1 text-sm text-text-secondary">Pra sempre, com limites — dá pra testar o essencial.</p>
@@ -407,13 +442,14 @@ export default function HomePage() {
               Começar grátis
             </Link>
           </GlassCard>
+          </RevealItem>
           {PLANS.map((plan) => {
             const pricing = getCyclePricing(plan.id, "monthly");
             return (
+              <RevealItem key={plan.id} className="h-full">
               <GlassCard
-                key={plan.id}
                 padding="lg"
-                className={`flex flex-col gap-4 ${plan.highlighted ? "shadow-neon-glow ring-1 ring-neon-pink/40" : ""}`}
+                className={`flex h-full flex-col gap-4 ${plan.highlighted ? "shadow-neon-glow ring-1 ring-neon-pink/40" : ""}`}
               >
                 {plan.highlighted && (
                   <span className="w-fit rounded-pill bg-neon-gradient px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">
@@ -439,39 +475,54 @@ export default function HomePage() {
                   Assinar {plan.name}
                 </Link>
               </GlassCard>
+              </RevealItem>
             );
           })}
-        </div>
-        <div className="mt-8 text-center">
+        </RevealGroup>
+        <Reveal className="mt-8 text-center">
           <Link href="/pricing" className="text-sm text-text-secondary hover:text-text-primary">
             Comparar tudo — mensal, anual e Pix <ArrowRight size={14} className="inline" />
           </Link>
-        </div>
+        </Reveal>
       </section>
 
       {/* FAQ */}
       <section id="faq" className="mx-auto mt-28 max-w-2xl px-6 md:px-12">
-        <h2 className="text-center font-display text-3xl md:text-4xl">Perguntas frequentes</h2>
-        <div className="mt-10 space-y-3">
+        <AnimatedHeading
+          className="text-center font-display text-3xl md:text-4xl"
+          segments={["Perguntas frequentes"]}
+        />
+        <RevealGroup className="mt-10 space-y-3" stagger={0.07}>
           {FAQ.map((item) => (
-            <GlassAccordion key={item.question} title={item.question}>
-              <p className="text-sm text-text-secondary">{item.answer}</p>
-            </GlassAccordion>
+            <RevealItem key={item.question}>
+              <GlassAccordion title={item.question}>
+                <p className="text-sm text-text-secondary">{item.answer}</p>
+              </GlassAccordion>
+            </RevealItem>
           ))}
-        </div>
+        </RevealGroup>
       </section>
 
       {/* CTA final */}
       <section className="mx-auto my-28 max-w-4xl px-6 md:px-12">
-        <GlassCard padding="lg" className="flex flex-col items-center gap-4 py-14 text-center shadow-neon-glow">
-          <h2 className="font-display text-3xl">Pronto pra saber o lucro real do seu estúdio?</h2>
-          <p className="max-w-md text-text-secondary">
-            Sem cartão de crédito, 14 dias de acesso completo. Depois, você decide se continua.
-          </p>
-          <Link href="/signup" className="neon-btn">
-            Começar grátis <ArrowRight size={16} />
-          </Link>
-        </GlassCard>
+        <Reveal>
+          <GlassCard padding="lg" className="flex flex-col items-center gap-4 py-14 text-center shadow-neon-glow">
+            <AnimatedHeading
+              className="font-display text-3xl"
+              segments={["Pronto pra saber o", { text: "lucro real", neon: true }, "do seu estúdio?"]}
+            />
+            <Reveal delay={0.25}>
+              <p className="max-w-md text-text-secondary">
+                Sem cartão de crédito, 14 dias de acesso completo. Depois, você decide se continua.
+              </p>
+            </Reveal>
+            <Reveal delay={0.35}>
+              <Link href="/signup" className="neon-btn">
+                Começar grátis <ArrowRight size={16} />
+              </Link>
+            </Reveal>
+          </GlassCard>
+        </Reveal>
       </section>
 
       <footer className="flex flex-col items-center gap-3 border-t border-border-glass px-6 py-8 text-center text-xs text-text-muted md:px-12">

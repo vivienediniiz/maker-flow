@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, DollarSign, Printer, Package, Rocket, type LucideIcon } from "lucide-react";
+import { AnimatedHeading } from "./motion/AnimatedHeading";
 import { BrowserFrame } from "./BrowserFrame";
 import { CalculatorMockup } from "./mockups/CalculatorMockup";
 import { SidebarMockup } from "./mockups/SidebarMockup";
@@ -10,7 +12,13 @@ import { SidebarMockup } from "./mockups/SidebarMockup";
 const EYEBROW =
   "Gestão completa para estúdios de impressão 3D: orçamentos inteligentes, pedidos, estoque e insights financeiros em tempo real.";
 
-const HEADLINE = "Calculadora de impressão 3D: custo real e preço que protege seu lucro.";
+const HEADLINE_SEGMENTS = [
+  "Calculadora de impressão 3D: custo real e preço que protege seu",
+  { text: "lucro.", neon: true } as const,
+];
+
+// Curva expo-out: a mesma usada nos reveals de scroll, pro hero e o resto da página baterem juntos.
+const EASE = [0.16, 1, 0.3, 1] as const;
 
 const PHRASES: { title: string; icon: LucideIcon }[] = [
   { title: "Precifique, produza e venda — tudo em um só lugar.", icon: DollarSign },
@@ -71,6 +79,7 @@ function useTypewriter() {
 export function LandingHero() {
   const { phrase, typed } = useTypewriter();
   const PhraseIcon = phrase.icon;
+  const reduced = useReducedMotion();
 
   return (
     <div className="relative overflow-hidden">
@@ -104,21 +113,43 @@ export function LandingHero() {
 
       <main className="relative z-10 px-6 pt-16 text-center md:px-12 md:pt-24">
         <div className="mx-auto flex max-w-[705px] flex-col items-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border-glass bg-white/5">
+          <motion.div
+            initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.8, y: -12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: EASE }}
+            className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border-glass bg-white/5"
+          >
             <PhraseIcon size={22} className="text-neon-pink" />
-          </div>
-          <p className="mt-5 max-w-xl text-sm text-text-secondary">{EYEBROW}</p>
+          </motion.div>
+          <motion.p
+            initial={{ opacity: 0, y: reduced ? 0 : 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1, ease: EASE }}
+            className="mt-5 max-w-xl text-sm text-text-secondary"
+          >
+            {EYEBROW}
+          </motion.p>
           {/* leading igual ao tamanho da fonte (60/60 no Figma) e bloco de 4 linhas de altura */}
-          <h1 className="font-display mt-4 text-4xl leading-none md:text-5xl xl:min-h-[240px] xl:text-6xl">
-            {HEADLINE}
-          </h1>
+          <AnimatedHeading
+            as="h1"
+            trigger="mount"
+            delay={0.2}
+            stagger={0.05}
+            segments={HEADLINE_SEGMENTS}
+            className="font-display mt-4 text-4xl leading-none md:text-5xl xl:min-h-[240px] xl:text-6xl"
+          />
           <p className="mt-4 min-h-[2rem] max-w-xl text-lg text-text-secondary md:text-xl">
             {typed}
             <span className="animate-caret-blink ml-0.5 inline-block h-[0.85em] w-[2px] translate-y-0.5 bg-neon-pink align-middle" />
           </p>
         </div>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: reduced ? 0 : 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.55, ease: EASE }}
+          className="mt-8 flex flex-wrap items-center justify-center gap-4"
+        >
           <Link href="/signup" className="neon-btn">
             Começar grátis <ArrowRight size={16} />
           </Link>
@@ -128,10 +159,15 @@ export function LandingHero() {
           >
             Ver planos
           </Link>
-        </div>
-        <p className="mt-3 text-xs text-text-muted">
+        </motion.div>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.75 }}
+          className="mt-3 text-xs text-text-muted"
+        >
           Sem cartão de crédito · 14 dias de acesso completo
-        </p>
+        </motion.p>
       </main>
     </div>
   );
