@@ -2,7 +2,7 @@
   "name": "StudioMaker3D — Gestão para Estúdios 3D",
   "short_name": "StudioMaker",
   "description": "Precificação inteligente, gestão de pedidos e automação para a comunidade Maker e estúdios de Impressão 3D.",
-  "start_url": "/",
+  "start_url": "/?from=app",
   "display": "standalone",
   "background_color": "#0B0914",
   "theme_color": "#AA17DB",

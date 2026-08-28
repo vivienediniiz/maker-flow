@@ -9,11 +9,14 @@ const LOGOUT_SPLASH_MS = 800;
 
 // Tela de abertura do app: mostra a logo por alguns segundos e segue pro
 // destino certo — igual a tela de lançamento de qualquer app nativo.
-// Passa por aqui em três casos: abertura normal (3s, checa sessão e manda
-// pro dashboard se já estiver logado, senão pro login), clique na logo em
-// qualquer tela (`?from=logo`, via AppLogo — 2s, mesma checagem de sessão,
-// serve pra "atualizar" o app) e logout (`?from=logout`, disparado pelo
-// botão "Sair" no Topbar — 2s, sempre vai pro login).
+//
+// Só se chega aqui com `?from=`: o middleware manda a raiz limpa pra landing
+// (deslogado) ou pro dashboard (logado), pra quem digita o domínio não cair
+// numa tela de login sem contexto. As três entradas que ainda passam por
+// aqui são `app` (start_url do PWA instalado, checa sessão e vai pro
+// dashboard ou login), `logo` (clique na logo em qualquer tela, mesma
+// checagem, serve pra "atualizar" o app) e `logout` (botão "Sair" no
+// Topbar, sempre vai pro login).
 function SplashContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
