@@ -9,6 +9,7 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { Starfield } from "@/components/auth/Starfield";
+import { LEGAL_VERSION } from "@/lib/legal";
 
 export default function SignupPage() {
   return (
@@ -44,17 +45,34 @@ function SignupForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Mensagem única pros dois caminhos de cadastro. Aponta pra baixo porque o
+  // botão do Google fica acima do checkbox no card.
+  const termsBlock = acceptedTerms
+    ? null
+    : "Marque o aceite dos Termos de Uso e da Política de Privacidade, logo abaixo, pra continuar.";
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    // O `required` do input já barra no navegador; isto é a rede de baixo, pro
+    // caso de o form ser submetido por outro caminho.
+    if (termsBlock) {
+      setError(termsBlock);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName, ref_code: refCode ?? null } },
+      // `terms_version` vira terms_accepted_at + terms_version no perfil, pela
+      // trigger handle_new_user. É o registro que serve de prova do aceite.
+      options: { data: { full_name: fullName, ref_code: refCode ?? null, terms_version: LEGAL_VERSION } },
     });
     setLoading(false);
     if (error) {
@@ -88,7 +106,7 @@ function SignupForm() {
         <p className="mt-1 text-sm text-text-secondary">Comece grátis, sem cartão de crédito.</p>
       </div>
 
-      <SocialAuthButtons refCode={refCode} />
+      <SocialAuthButtons refCode={refCode} termsVersion={LEGAL_VERSION} blockedReason={termsBlock} />
 
       <div className="flex items-center gap-3">
         <div className="h-px flex-1 bg-border-glass" />
@@ -110,9 +128,30 @@ function SignupForm() {
           <PasswordInput required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
 
+        <label className="flex cursor-pointer items-start gap-2.5 text-xs leading-relaxed text-text-secondary">
+          <input
+            type="checkbox"
+            required
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-neon-pink"
+          />
+          <span>
+            Li e aceito os{" "}
+            <Link href="/terms" target="_blank" className="text-neon-pink hover:underline">
+              Termos de Uso
+            </Link>{" "}
+            e a{" "}
+            <Link href="/privacy-policy" target="_blank" className="text-neon-pink hover:underline">
+              Política de Privacidade
+            </Link>
+            .
+          </span>
+        </label>
+
         {error && <p className="text-xs text-red-400">{error}</p>}
 
-        <NeonButton type="submit" className="w-full" disabled={loading}>
+        <NeonButton type="submit" className="w-full" disabled={loading || !acceptedTerms}>
           {loading ? "Criando..." : "Criar conta"}
         </NeonButton>
       </form>

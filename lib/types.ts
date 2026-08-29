@@ -17,6 +17,10 @@ export interface Profile {
   paid_until: string | null; // ISO timestamp — só relevante quando payment_method = pix
   /** Id do último pagamento Pix já creditado em `paid_until` — trava de idempotência do webhook, não é histórico. */
   last_pix_payment_id: string | null;
+  /** Quando o usuário aceitou Termos e Privacidade no cadastro. Nulo em contas criadas antes do consentimento existir. */
+  terms_accepted_at: string | null;
+  /** Versão dos documentos aceitos (`LEGAL_VERSION` em lib/legal.ts). */
+  terms_version: string | null;
   mp_customer_id: string | null;
   mp_subscription_id: string | null;
   studio_name: string | null;

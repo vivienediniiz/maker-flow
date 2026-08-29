@@ -11,6 +11,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://studiomaker3d.com.
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
   const refCode = req.nextUrl.searchParams.get("ref");
+  const termsVersion = req.nextUrl.searchParams.get("terms");
 
   if (!code) {
     return NextResponse.redirect(`${SITE_URL}/login`);
@@ -44,6 +45,36 @@ export async function GET(req: NextRequest) {
       }
     } catch (err) {
       console.error("[auth/callback] falha ao resolver indicação de afiliado", err);
+    }
+  }
+
+  // Aceite dos termos no cadastro por Google. O caminho e-mail/senha grava
+  // isso na trigger handle_new_user, mas signInWithOAuth não carrega metadata
+  // de usuário, então aqui é o primeiro momento em que dá pra carimbar.
+  // Só grava se ainda não houver aceite: quem já aceitou uma versão não pode
+  // ter o carimbo trocado por um login posterior.
+  if (termsVersion) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("terms_accepted_at")
+          .eq("id", user.id)
+          .single();
+
+        if (profile && !profile.terms_accepted_at) {
+          await supabase
+            .from("profiles")
+            .update({ terms_accepted_at: new Date().toISOString(), terms_version: termsVersion })
+            .eq("id", user.id);
+        }
+      }
+    } catch (err) {
+      console.error("[auth/callback] falha ao registrar aceite dos termos", err);
     }
   }
 

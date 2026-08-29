@@ -33,12 +33,32 @@ const PROVIDERS: { id: OAuthProvider; label: string; icon: ReactNode }[] = [
   { id: "google", label: "Continuar com Google", icon: <GoogleIcon /> },
 ];
 
-export function SocialAuthButtons({ refCode }: { refCode?: string } = {}) {
+interface SocialAuthButtonsProps {
+  refCode?: string;
+  /**
+   * Versão dos documentos legais a carimbar no cadastro. Só o /signup passa —
+   * no /login não há consentimento a colher, a conta já existe.
+   */
+  termsVersion?: string;
+  /**
+   * Motivo pelo qual o botão não pode seguir agora (ex: termos não aceitos).
+   * Vira mensagem no clique em vez de botão morto: botão desabilitado sem
+   * explicação é o jeito mais rápido de perder um cadastro.
+   */
+  blockedReason?: string | null;
+}
+
+export function SocialAuthButtons({ refCode, termsVersion, blockedReason }: SocialAuthButtonsProps = {}) {
   const supabase = createClient();
   const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function handleClick(provider: OAuthProvider) {
+    if (blockedReason) {
+      setError(blockedReason);
+      return;
+    }
+
     setError(null);
     setLoadingProvider(provider);
 
@@ -47,6 +67,9 @@ export function SocialAuthButtons({ refCode }: { refCode?: string } = {}) {
     // é confiável aqui pq alguns provedores abrem em nova aba/popup).
     const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
     if (refCode) callbackUrl.searchParams.set("ref", refCode);
+    // signInWithOAuth não aceita metadata de usuário, então o aceite viaja na
+    // própria URL de retorno — o callback é quem grava no perfil.
+    if (termsVersion) callbackUrl.searchParams.set("terms", termsVersion);
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,

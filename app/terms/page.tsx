@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AppLogo } from "@/components/ui/AppLogo";
+import { TERMS_UPDATED_AT } from "@/lib/legal";
 
 export const metadata: Metadata = {
   title: "Termos de Uso — StudioMaker",
@@ -19,7 +20,7 @@ export default function TermsPage() {
 
       <main className="mx-auto max-w-[720px] px-6 pb-24 pt-8 md:pt-12">
         <h1 className="font-display text-3xl md:text-4xl">Termos de Uso</h1>
-        <p className="mt-2 text-xs text-text-muted">Última atualização: 19 de agosto de 2026</p>
+        <p className="mt-2 text-xs text-text-muted">Última atualização: {TERMS_UPDATED_AT}</p>
 
         <Section title="1. Aceite dos termos">
           <P>
