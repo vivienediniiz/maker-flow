@@ -221,14 +221,28 @@ export async function POST(req: NextRequest) {
       }
 
       if (payment.status === "approved") {
-        const periodDays = getCyclePricing(tier, cycle).frequencyMonths * 30;
-        const paidUntil = new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000).toISOString();
-
         const { data: beforeProfile } = await supabase
           .from("profiles")
-          .select("subscription_tier, subscription_status")
+          .select("subscription_tier, subscription_status, paid_until, last_pix_payment_id")
           .eq("id", userId)
           .maybeSingle();
+
+        const pixPaymentId = String(payment.id);
+
+        // O Mercado Pago reenvia o aviso do mesmo pagamento (retry, ou o mesmo
+        // evento chegando por dois canais). Sem esta trava, cada reenvio somava
+        // outro período inteiro em paid_until — assinatura de graça.
+        if (beforeProfile?.last_pix_payment_id === pixPaymentId) {
+          return NextResponse.json({ received: true, skipped: "pix_already_credited" }, { status: 200 });
+        }
+
+        const periodDays = getCyclePricing(tier, cycle).frequencyMonths * 30;
+
+        // Renovação paga antes de vencer soma em cima do que ainda sobrava, em
+        // vez de queimar os dias restantes.
+        const currentPaidUntil = beforeProfile?.paid_until ? new Date(beforeProfile.paid_until).getTime() : 0;
+        const startsFrom = Number.isFinite(currentPaidUntil) ? Math.max(Date.now(), currentPaidUntil) : Date.now();
+        const paidUntil = new Date(startsFrom + periodDays * 24 * 60 * 60 * 1000).toISOString();
 
         const { error } = await supabase
           .from("profiles")
@@ -238,6 +252,7 @@ export async function POST(req: NextRequest) {
             subscription_status: "active",
             payment_method: "pix",
             paid_until: paidUntil,
+            last_pix_payment_id: pixPaymentId,
           })
           .eq("id", userId);
 

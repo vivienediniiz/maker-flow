@@ -15,6 +15,8 @@ export interface Profile {
   trial_ends_at: string; // ISO timestamp — fim do período gratuito de 7 dias
   payment_method: PaymentMethodType; // card (assinatura automática) | pix (renovação manual) | null
   paid_until: string | null; // ISO timestamp — só relevante quando payment_method = pix
+  /** Id do último pagamento Pix já creditado em `paid_until` — trava de idempotência do webhook, não é histórico. */
+  last_pix_payment_id: string | null;
   mp_customer_id: string | null;
   mp_subscription_id: string | null;
   studio_name: string | null;
