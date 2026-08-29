@@ -67,10 +67,6 @@ export default function SubscriptionPage() {
     }
   }
 
-  function handlePixApproved() {
-    setTimeout(loadProfile, 1500);
-  }
-
   if (loading) {
     return (
       <>
@@ -176,7 +172,6 @@ export default function SubscriptionPage() {
           cycle={cycle}
           planName={getPlan(pixTarget).name}
           amount={getCyclePricing(pixTarget, cycle).price}
-          onApproved={handlePixApproved}
         />
       )}
     </>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Copy, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
+import { createClient } from "@/lib/supabase/client";
 import { formatBRL } from "@/lib/utils";
 import type { PlanTier, BillingCycle } from "@/lib/plans";
 
@@ -14,7 +15,9 @@ interface PixCheckoutModalProps {
   cycle: BillingCycle;
   planName: string;
   amount: number;
-  onApproved: () => void;
+  onApproved?: () => void;
+  /** Pra onde levar depois que o plano estiver liberado de verdade. */
+  redirectTo?: string;
 }
 
 type Step = "loading" | "ready" | "error" | "approved";
@@ -27,7 +30,9 @@ export function PixCheckoutModal({
   planName,
   amount,
   onApproved,
+  redirectTo = "/dashboard",
 }: PixCheckoutModalProps) {
+  const supabase = createClient();
   const [step, setStep] = useState<Step>("loading");
   const [qrCode, setQrCode] = useState("");
   const [qrCodeBase64, setQrCodeBase64] = useState("");
@@ -35,6 +40,8 @@ export function PixCheckoutModal({
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onApprovedRef = useRef(onApproved);
+  onApprovedRef.current = onApproved;
 
   useEffect(() => {
     if (!open) return;
@@ -83,7 +90,7 @@ export function PixCheckoutModal({
         if (data.status === "approved") {
           setStep("approved");
           if (pollRef.current) clearInterval(pollRef.current);
-          onApproved();
+          onApprovedRef.current?.();
         }
       } catch {
         // silencioso — tenta de novo no próximo tick
@@ -93,7 +100,44 @@ export function PixCheckoutModal({
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [step, paymentId, onApproved]);
+  }, [step, paymentId]);
+
+  // Pago != liberado: quem grava o plano no perfil é o webhook do Mercado
+  // Pago, e a aba aberta não tem como ser avisada. Então espera o perfil
+  // refletir a assinatura antes de navegar — senão o usuário cai no dashboard
+  // ainda como Grátis segundos depois de pagar, que foi exatamente a queixa.
+  // Navegação dura (não router.push) pra garantir render novo no servidor.
+  useEffect(() => {
+    if (step !== "approved") return;
+    let cancelled = false;
+
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      for (let attempt = 0; attempt < 12 && !cancelled; attempt++) {
+        if (user) {
+          const { data } = await supabase
+            .from("profiles")
+            .select("subscription_status")
+            .eq("id", user.id)
+            .maybeSingle();
+          if (data?.subscription_status === "active") break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      // Passou do limite sem o webhook chegar? Vai mesmo assim: o plano entra
+      // sozinho quando o aviso chegar, e travar o usuário no modal é pior.
+      if (!cancelled) window.location.assign(redirectTo);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, redirectTo]);
 
   function copyCode() {
     navigator.clipboard.writeText(qrCode);
@@ -125,7 +169,8 @@ export function PixCheckoutModal({
             <Check size={28} />
           </div>
           <p className="font-display text-lg">Pagamento aprovado!</p>
-          <p className="text-sm text-text-secondary">Seu plano {planName} já está ativo.</p>
+          <p className="text-sm text-text-secondary">Liberando o plano {planName}...</p>
+          <Loader2 size={16} className="animate-spin text-text-muted" />
         </div>
       )}
 

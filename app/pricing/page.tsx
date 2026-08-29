@@ -73,13 +73,6 @@ export default function PricingPage() {
     setPixTarget(tier);
   }
 
-  function handlePixApproved() {
-    setTimeout(() => {
-      router.push("/dashboard");
-      router.refresh();
-    }, 1500);
-  }
-
   return (
     <div className="min-h-screen">
       <header className="flex items-center justify-between px-6 py-6 md:px-12">
@@ -199,7 +192,6 @@ export default function PricingPage() {
           cycle={cycle}
           planName={getPlan(pixTarget).name}
           amount={getCyclePricing(pixTarget, cycle).price}
-          onApproved={handlePixApproved}
         />
       )}
     </div>
