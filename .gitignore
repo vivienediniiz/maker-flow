@@ -71,3 +71,9 @@ bridge/*.spec
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Supabase CLI
+/supabase/.temp/
+/supabase/.branches/
+# Gerado por `supabase db dump` — ver supabase/baseline/README.md
+/supabase/baseline/01_schema.sql
