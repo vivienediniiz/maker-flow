@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { decodeExternalReference, getCyclePricing, TRIAL_TIER, type PlanTier, type BillingCycle } from "@/lib/plans";
+import { decodeExternalReference, getCyclePricing, type PlanTier, type BillingCycle } from "@/lib/plans";
+import { decidePreapproval, decidePixPayment } from "@/lib/subscription";
 import { AFFILIATE_COMMISSION_RATE } from "@/lib/affiliates";
 
 function adminClient() {
@@ -78,13 +79,6 @@ async function logSubscriptionEvent(
   }
 }
 
-const MP_STATUS_TO_SUBSCRIPTION_STATUS: Record<string, "active" | "paused" | "cancelled" | "inactive"> = {
-  authorized: "active",
-  paused: "paused",
-  cancelled: "cancelled",
-  pending: "inactive",
-};
-
 /**
  * Mercado Pago envia { type, data: { id } }. Sempre re-consultamos o recurso na API do MP
  * (nunca confiamos só no corpo do POST). Dois fluxos possíveis, identificados pelo `topic`:
@@ -127,9 +121,6 @@ export async function POST(req: NextRequest) {
       }
 
       const { userId, tier, cycle } = decodeExternalReference(rawRef);
-      const mpStatus: string = subscription.status;
-      const subscriptionStatus = MP_STATUS_TO_SUBSCRIPTION_STATUS[mpStatus] ?? "inactive";
-      const isEffectivelyActive = subscriptionStatus === "active";
 
       const { data: beforeProfile } = await supabase
         .from("profiles")
@@ -137,46 +128,27 @@ export async function POST(req: NextRequest) {
         .eq("id", userId)
         .maybeSingle();
 
-      if (!isEffectivelyActive) {
-        // "pending" é o estado em que /api/mercadopago/create-preapproval cria
-        // a assinatura: o usuário clicou em "Assinar" e ainda nem chegou no
-        // checkout. O MP avisa nesse instante. Escrever no perfil aqui
-        // rebaixava pra Free quem só clicou no botão — inclusive matando o
-        // reverse trial de uma conta recém-criada. Cancelamento e pausa de
-        // verdade chegam em outro aviso, com outro status.
-        if (mpStatus === "pending") {
-          return NextResponse.json({ received: true, skipped: "preapproval_pending" }, { status: 200 });
-        }
+      const decision = decidePreapproval({
+        mpStatus: subscription.status,
+        preapprovalId: String(subscription.id),
+        tier,
+        cycle,
+        profile: beforeProfile,
+      });
 
-        // Cancelamento/pausa só vale pra assinatura que é a atual do perfil.
-        // Sem isso, o aviso atrasado de uma tentativa de assinatura abandonada
-        // derrubava um assinante que já tinha pago em outra tentativa.
-        if (beforeProfile?.mp_subscription_id && beforeProfile.mp_subscription_id !== subscription.id) {
+      if (decision.action === "skip") {
+        if (decision.reason === "stale_preapproval") {
           console.warn(
-            `[mercadopago webhook] preapproval ${subscription.id} (${mpStatus}) ignorado: perfil ${userId} está na assinatura ${beforeProfile.mp_subscription_id}.`
+            `[mercadopago webhook] preapproval ${subscription.id} (${subscription.status}) ignorado: perfil ${userId} está na assinatura ${beforeProfile?.mp_subscription_id}.`
           );
-          return NextResponse.json({ received: true, skipped: "stale_preapproval" }, { status: 200 });
         }
+        return NextResponse.json({ received: true, skipped: decision.reason }, { status: 200 });
       }
 
-      // Assinatura que não vingou não pode custar o trial de quem ainda está
-      // dentro do prazo — volta pro tier do trial, não pro Free.
-      const stillInTrial = beforeProfile?.trial_ends_at
-        ? new Date(beforeProfile.trial_ends_at).getTime() > Date.now()
-        : false;
-      const toTier = isEffectivelyActive ? tier : stillInTrial ? TRIAL_TIER : "free";
+      const { subscription_tier: toTier, subscription_status: subscriptionStatus } = decision.update;
+      const isEffectivelyActive = subscriptionStatus === "active";
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          subscription_tier: toTier,
-          billing_cycle: isEffectivelyActive ? cycle : null,
-          subscription_status: subscriptionStatus,
-          payment_method: isEffectivelyActive ? "card" : null,
-          paid_until: null,
-          mp_subscription_id: subscription.id,
-        })
-        .eq("id", userId);
+      const { error } = await supabase.from("profiles").update(decision.update).eq("id", userId);
 
       if (error) {
         console.error("[mercadopago webhook] falha ao atualizar profile (preapproval)", error);
@@ -227,34 +199,18 @@ export async function POST(req: NextRequest) {
           .eq("id", userId)
           .maybeSingle();
 
-        const pixPaymentId = String(payment.id);
+        const decision = decidePixPayment({
+          paymentId: String(payment.id),
+          tier,
+          cycle,
+          profile: beforeProfile,
+        });
 
-        // O Mercado Pago reenvia o aviso do mesmo pagamento (retry, ou o mesmo
-        // evento chegando por dois canais). Sem esta trava, cada reenvio somava
-        // outro período inteiro em paid_until — assinatura de graça.
-        if (beforeProfile?.last_pix_payment_id === pixPaymentId) {
-          return NextResponse.json({ received: true, skipped: "pix_already_credited" }, { status: 200 });
+        if (decision.action === "skip") {
+          return NextResponse.json({ received: true, skipped: decision.reason }, { status: 200 });
         }
 
-        const periodDays = getCyclePricing(tier, cycle).frequencyMonths * 30;
-
-        // Renovação paga antes de vencer soma em cima do que ainda sobrava, em
-        // vez de queimar os dias restantes.
-        const currentPaidUntil = beforeProfile?.paid_until ? new Date(beforeProfile.paid_until).getTime() : 0;
-        const startsFrom = Number.isFinite(currentPaidUntil) ? Math.max(Date.now(), currentPaidUntil) : Date.now();
-        const paidUntil = new Date(startsFrom + periodDays * 24 * 60 * 60 * 1000).toISOString();
-
-        const { error } = await supabase
-          .from("profiles")
-          .update({
-            subscription_tier: tier,
-            billing_cycle: cycle,
-            subscription_status: "active",
-            payment_method: "pix",
-            paid_until: paidUntil,
-            last_pix_payment_id: pixPaymentId,
-          })
-          .eq("id", userId);
+        const { error } = await supabase.from("profiles").update(decision.update).eq("id", userId);
 
         if (error) {
           console.error("[mercadopago webhook] falha ao atualizar profile (pix)", error);
