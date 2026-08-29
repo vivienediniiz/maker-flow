@@ -66,3 +66,8 @@ bridge/.venv/
 bridge/build/
 bridge/dist/
 bridge/*.spec
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

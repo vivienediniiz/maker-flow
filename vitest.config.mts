@@ -6,5 +6,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    // tests/e2e é do Playwright (npm run test:e2e), não do Vitest.
+    exclude: ["tests/e2e/**"],
   },
 });
