@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { decodeExternalReference, getCyclePricing, type PlanTier, type BillingCycle } from "@/lib/plans";
+import { decodeExternalReference, getCyclePricing, TRIAL_TIER, type PlanTier, type BillingCycle } from "@/lib/plans";
 import { AFFILIATE_COMMISSION_RATE } from "@/lib/affiliates";
 
 function adminClient() {
@@ -133,11 +133,38 @@ export async function POST(req: NextRequest) {
 
       const { data: beforeProfile } = await supabase
         .from("profiles")
-        .select("subscription_tier, subscription_status")
+        .select("subscription_tier, subscription_status, mp_subscription_id, trial_ends_at")
         .eq("id", userId)
         .maybeSingle();
 
-      const toTier = isEffectivelyActive ? tier : "free";
+      if (!isEffectivelyActive) {
+        // "pending" é o estado em que /api/mercadopago/create-preapproval cria
+        // a assinatura: o usuário clicou em "Assinar" e ainda nem chegou no
+        // checkout. O MP avisa nesse instante. Escrever no perfil aqui
+        // rebaixava pra Free quem só clicou no botão — inclusive matando o
+        // reverse trial de uma conta recém-criada. Cancelamento e pausa de
+        // verdade chegam em outro aviso, com outro status.
+        if (mpStatus === "pending") {
+          return NextResponse.json({ received: true, skipped: "preapproval_pending" }, { status: 200 });
+        }
+
+        // Cancelamento/pausa só vale pra assinatura que é a atual do perfil.
+        // Sem isso, o aviso atrasado de uma tentativa de assinatura abandonada
+        // derrubava um assinante que já tinha pago em outra tentativa.
+        if (beforeProfile?.mp_subscription_id && beforeProfile.mp_subscription_id !== subscription.id) {
+          console.warn(
+            `[mercadopago webhook] preapproval ${subscription.id} (${mpStatus}) ignorado: perfil ${userId} está na assinatura ${beforeProfile.mp_subscription_id}.`
+          );
+          return NextResponse.json({ received: true, skipped: "stale_preapproval" }, { status: 200 });
+        }
+      }
+
+      // Assinatura que não vingou não pode custar o trial de quem ainda está
+      // dentro do prazo — volta pro tier do trial, não pro Free.
+      const stillInTrial = beforeProfile?.trial_ends_at
+        ? new Date(beforeProfile.trial_ends_at).getTime() > Date.now()
+        : false;
+      const toTier = isEffectivelyActive ? tier : stillInTrial ? TRIAL_TIER : "free";
 
       const { error } = await supabase
         .from("profiles")

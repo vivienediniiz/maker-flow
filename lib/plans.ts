@@ -12,6 +12,11 @@ export const PIX_GRACE_PERIOD_DAYS = 3;
 // (subscription_status = "active"), cai pra "free" automaticamente.
 export const TRIAL_DAYS = 14;
 
+// Tier que o reverse trial concede. Fica aqui (e não solto em cada arquivo)
+// porque tanto o signup (handle_new_user, no banco) quanto o webhook de
+// assinatura precisam saber pra onde voltar quando a assinatura não vinga.
+export const TRIAL_TIER: SubscriptionTier = "pro";
+
 export interface CyclePricing {
   price: number; // R$, cobrado a cada `frequencyMonths` meses
   frequencyMonths: number;
