@@ -1,29 +1,14 @@
-{
-  "name": "StudioMaker3D — Gestão para Estúdios 3D",
+﻿{
+  "name": "StudioMaker — Gestão para Estúdios 3D",
   "short_name": "StudioMaker",
-  "description": "Precificação inteligente, gestão de pedidos e automação para a comunidade Maker e estúdios de Impressão 3D.",
-  "start_url": "/splash?from=app",
+  "description": "Precificação inteligente, gestão de pedidos e automação para makers e estúdios de impressão 3D.",
+  "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0B0914",
   "theme_color": "#AA17DB",
+  "background_color": "#0B0914",
   "icons": [
-    {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    {"src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23AA17DB' width='192' height='192' rx='48'/><text x='96' y='96' font-size='96' fill='white' font-weight='bold' text-anchor='middle' dominant-baseline='middle'>S</text></svg>", "type": "image/svg+xml", "sizes": "192x192", "purpose": "any"},
+    {"src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23AA17DB' width='192' height='192' rx='48'/><text x='96' y='96' font-size='96' fill='white' font-weight='bold' text-anchor='middle' dominant-baseline='middle'>S</text></svg>", "type": "image/svg+xml", "sizes": "192x192", "purpose": "maskable"}
   ]
 }
