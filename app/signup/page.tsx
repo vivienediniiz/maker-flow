@@ -10,6 +10,7 @@ import { PasswordInput } from "@/components/ui/PasswordInput";
 import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { Starfield } from "@/components/auth/Starfield";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { useAnalytics } from "@/lib/hooks/useAnalytics";
 
 export default function SignupPage() {
   return (
@@ -48,6 +49,7 @@ function SignupForm() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { trackSignup } = useAnalytics();
 
   // Mensagem única pros dois caminhos de cadastro. Aponta pra baixo porque o
   // botão do Google fica acima do checkbox no card.
@@ -81,6 +83,8 @@ function SignupForm() {
     }
 
     if (data.session) {
+      // Rastreia novo signup no GA4
+      trackSignup({ tier: "monthly", referrer: refCode });
       router.push("/dashboard");
       return;
     }
