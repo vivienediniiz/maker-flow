@@ -83,8 +83,10 @@ function SignupForm() {
     }
 
     if (data.session) {
-      // Rastreia novo signup no GA4
-      trackSignup({ tier: "monthly", referrer: refCode });
+      // Rastreia novo signup no GA4 — usa timeout pra garantir que gtag está pronto
+      setTimeout(() => {
+        trackSignup({ tier: "monthly", referrer: refCode });
+      }, 100);
       router.push("/dashboard");
       return;
     }

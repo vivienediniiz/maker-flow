@@ -16,7 +16,11 @@ export function useAnalytics() {
      * Rastreia novo cadastro
      */
     trackSignup: (params?: { tier?: string; referrer?: string }) => {
-      if (!gtag) return;
+      if (!gtag) {
+        console.warn('[GA4] gtag não disponível — trackSignup ignorado');
+        return;
+      }
+      console.log('[GA4] trackSignup chamado:', params);
       gtag('event', 'sign_up', {
         method: 'email',
         tier: params?.tier,
