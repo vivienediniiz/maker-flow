@@ -1,0 +1,22 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+# Arquivo de configuração da Netlify para StudioMaker
+# Define os caminhos corretos para:
+# - / → landing page (quando não autenticado) / dashboard (quando autenticado)
+# - /login → página de login
+# - /dashboard → dashboard (protegido por middleware)
+
+[[redirects]]
+  from = "/home"
+  to = "/"
+  status = 308
+  force = false
+
+# Fallback para SPA routing — sem isso, Next.js não consegue renderizar rotas dinâmicas
+[[redirects]]
+  from = "/*"
+  to = "/"
+  status = 200
+  condition = {Status = "404"}
