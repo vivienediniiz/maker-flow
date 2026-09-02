@@ -20,3 +20,19 @@
   to = "/"
   status = 200
   condition = {Status = "404"}
+
+# Headers de segurança — protege contra clickjacking, MIME sniffing, etc.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Impede embebimento em iframes de terceiros (previne clickjacking)
+    X-Frame-Options = "DENY"
+
+    # Previne MIME type sniffing (força navegador respeitar Content-Type)
+    X-Content-Type-Options = "nosniff"
+
+    # Política de referrer — só envia URL origem em requisições cross-origin
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+    # Desabilita features perigosas via permissões
+    Permissions-Policy = "geolocation=(), microphone=(), camera=(), payment=()"
