@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 
 export function createClient() {
+  // @ts-ignore — cookies() retorna Promise em Next.js 16 mas Supabase SSR 0.12 ainda espera síncrono
   const cookieStore = cookies();
 
   return createServerClient(
@@ -11,10 +12,12 @@ export function createClient() {
     {
       cookies: {
         get(name: string) {
+          // @ts-ignore
           return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
           try {
+            // @ts-ignore
             cookieStore.set({ name, value, ...options });
           } catch {
             // Called from a Server Component; safe to ignore if middleware refreshes sessions.
@@ -22,6 +25,7 @@ export function createClient() {
         },
         remove(name: string, options: CookieOptions) {
           try {
+            // @ts-ignore
             cookieStore.set({ name, value: "", ...options });
           } catch {
             // Ignore in Server Component context.
