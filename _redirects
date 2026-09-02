@@ -1,0 +1,5 @@
+# Redireciona /home para / (mantém o histórico de URLs antigas)
+/home              /                         301
+
+# Fallback para SPA routing — sem isso, rotas dinâmicas do Next.js não funcionam
+/*                 /index.html               200
