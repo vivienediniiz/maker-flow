@@ -3,6 +3,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { decodeExternalReference, getCyclePricing, type PlanTier, type BillingCycle } from "@/lib/plans";
 import { decidePreapproval, decidePixPayment } from "@/lib/subscription";
 import { AFFILIATE_COMMISSION_RATE } from "@/lib/affiliates";
+import { trackPaymentServer } from "@/lib/analytics-server";
 
 function adminClient() {
   return createClient(
@@ -166,6 +167,16 @@ export async function POST(req: NextRequest) {
 
       if (isEffectivelyActive) {
         await maybeRecordAffiliateCommission(supabase, userId, tier, cycle);
+
+        // Rastreia pagamento por cartão no GA4
+        const pricingData = getCyclePricing(tier, cycle);
+        trackPaymentServer({
+          userId,
+          amount: pricingData.price,
+          currency: "BRL",
+          tier,
+          method: "card",
+        });
       }
     }
 
@@ -227,6 +238,16 @@ export async function POST(req: NextRequest) {
         );
 
         await maybeRecordAffiliateCommission(supabase, userId, tier, cycle);
+
+        // Rastreia pagamento no GA4
+        const pricingData = getCyclePricing(tier, cycle);
+        trackPaymentServer({
+          userId,
+          amount: pricingData.price,
+          currency: "BRL",
+          tier,
+          method: "pix",
+        });
       }
     }
 
