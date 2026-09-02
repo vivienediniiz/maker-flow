@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://studiomaker3d.com.br";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(APP_URL),
   title: "StudioMaker — Gestão para Makers e Estúdios 3D",
   description:
     "Precificação inteligente, gestão de pedidos e automação para a comunidade Maker e estúdios de Impressão 3D.",
@@ -10,6 +13,24 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "StudioMaker",
+  },
+  openGraph: {
+    title: "StudioMaker — Gestão para Makers e Estúdios 3D",
+    description:
+      "Precificação inteligente, gestão de pedidos e automação para a comunidade Maker e estúdios de Impressão 3D.",
+    url: APP_URL,
+    siteName: "StudioMaker",
+    images: [
+      {
+        url: "/og",
+        width: 1200,
+        height: 630,
+        alt: "StudioMaker — Gestão para estúdios 3D",
+        type: "image/png",
+      },
+    ],
+    type: "website",
+    locale: "pt_BR",
   },
 };
 
