@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
     payment_method_id: "pix",
     external_reference: encodeExternalReference(user.id, tier, cycle, "pix"),
     payer: { email: user.email },
+    notification_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://studiomaker3d.com.br"}/api/webhooks/mercadopago`,
   };
 
   const mpRes = await fetch("https://api.mercadopago.com/v1/payments", {
