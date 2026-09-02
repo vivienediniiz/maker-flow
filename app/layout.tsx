@@ -1,6 +1,25 @@
 import type { Metadata, Viewport } from "next";
+import { Montserrat, Exo_2, Chakra_Petch } from "next/font/google";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import "./globals.css";
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const exo2 = Exo_2({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["500", "600", "700", "800"],
+});
+
+const chakraPetch = Chakra_Petch({
+  subsets: ["latin"],
+  variable: "--font-numeric",
+  weight: ["500", "600", "700"],
+});
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://studiomaker3d.com.br";
 
@@ -41,15 +60,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className="dark">
-      <head>
-        {/* Exo 2 — headings (h1-h3, font-display) · Chakra Petch — numeric/KPI values (font-numeric)
-            Montserrat — body/UI text (font-sans) */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Exo+2:wght@500;600;700;800&family=Chakra+Petch:wght@500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html
+      lang="pt-BR"
+      className="dark"
+      style={{
+        ...montserrat.style,
+        ...exo2.style,
+        ...chakraPetch.style,
+      } as React.CSSProperties}
+    >
+      <head />
       <body>
         {children}
         <GoogleAnalytics />
