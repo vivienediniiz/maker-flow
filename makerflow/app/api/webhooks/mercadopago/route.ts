@@ -1,3 +1,4 @@
+import { webhookRateLimit, requestIp } from "@/lib/rateLimit";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { decodeExternalReference, getCyclePricing, type PlanTier, type BillingCycle } from "@/lib/plans";
@@ -93,8 +94,23 @@ async function logSubscriptionEvent(
  */
 export async function POST(req: NextRequest) {
   try {
+  if (webhookRateLimit) {
+    const ip = requestIp(req);
+    const { success } = await webhookRateLimit.limit(ip);
+    if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
     const body = await req.json().catch(() => ({}));
+  if (webhookRateLimit) {
+    const ip = requestIp(req);
+    const { success } = await webhookRateLimit.limit(ip);
+    if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
     const topic = body.type ?? req.nextUrl.searchParams.get("topic");
+  if (webhookRateLimit) {
+    const ip = requestIp(req);
+    const { success } = await webhookRateLimit.limit(ip);
+    if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
     const resourceId = body.data?.id ?? req.nextUrl.searchParams.get("id");
 
     if (!topic || !resourceId) {

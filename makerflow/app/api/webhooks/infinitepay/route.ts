@@ -1,3 +1,4 @@
+import { webhookRateLimit, requestIp } from "@/lib/rateLimit";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { checkInfinitePayPayment } from "@/lib/infinitePay";
@@ -22,7 +23,17 @@ const INFINITEPAY_HANDLE = process.env.INFINITEPAY_HANDLE;
  * Online, independente do provedor de pagamento.
  */
 export async function POST(req: NextRequest) {
+  if (webhookRateLimit) {
+    const ip = requestIp(req);
+    const { success } = await webhookRateLimit.limit(ip);
+    if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
   const admin = adminClient();
+  if (webhookRateLimit) {
+    const ip = requestIp(req);
+    const { success } = await webhookRateLimit.limit(ip);
+    if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
   const body = await req.json().catch(() => null);
 
   const orderNsu: string | null = body?.order_nsu ?? null;

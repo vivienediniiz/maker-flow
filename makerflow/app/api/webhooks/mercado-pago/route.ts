@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { fetchMercadoPagoOrderForIntegration, upsertQuoteFromMercadoPagoOrder, validateMercadoPagoSignature } from "@/lib/mercadoPago";
 import { apiError } from "@/lib/apiError";
+import { webhookRateLimit, requestIp } from "@/lib/rateLimit";
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -19,6 +20,15 @@ function adminClient() {
  * StudioMaker (app "Makerflow3d", não mexer nesse).
  */
 export async function POST(req: NextRequest) {
+  // Rate limiting
+  if (webhookRateLimit) {
+    const ip = requestIp(req);
+    const { success } = await webhookRateLimit.limit(ip);
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+  }
+
   const admin = adminClient();
 
   const body = await req.json().catch(() => ({}));

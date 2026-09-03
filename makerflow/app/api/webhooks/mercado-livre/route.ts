@@ -1,3 +1,4 @@
+import { webhookRateLimit, requestIp } from "@/lib/rateLimit";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { fetchMercadoLivreOrderForIntegration, upsertQuoteFromMercadoLivreOrder } from "@/lib/mercadoLivre";
@@ -16,6 +17,11 @@ function adminClient() {
  * (mesma defesa usada no webhook do Mercado Pago).
  */
 export async function POST(req: NextRequest) {
+  if (webhookRateLimit) {
+    const ip = requestIp(req);
+    const { success } = await webhookRateLimit.limit(ip);
+    if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
   const admin = adminClient();
 
   const body = await req.json().catch(() => ({}));

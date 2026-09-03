@@ -1,3 +1,4 @@
+import { webhookRateLimit, requestIp } from "@/lib/rateLimit";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { fetchMelhorEnvioCartItem } from "@/lib/melhorEnvio";
@@ -39,7 +40,17 @@ function extractShipmentId(body: unknown): string | null {
 }
 
 export async function POST(req: NextRequest) {
+  if (webhookRateLimit) {
+    const ip = requestIp(req);
+    const { success } = await webhookRateLimit.limit(ip);
+    if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
   const admin = adminClient();
+  if (webhookRateLimit) {
+    const ip = requestIp(req);
+    const { success } = await webhookRateLimit.limit(ip);
+    if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
   const body = await req.json().catch(() => null);
 
   const shipmentId = extractShipmentId(body);

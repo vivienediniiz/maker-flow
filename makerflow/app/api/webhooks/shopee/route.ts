@@ -1,3 +1,4 @@
+import { webhookRateLimit, requestIp } from "@/lib/rateLimit";
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
@@ -17,7 +18,17 @@ import crypto from "crypto";
  *  4. Atualizar integrations.last_event_at.
  */
 export async function POST(req: NextRequest) {
+  if (webhookRateLimit) {
+    const ip = requestIp(req);
+    const { success } = await webhookRateLimit.limit(ip);
+    if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
   const partnerKey = process.env.SHOPEE_PARTNER_KEY;
+  if (webhookRateLimit) {
+    const ip = requestIp(req);
+    const { success } = await webhookRateLimit.limit(ip);
+    if (!success) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
   const rawBody = await req.text();
 
   if (partnerKey) {
