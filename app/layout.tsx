@@ -62,7 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="pt-BR"
-      className={`dark ${montserrat.className} ${exo2.className} ${chakraPetch.className}`}
+      className="dark"
       style={{
         ...montserrat.style,
         ...exo2.style,
