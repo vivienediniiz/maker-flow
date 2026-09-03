@@ -1,25 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Montserrat, Exo_2, Chakra_Petch } from "next/font/google";
+import { Montserrat, Exo_2 } from "next/font/google";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { OrganizationJsonLd, WebsiteJsonLd, SoftwareApplicationJsonLd } from "@/components/seo/JsonLd";
 import "./globals.css";
 
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  weight: ["400", "500", "600", "700", "800"],
-});
-
+// Exo 2 é a fonte principal do site inteiro (corpo + títulos).
 const exo2 = Exo_2({
   subsets: ["latin"],
   variable: "--font-display",
-  weight: ["500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-const chakraPetch = Chakra_Petch({
+// Montserrat fica reservada pra subtítulos/números — carregada via --font-numeric.
+const montserrat = Montserrat({
   subsets: ["latin"],
   variable: "--font-numeric",
-  weight: ["500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://studiomaker3d.com.br";
@@ -63,7 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="pt-BR"
-      className={`dark ${montserrat.variable} ${exo2.variable} ${chakraPetch.variable}`}
+      className={`dark ${exo2.variable} ${montserrat.variable}`}
     >
       <head>
         <OrganizationJsonLd />
