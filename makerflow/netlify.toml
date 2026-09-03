@@ -1,6 +1,11 @@
 [build]
   command = "npm run build && node scripts/copy-headers.js"
   publish = ".next"
+  functions = "netlify/edge-functions"
+
+[[edge_functions]]
+  function = "security-headers"
+  path = "/*"
 
 [[redirects]]
   from = "/home"
