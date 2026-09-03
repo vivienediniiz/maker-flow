@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import NextImage from "next/image";
 import { FileText, Loader2, Image as ImageIcon, MessageCircle, Link2, Copy, Check } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
@@ -152,8 +153,7 @@ export function QuoteDetailModal({
           <div className="glass-card flex gap-3 p-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neon-gradient-soft">
               {quote.products.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={quote.products.image_url} alt="" className="h-full w-full object-cover" />
+                <NextImage src={quote.products.image_url} alt="" width={64} height={64} className="h-full w-full object-cover" />
               ) : (
                 <span className="text-xl">🧩</span>
               )}

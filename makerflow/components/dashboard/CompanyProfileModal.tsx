@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Camera, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
@@ -221,8 +222,7 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
             <div className="relative">
               <div className="h-20 w-20 overflow-hidden rounded-full bg-neon-gradient">
                 {avatarUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={avatarUrl} alt="Logo do estúdio" className="h-full w-full object-cover" />
+                  <Image src={avatarUrl} alt="Logo do estúdio" width={80} height={80} className="h-full w-full object-cover" />
                 )}
               </div>
               <label className="absolute -bottom-1 -right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-border-glass bg-bg-raised text-text-secondary hover:text-text-primary">

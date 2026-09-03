@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface AppLogoProps {
   wrapperClassName?: string;
@@ -22,8 +23,7 @@ export function AppLogo({
 
   return (
     <button type="button" onClick={() => router.push("/splash?from=logo")} className={wrapperClassName}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo-icon.png" alt="StudioMaker" className={iconClassName} />
+      <Image src="/logo-icon.png" alt="StudioMaker" width={36} height={36} className={iconClassName} />
       {showLabel && <span className={textClassName}>StudioMaker</span>}
     </button>
   );

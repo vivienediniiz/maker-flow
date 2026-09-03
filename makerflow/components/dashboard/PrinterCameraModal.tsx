@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { CameraOff } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { createClient } from "@/lib/supabase/client";
@@ -62,13 +63,14 @@ export function PrinterCameraModal({
             </p>
           </div>
         ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             key={lastSnapshotAt}
             src={getSnapshotUrl(printer.id, lastSnapshotAt)}
             alt={`Câmera de ${printer.name}`}
             onError={() => setImgError(true)}
-            className="w-full rounded-xl border border-border-glass"
+            fill
+            className="w-full rounded-xl border border-border-glass object-cover"
+            sizes="100vw"
           />
         )}
 

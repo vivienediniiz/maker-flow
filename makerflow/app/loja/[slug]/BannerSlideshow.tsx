@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import type { StoreBannerPublic } from "@/lib/types";
 
 export function BannerSlideshow({
@@ -23,8 +24,14 @@ export function BannerSlideshow({
   const active = banners[index];
   const content = (
     <div className="relative aspect-[1600/500] w-full overflow-hidden rounded-2xl bg-white/5">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={active.image_url} alt={active.title ?? ""} className="h-full w-full object-cover" />
+      <Image
+        src={active.image_url}
+        alt={active.title ?? ""}
+        fill
+        priority
+        className="h-full w-full object-cover"
+        sizes="100vw"
+      />
       {(active.title || active.subtitle) && (
         <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/60 via-black/10 to-transparent p-5 sm:p-8">
           {active.title && <p className="text-xl font-semibold text-white sm:text-2xl">{active.title}</p>}

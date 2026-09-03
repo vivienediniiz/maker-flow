@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Camera, Loader2, Store as StoreIcon } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { NeonButton } from "@/components/ui/NeonButton";
@@ -142,8 +143,7 @@ export function StoreBrandingCard({ userId, studioName }: StoreBrandingCardProps
           <div className="flex items-center gap-4">
             <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-border-glass bg-white/[0.03]">
               {logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt="" className="h-full w-full object-cover" />
+                <Image src={logoUrl} alt="" width={64} height={64} className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-text-muted">
                   <Camera size={18} />
@@ -290,8 +290,7 @@ export function StoreBrandingCard({ userId, studioName }: StoreBrandingCardProps
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10">
                   {logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={logoUrl} alt="" className="h-full w-full object-cover" />
+                    <Image src={logoUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />
                   ) : (
                     <StoreIcon size={16} color={primaryColor} />
                   )}

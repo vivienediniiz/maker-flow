@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Camera, Loader2, Calculator } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
@@ -190,8 +191,7 @@ export function NewProductModal({
         <div className="flex flex-col items-center gap-2">
           <div className="relative h-28 w-28 overflow-hidden rounded-xl border border-border-glass bg-white/[0.03]">
             {imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+              <Image src={imageUrl} alt="" width={112} height={112} className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-text-muted">
                 <Camera size={22} />

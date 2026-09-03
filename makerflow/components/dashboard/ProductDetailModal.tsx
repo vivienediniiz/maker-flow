@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Modal } from "@/components/ui/Modal";
 import { formatBRL, cn } from "@/lib/utils";
 import type { Product } from "@/lib/types";
@@ -13,10 +14,9 @@ export function ProductDetailModal({ product, onClose }: { product: Product | nu
   return (
     <Modal open={!!product} onClose={onClose} title={product.name}>
       <div className="max-h-[70vh] space-y-5 overflow-y-auto scrollbar-glass pr-1">
-        <div className="flex h-56 items-center justify-center overflow-hidden rounded-xl bg-neon-gradient-soft">
+        <div className="relative flex h-56 items-center justify-center overflow-hidden rounded-xl bg-neon-gradient-soft">
           {product.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+            <Image src={product.image_url} alt={product.name} fill className="h-full w-full object-cover" sizes="56rem" />
           ) : (
             <span className="text-5xl">🧩</span>
           )}

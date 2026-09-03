@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/Modal";
 import { formatBRL } from "@/lib/utils";
@@ -202,8 +203,7 @@ function StorePageContent({ slug }: { slug: string }) {
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10">
             {seller.logo_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={seller.logo_url} alt="" className="h-full w-full object-cover" />
+              <Image src={seller.logo_url} alt="" width={44} height={44} priority className="h-full w-full object-cover" />
             )}
           </div>
           <span style={{ fontFamily: titleFontOption.cssFamily, color: titleColor }} className="text-lg">
@@ -286,8 +286,14 @@ function StorePageContent({ slug }: { slug: string }) {
                   className="flex aspect-square items-center justify-center overflow-hidden bg-white/5"
                 >
                   {p.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                    <Image
+                      src={p.image_url}
+                      alt={p.name}
+                      fill
+                      className="h-full w-full object-cover"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      priority={filteredProducts.indexOf(p) < 4}
+                    />
                   ) : (
                     <span className="text-3xl">🧩</span>
                   )}

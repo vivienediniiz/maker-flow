@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { ImagePlus, Loader2, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Toggle } from "@/components/ui/Toggle";
@@ -132,9 +133,8 @@ export function StoreBannersCard({ userId }: StoreBannersCardProps) {
         <div className="space-y-3">
           {sorted.map((banner, idx) => (
             <div key={banner.id} className="flex flex-col gap-3 rounded-xl border border-border-glass bg-white/[0.02] p-3 sm:flex-row sm:items-center">
-              <div className="h-16 w-28 shrink-0 overflow-hidden rounded-lg bg-white/[0.03]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={banner.image_url} alt="" className="h-full w-full object-cover" />
+              <div className="relative h-16 w-28 shrink-0 overflow-hidden rounded-lg bg-white/[0.03]">
+                <Image src={banner.image_url} alt="" fill className="h-full w-full object-cover" sizes="7rem" />
               </div>
               <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
                 <input

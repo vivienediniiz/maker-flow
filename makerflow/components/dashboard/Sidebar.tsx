@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { planDisplayLabel } from "@/lib/plans";
 import { AppLogo } from "@/components/ui/AppLogo";
@@ -116,8 +117,7 @@ export function Sidebar({ studioName, avatarUrl, tier, isAdmin }: SidebarProps) 
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-neon-gradient">
               {avatarUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                <Image src={avatarUrl} alt="" width={32} height={32} className="h-full w-full object-cover" />
               )}
             </div>
             <div className="min-w-0">

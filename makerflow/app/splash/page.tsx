@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 const DEFAULT_SPLASH_MS = 1200;
@@ -41,10 +42,13 @@ function SplashContent() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg">
-      <img
+      <Image
         src="/logo-icon.png"
         alt="StudioMaker"
-        className="h-24 w-24 animate-splash-logo opacity-0"
+        width={96}
+        height={96}
+        priority
+        className="animate-splash-logo opacity-0"
         style={{ animationDuration: `${duration}ms` }}
       />
     </div>

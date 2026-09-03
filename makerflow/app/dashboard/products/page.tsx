@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardRow } from "@/components/ui/CardRow";
@@ -399,8 +400,7 @@ export default function ProductsPage() {
                             <div className="flex items-center gap-3">
                               <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neon-gradient-soft">
                                 {p.image_url ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={p.image_url} alt="" className="h-full w-full object-cover" />
+                                  <Image src={p.image_url} alt="" width={40} height={40} className="h-full w-full object-cover" />
                                 ) : (
                                   <span className="text-base">🧩</span>
                                 )}
@@ -487,8 +487,7 @@ export default function ProductsPage() {
                         </div>
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neon-gradient-soft">
                           {p.image_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={p.image_url} alt="" className="h-full w-full object-cover" />
+                            <Image src={p.image_url} alt="" width={40} height={40} className="h-full w-full object-cover" />
                           ) : (
                             <span className="text-base">🧩</span>
                           )}

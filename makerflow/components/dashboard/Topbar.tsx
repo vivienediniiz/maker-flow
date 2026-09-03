@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Search, LogOut, User, Menu } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { CompanyProfileModal } from "./CompanyProfileModal";
@@ -97,8 +98,7 @@ export function Topbar({ title, searchValue, onSearchChange, searchPlaceholder }
             aria-label="Menu da conta"
           >
             {avatarUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+              <Image src={avatarUrl} alt="" width={36} height={36} className="h-full w-full object-cover" />
             )}
           </button>
         </div>

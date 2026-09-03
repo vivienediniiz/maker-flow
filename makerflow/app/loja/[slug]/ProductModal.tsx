@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { X, Clock } from "lucide-react";
 import { formatBRL } from "@/lib/utils";
 import type { StoreProductPublic } from "@/lib/types";
@@ -46,10 +47,15 @@ export function ProductModal({
           <X size={16} />
         </button>
 
-        <div className="aspect-square w-full shrink-0 bg-white/5">
+        <div className="relative aspect-square w-full shrink-0 bg-white/5">
           {product.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+            <Image
+              src={product.image_url}
+              alt={product.name}
+              fill
+              className="h-full w-full object-cover"
+              sizes="(max-width: 640px) 90vw, 28rem"
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-5xl">🧩</div>
           )}
