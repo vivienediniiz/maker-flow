@@ -72,7 +72,7 @@ const FEATURES = [
     icon: ShoppingBag,
     title: "Vendas Multicanal",
     description:
-      "Mercado Livre, Mercado Pago, Shopee e TikTok Shop sincronizam sozinhos: pedido novo em qualquer uma dessas plataformas cai automaticamente em Vendas, sem importar nada. Fez venda pelo WhatsApp ou Instagram? Cadastra manual em segundos. Tudo no mesmo painel, com filtro por canal e status.",
+      "Mercado Livre e Mercado Pago sincronizam sozinhos: pedido novo chega automaticamente em Vendas, sem importar nada. Shopee e TikTok Shop chegam em breve. Fez venda pelo WhatsApp ou Instagram? Cadastra manual em segundos. Tudo no mesmo painel, com filtro por canal e status.",
     frameTitle: "studiomaker3d.com.br/orders",
     Mockup: SalesMockup,
   },
@@ -183,7 +183,7 @@ const WHY_US = [
     icon: LayoutGrid,
     title: "Todos os canais, um painel só",
     description:
-      "Mercado Livre, Mercado Pago, Shopee, TikTok Shop e vendas manuais no mesmo lugar. Sem pular de aba pra saber o que já vendeu.",
+      "Mercado Livre, Mercado Pago (conectados agora) + Shopee e TikTok Shop (em breve) + vendas manuais, tudo no mesmo lugar. Sem pular de aba pra saber o que já vendeu.",
   },
 ];
 
