@@ -1,10 +1,21 @@
 # Contas de Teste - StudioMaker
 
-## 📧 Email de Teste Principal
+## 📧 Contas de Teste
 
+### FREE PLAN
 **Email:** `rodrigomes.rga@gmail.com`  
-**Plano:** Grátis  
-**Status:** Ativo para testes
+**Status:** Trial → Converter para Free  
+**Ação:** Ver SQL abaixo para forçar downgrade
+
+### STARTER PLAN
+**Email:** (criar novo email)  
+**Status:** Novo  
+**Ação:** Criar conta e fazer subscription no Starter
+
+### PRO PLAN
+**Email:** (você já tem)  
+**Status:** Ativo  
+**Ação:** Usar conta existente
 
 ## 🎯 Casos de Uso
 
@@ -40,10 +51,61 @@
 - Dados de clientes reais
 - Integração com sistema real
 
-## 🔐 Credenciais
+## ⚙️ Setup das Contas
 
-**Email:** rodrigomes.rga@gmail.com  
-**Senha:** (configurar na primeira sessão)
+### 1️⃣ Forçar downgrade: Trial → Free
+
+Para converter `rodrigomes.rga@gmail.com` de trial para Free **agora** (sem esperar 14 dias):
+
+**No Supabase SQL Editor:**
+
+```sql
+-- Encontrar o user_id do email
+SELECT id, email, subscription_tier, subscription_status, trial_ends_at 
+FROM auth.users 
+WHERE email = 'rodrigomes.rga@gmail.com';
+
+-- Atualizar para Free (substitua {user_id} pelo ID acima)
+UPDATE profiles 
+SET 
+  subscription_tier = 'free',
+  subscription_status = 'inactive',
+  trial_ends_at = NOW()
+WHERE user_id = '{user_id}';
+```
+
+Depois disso:
+- Logout e login novamente
+- Verá plano Free com limitações
+- Feature Gating aparecerá nos blocos
+
+### 2️⃣ Criar conta Starter
+
+**Via UI:**
+1. Ir em `/signup`
+2. Digitar novo email (ex: `teste-starter@gmail.com`)
+3. Criar conta (receberá trial de 14 dias)
+4. Ir em `/dashboard/subscription`
+5. Clicar "Assine Starter"
+6. Fazer pagamento (usar cartão de teste: 4111 1111 1111 1111)
+
+**Via Supabase (rápido):**
+
+```sql
+-- Assumindo que a conta foi criada, atualize para Starter ativo
+UPDATE profiles 
+SET 
+  subscription_tier = 'starter',
+  subscription_status = 'active',
+  trial_ends_at = NULL
+WHERE user_id IN (
+  SELECT id FROM auth.users WHERE email = 'teste-starter@gmail.com'
+);
+```
+
+### 3️⃣ Usar conta Pro existente
+
+Apenas faça login com suas credenciais. Nada a fazer aqui! ✅
 
 ## 💻 Como Usar em Testes
 
@@ -111,11 +173,23 @@ E criar as contas correspondentes com os planos pagos.
 
 ## 📞 Referência Rápida
 
-| Email | Plano | Uso |
-|-------|-------|-----|
-| rodrigomes.rga@gmail.com | Grátis | Testar limitações + feature gating |
-| (vazio) | Starter | Próximo a adicionar |
-| (vazio) | Pro | Próximo a adicionar |
+| Email | Plano | Status | Ação |
+|-------|-------|--------|------|
+| rodrigomes.rga@gmail.com | Free | Trial ✅ | Forçar downgrade com SQL |
+| teste-starter@gmail.com | Starter | Criar | Signup + subscription |
+| (seu email) | Pro | Ativo | Usar existente |
+
+### Quick Commands
+
+**Forçar Free:**
+```sql
+UPDATE profiles SET subscription_tier = 'free', subscription_status = 'inactive', trial_ends_at = NOW() WHERE user_id = (SELECT id FROM auth.users WHERE email = 'rodrigomes.rga@gmail.com');
+```
+
+**Criar Starter:**
+```sql
+UPDATE profiles SET subscription_tier = 'starter', subscription_status = 'active', trial_ends_at = NULL WHERE user_id = (SELECT id FROM auth.users WHERE email = 'teste-starter@gmail.com');
+```
 
 ---
 
