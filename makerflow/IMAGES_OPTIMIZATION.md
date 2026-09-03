@@ -74,8 +74,48 @@ Deixar `<img>` apenas quando renderizando para PDF via html2canvas/jsPDF.
 3. **Imagens lazy** → `loading="lazy"`
 4. **Imagens em PDF** → deixar `<img>`
 
-## Próximos Passos
-- [ ] Migrar splash/BannerSlideshow (hero images)
-- [ ] Migrar loja/[slug] (store landing)
-- [ ] Migrar dashboard products/inventory
-- [ ] Manter PDF renders com `<img>`
+## Status: CONCLUÍDO ✅ (2026-09-03)
+
+### Migração Realizada (16 arquivos)
+
+**Hero Images (priority=true):**
+- ✅ `app/splash/page.tsx` - Logo de inicialização
+- ✅ `app/loja/[slug]/BannerSlideshow.tsx` - Banner hero de loja
+- ✅ `app/loja/[slug]/page.tsx` - Header logo + produtos (primeiros 4)
+
+**Dashboard UI:**
+- ✅ `app/dashboard/inventory/page.tsx` - Thumbnail de produto
+- ✅ `app/dashboard/products/page.tsx` - 2 imagens (tabela + card list)
+- ✅ `components/dashboard/ProductDetailModal.tsx` - Preview de produto
+- ✅ `components/dashboard/QuoteDetailModal.tsx` - Imagem de produto vinculado
+- ✅ `components/dashboard/NewProductModal.tsx` - Preview durante criação
+- ✅ `components/dashboard/CompanyProfileModal.tsx` - Avatar do estúdio
+- ✅ `components/dashboard/Sidebar.tsx` - Logo do estúdio
+- ✅ `components/dashboard/Topbar.tsx` - Avatar do usuário
+
+**Store Features:**
+- ✅ `components/dashboard/StoreBannersCard.tsx` - Preview de banners
+- ✅ `components/dashboard/StoreBrandingCard.tsx` - 2 imagens (logo preview)
+
+**Utilities:**
+- ✅ `components/dashboard/PrinterCameraModal.tsx` - Feed de câmera da impressora
+- ✅ `components/ui/AppLogo.tsx` - Logo clicável global
+
+**PDF Renders (deixados como `<img>` - correto):**
+- ⏸️ `app/dashboard/products/page.tsx:192` - Catálogo PDF
+- ⏸️ `components/dashboard/GenerateQuoteModal.tsx:153` - Orçamento PDF
+- ⏸️ `components/dashboard/PdfAppearanceSettings.tsx:90, 151` - Preview PDF
+- ⏸️ `components/dashboard/SaleReceiptModal.tsx:172, 253` - Recibo PDF
+
+### Resultados Esperados
+
+| Métrica | Ganho |
+|---------|-------|
+| **WebP Conversion** | ~40% redução de tamanho |
+| **Lazy Loading** | Carregamento sob demanda |
+| **Responsive Images** | Srcset automático |
+| **Priority Loading** | Acima da borda → LCP +20% |
+| **CLS Prevention** | Zero layout shift |
+
+### Commit
+- `1d03d852` - refactor: migrate 16 <img> tags to next/image component
