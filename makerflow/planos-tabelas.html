@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planos StudioMaker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0B0914 0%, #1a0f2e 100%);
+            color: #fff;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #E86333, #FF4EDF, #AA17DB);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            color: #aaa;
+        }
+
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+
+        .plan-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 40px 30px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .plan-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 78, 223, 0.3);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .plan-card.highlighted {
+            border: 2px solid #FF4EDF;
+            background: rgba(255, 78, 223, 0.1);
+            transform: scale(1.05);
+        }
+
+        .badge-popular {
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: linear-gradient(135deg, #E86333, #FF4EDF);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .plan-name {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            margin-top: 10px;
+        }
+
+        .plan-tagline {
+            font-size: 0.9em;
+            color: #aaa;
+            margin-bottom: 20px;
+            min-height: 40px;
+        }
+
+        .plan-price {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: #FF4EDF;
+        }
+
+        .plan-billing {
+            font-size: 0.9em;
+            color: #888;
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .plan-features {
+            list-style: none;
+            margin-bottom: 30px;
+            flex-grow: 1;
+        }
+
+        .plan-features li {
+            padding: 10px 0;
+            padding-left: 25px;
+            position: relative;
+            font-size: 0.95em;
+            line-height: 1.5;
+            color: #ddd;
+        }
+
+        .plan-features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4ade80;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .plan-features li.disabled {
+            color: #666;
+            opacity: 0.6;
+        }
+
+        .plan-features li.disabled:before {
+            content: "✕";
+            color: #ef4444;
+        }
+
+        .plan-features li.coming-soon:before {
+            content: "◐";
+            color: #f59e0b;
+        }
+
+        .plan-features li.coming-soon {
+            color: #f59e0b;
+        }
+
+        .plan-cta {
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .plan-cta.primary {
+            background: linear-gradient(135deg, #E86333, #FF4EDF);
+            color: white;
+        }
+
+        .plan-cta.primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(255, 78, 223, 0.3);
+        }
+
+        .plan-cta.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .plan-cta.secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .comparison-table {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-top: 40px;
+        }
+
+        .comparison-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .comparison-table th {
+            background: rgba(255, 78, 223, 0.1);
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: 600;
+        }
+
+        .comparison-table td {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .comparison-table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .check {
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .times {
+            color: #ef4444;
+            font-weight: bold;
+        }
+
+        .limited {
+            color: #f59e0b;
+        }
+
+        .unlimited {
+            color: #4ade80;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .plan-card.highlighted {
+                transform: scale(1);
+            }
+
+            .plans-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .comparison-table {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Planos StudioMaker</h1>
+            <p class="subtitle">Escolha o plano perfeito para seu estúdio de impressão 3D</p>
+        </header>
+
+        <div class="plans-grid">
+            <!-- PLANO GRÁTIS -->
+            <div class="plan-card">
+                <h2 class="plan-name">Grátis</h2>
+                <p class="plan-tagline">Comece sem custo</p>
+                <div class="plan-price">R$ 0</div>
+                <div class="plan-billing">Sempre grátis • 14 dias trial completo</div>
+                <ul class="plan-features">
+                    <li>5 orçamentos/vendas por mês</li>
+                    <li>Até 15 clientes</li>
+                    <li>Até 10 produtos</li>
+                    <li>Até 5 filamentos</li>
+                    <li>1 impressora</li>
+                    <li>Calculadora de preço</li>
+                    <li>Estoque básico</li>
+                    <li class="disabled">PDF com marca d'água</li>
+                    <li class="disabled">Financeiro e BI</li>
+                    <li class="disabled">Integrações de venda</li>
+                    <li>Central de Ajuda</li>
+                </ul>
+                <button class="plan-cta secondary">Comece Agora</button>
+            </div>
+
+            <!-- PLANO STARTER -->
+            <div class="plan-card">
+                <h2 class="plan-name">Starter</h2>
+                <p class="plan-tagline">Pro maker que já vende todo mês</p>
+                <div class="plan-price">R$ 29</div>
+                <div class="plan-billing">/mês ou R$ 290/ano (-17%)</div>
+                <ul class="plan-features">
+                    <li>50 orçamentos/vendas por mês</li>
+                    <li>Até 300 clientes</li>
+                    <li>Até 150 produtos</li>
+                    <li>Até 40 filamentos</li>
+                    <li>5 impressoras</li>
+                    <li>5 filiais</li>
+                    <li>PDF com sua logo</li>
+                    <li>Baixa automática de estoque</li>
+                    <li>Alerta de estoque baixo</li>
+                    <li>Dashboard completo</li>
+                    <li>Financeiro e BI</li>
+                    <li>Insumos e Compras Extras</li>
+                    <li>Todas as integrações</li>
+                    <li>Suporte por e-mail</li>
+                    <li class="coming-soon">Link de aprovação (em breve)</li>
+                </ul>
+                <button class="plan-cta primary">Assine Agora</button>
+            </div>
+
+            <!-- PLANO PRO -->
+            <div class="plan-card highlighted">
+                <span class="badge-popular">MAIS POPULAR</span>
+                <h2 class="plan-name">Pro</h2>
+                <p class="plan-tagline">Pra quem parou de contar</p>
+                <div class="plan-price">R$ 69</div>
+                <div class="plan-billing">/mês ou R$ 690/ano (-17%)</div>
+                <ul class="plan-features">
+                    <li class="unlimited">∞ Orçamentos/vendas ilimitados</li>
+                    <li class="unlimited">∞ Clientes ilimitados</li>
+                    <li class="unlimited">∞ Produtos ilimitados</li>
+                    <li class="unlimited">∞ Filamentos ilimitados</li>
+                    <li class="unlimited">∞ Impressoras ilimitadas</li>
+                    <li class="unlimited">∞ Filiais ilimitadas</li>
+                    <li>PDF com sua logo</li>
+                    <li>Baixa automática de estoque</li>
+                    <li>Alerta de estoque baixo</li>
+                    <li>Dashboard completo</li>
+                    <li>Financeiro e BI</li>
+                    <li>Insumos e Compras Extras</li>
+                    <li>Todas as integrações</li>
+                    <li>Suporte prioritário WhatsApp</li>
+                    <li class="coming-soon">Usuários ilimitados (em breve)</li>
+                </ul>
+                <button class="plan-cta primary">Assine Agora</button>
+            </div>
+        </div>
+
+        <!-- TABELA COMPARATIVA -->
+        <section class="comparison-table">
+            <h3 style="padding: 30px 30px 0; font-size: 1.3em; margin-bottom: 20px;">📊 Comparativo Detalhado</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Recurso</th>
+                        <th>Grátis</th>
+                        <th>Starter</th>
+                        <th>Pro</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Orçamentos/mês</strong></td>
+                        <td class="limited">5</td>
+                        <td class="limited">50</td>
+                        <td class="unlimited">∞ Ilimitado</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Clientes</strong></td>
+                        <td class="limited">Até 15</td>
+                        <td class="limited">Até 300</td>
+                        <td class="unlimited">∞ Ilimitado</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Produtos</strong></td>
+                        <td class="limited">Até 10</td>
+                        <td class="limited">Até 150</td>
+                        <td class="unlimited">∞ Ilimitado</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Filamentos</strong></td>
+                        <td class="limited">Até 5</td>
+                        <td class="limited">Até 40</td>
+                        <td class="unlimited">∞ Ilimitado</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Impressoras</strong></td>
+                        <td class="limited">1</td>
+                        <td class="limited">5</td>
+                        <td class="unlimited">∞ Ilimitado</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Filiais</strong></td>
+                        <td class="limited">1 (matriz)</td>
+                        <td class="limited">5</td>
+                        <td class="unlimited">∞ Ilimitado</td>
+                    </tr>
+                    <tr>
+                        <td><strong>PDF de Orçamento</strong></td>
+                        <td>Com marca d'água</td>
+                        <td>Com sua logo</td>
+                        <td>Com sua logo</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Baixa automática estoque</strong></td>
+                        <td><span class="times">✕</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Alerta estoque baixo</strong></td>
+                        <td><span class="times">✕</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Dashboard completo</strong></td>
+                        <td><span class="times">✕</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Financeiro (Receita/Custos)</strong></td>
+                        <td><span class="times">✕</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Insights & BI (Gráficos)</strong></td>
+                        <td><span class="times">✕</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Insumos e Compras Extras</strong></td>
+                        <td><span class="times">✕</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Integrações (MP, ML, Shopee, TikTok)</strong></td>
+                        <td><span class="times">✕</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Link de Aprovação</strong></td>
+                        <td><span class="times">✕</span></td>
+                        <td>Em breve</td>
+                        <td>Em breve</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Suporte</strong></td>
+                        <td>Central de Ajuda</td>
+                        <td>E-mail (24h)</td>
+                        <td>WhatsApp (prioritário)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <footer style="text-align: center; margin-top: 60px; padding-top: 40px; border-top: 1px solid rgba(255,255,255,0.1); color: #888;">
+            <p>Todos os planos incluem 14 dias de trial completo • Cancele a qualquer momento • Sem contrato</p>
+        </footer>
+    </div>
+</body>
+</html>
