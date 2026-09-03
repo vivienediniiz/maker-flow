@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Montserrat, Exo_2, Chakra_Petch } from "next/font/google";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { OrganizationJsonLd, WebsiteJsonLd, SoftwareApplicationJsonLd } from "@/components/seo/JsonLd";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -69,7 +70,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         ...chakraPetch.style,
       } as React.CSSProperties}
     >
-      <head />
+      <head>
+        <OrganizationJsonLd />
+        <WebsiteJsonLd />
+        <SoftwareApplicationJsonLd />
+      </head>
       <body>
         {children}
         <GoogleAnalytics />
