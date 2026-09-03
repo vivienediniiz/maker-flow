@@ -62,14 +62,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="pt-BR"
-      className="dark"
+      className={`dark ${montserrat.className} ${exo2.className} ${chakraPetch.className}`}
       style={{
         ...montserrat.style,
         ...exo2.style,
         ...chakraPetch.style,
       } as React.CSSProperties}
     >
-      <head />
       <body>
         {children}
         <GoogleAnalytics />
