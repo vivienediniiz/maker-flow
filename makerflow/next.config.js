@@ -8,12 +8,23 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      // A landing morava em /home antes de mudar pra raiz. Fica aqui, e não
-      // numa page.tsx com redirect(): a rota era estática, e o 308 gerado
-      // por ela chegava em produção sem o cabeçalho Location — o navegador
-      // recebia "mudou de endereço" e nenhum endereço. Redirecionamento de
-      // URL é configuração, não página.
       { source: "/home", destination: "/", permanent: true },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-XSS-Protection", value: "1; mode=block" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "geolocation=(), microphone=(), camera=()" },
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://api.anthropic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://api.supabase.co https://api.mercadopago.com https://*.mux.com; frame-ancestors 'none'; upgrade-insecure-requests" },
+        ],
+      },
     ];
   },
 };
