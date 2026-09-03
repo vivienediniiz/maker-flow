@@ -346,6 +346,13 @@ export default function HomePage() {
             ))}
           </RevealGroup>
         </div>
+
+        {/* CTA: Fim da seção de Ferramentas */}
+        <Reveal className="mt-20 text-center">
+          <Link href="/signup" className="neon-btn">
+            Começar grátis <ArrowRight size={16} />
+          </Link>
+        </Reveal>
       </section>
 
       <LiveCalculatorSection />
@@ -384,6 +391,13 @@ export default function HomePage() {
             </GlassCard>
           </Reveal>
         </div>
+
+        {/* CTA: Fim da seção Antes e Depois */}
+        <Reveal className="mt-16 text-center">
+          <Link href="/signup" className="neon-btn">
+            Começar grátis <ArrowRight size={16} />
+          </Link>
+        </Reveal>
       </section>
 
       {/* Por que StudioMaker3D */}
@@ -405,6 +419,13 @@ export default function HomePage() {
             </RevealItem>
           ))}
         </RevealGroup>
+
+        {/* CTA: Fim da seção Por que StudioMaker3D */}
+        <Reveal className="mt-20 text-center">
+          <Link href="/signup" className="neon-btn">
+            Começar grátis <ArrowRight size={16} />
+          </Link>
+        </Reveal>
       </section>
 
       <ScreensShowcaseSection />
@@ -501,6 +522,13 @@ export default function HomePage() {
             </RevealItem>
           ))}
         </RevealGroup>
+
+        {/* CTA: Fim da seção FAQ */}
+        <Reveal className="mt-16 text-center">
+          <Link href="/signup" className="neon-btn">
+            Começar grátis <ArrowRight size={16} />
+          </Link>
+        </Reveal>
       </section>
 
       {/* CTA final */}
