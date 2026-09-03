@@ -14,14 +14,5 @@
   status = 200
   condition = {Status = "404"}
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    X-XSS-Protection = "1; mode=block"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
-    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://api.anthropic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://api.supabase.co https://api.mercadopago.com https://*.mux.com; frame-ancestors 'none'; upgrade-insecure-requests"
+# Security headers delegated to public/_headers for better Netlify compatibility
 # Force rebuild Thu Sep  3 13:32:50     2026
