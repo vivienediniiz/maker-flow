@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { IntegrationCard } from "@/components/dashboard/IntegrationCard";
 import { ConfigNudgeBanner } from "@/components/dashboard/ConfigNudgeBanner";
+import { FeatureLocked } from "@/components/ui/FeatureGate";
+import { useSubscription } from "@/components/dashboard/SubscriptionContext";
 import { createClient } from "@/lib/supabase/client";
 import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import type { Integration, IntegrationPlatform } from "@/lib/types";
@@ -25,9 +27,12 @@ function IntegrationsPageContent() {
   const supabase = createClient();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { tier } = useSubscription();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [marketplaceFeesConfigured, setMarketplaceFeesConfigured] = useState(true);
+
+  const canIntegrate = tier !== "free";
 
   const mpConnected = searchParams.get("mp_connected");
   const mpError = searchParams.get("mp_error");
@@ -85,6 +90,13 @@ function IntegrationsPageContent() {
           Conecte suas contas de vendas pra receber pedidos automaticamente em Vendas, via webhook — sem precisar
           importar nada manualmente.
         </p>
+
+        {!canIntegrate && (
+          <FeatureLocked
+            requiredTier="starter"
+            message="Integre com Mercado Pago, Mercado Livre, Shopee, TikTok Shop e Melhor Envio para sincronizar seus pedidos automaticamente."
+          />
+        )}
 
         {mpConnected && (
           <div className="flex items-center gap-2 rounded-xl border border-neon-green/30 bg-neon-green/10 px-4 py-3 text-sm text-neon-green">
