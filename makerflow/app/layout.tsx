@@ -63,12 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="pt-BR"
-      className="dark"
-      style={{
-        ...montserrat.style,
-        ...exo2.style,
-        ...chakraPetch.style,
-      } as React.CSSProperties}
+      className={`dark ${montserrat.variable} ${exo2.variable} ${chakraPetch.variable}`}
     >
       <head>
         <OrganizationJsonLd />
