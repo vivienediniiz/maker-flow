@@ -130,8 +130,8 @@ function SignupForm() {
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="glass-input w-full" />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs text-text-muted">Senha</label>
-          <PasswordInput required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+          <label className="mb-1.5 block text-xs text-text-muted">Senha (mínimo 10 caracteres)</label>
+          <PasswordInput required minLength={10} value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
 
         <label className="flex cursor-pointer items-start gap-2.5 text-xs leading-relaxed text-text-secondary">

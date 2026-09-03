@@ -191,8 +191,8 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
 
   async function handlePasswordChange(e: React.FormEvent) {
     e.preventDefault();
-    if (newPassword.length < 6) {
-      setPasswordMessage("A senha precisa ter pelo menos 6 caracteres.");
+    if (newPassword.length < 10) {
+      setPasswordMessage("A senha precisa ter pelo menos 10 caracteres.");
       return;
     }
     setPasswordSaving(true);
@@ -395,11 +395,12 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
             <p className="mb-3 text-xs font-medium uppercase tracking-wider text-text-muted">Segurança</p>
             <form onSubmit={handlePasswordChange} className="space-y-3">
               <div>
-                <label className="mb-1.5 block text-xs text-text-muted">Nova senha</label>
+                <label className="mb-1.5 block text-xs text-text-muted">Nova senha (mínimo 10 caracteres)</label>
                 <PasswordInput
+                  minLength={10}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 10 caracteres"
                 />
               </div>
               {passwordMessage && (
