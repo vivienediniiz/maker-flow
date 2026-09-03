@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build && cp public/_headers .next/_headers"
+  command = "npm run build && node scripts/copy-headers.js"
   publish = ".next"
 
 [[redirects]]
