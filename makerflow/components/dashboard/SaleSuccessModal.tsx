@@ -1,0 +1,140 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { CheckCircle2, Link2, Copy, Check, Loader2, MessageCircle } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
+import { NeonButton } from "@/components/ui/NeonButton";
+import { SaleReceiptModal } from "@/components/dashboard/SaleReceiptModal";
+import { buildWhatsAppLink } from "@/components/ui/WhatsAppLink";
+import { formatBRL } from "@/lib/utils";
+import { formatOrderNumber } from "@/lib/quotes";
+import type { QuoteWithClient } from "@/lib/types";
+
+export function SaleSuccessModal({ quote, onClose }: { quote: QuoteWithClient | null; onClose: () => void }) {
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [paymentLink, setPaymentLink] = useState<string | null>(null);
+  const [generatingLink, setGeneratingLink] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Forma de pagamento "Link de Pagamento" já chega com o link pronto (gerado
+  // no submit do NewSaleModal) — evita um segundo clique só pra ver o que já
+  // foi criado.
+  useEffect(() => {
+    setPaymentLink(quote?.payment_link_url ?? null);
+    setLinkError(null);
+  }, [quote?.id, quote?.payment_link_url]);
+
+  if (!quote) return null;
+
+  async function handleGenerateLink() {
+    setGeneratingLink(true);
+    setLinkError(null);
+    try {
+      const endpoint =
+        quote!.payment_method === "infinitepay"
+          ? `/api/quotes/${quote!.id}/infinitepay-link`
+          : `/api/quotes/${quote!.id}/payment-link`;
+      const res = await fetch(endpoint, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setLinkError(data.error ?? "Não foi possível gerar o link.");
+        return;
+      }
+      setPaymentLink(data.url);
+    } catch {
+      setLinkError("Falha ao gerar o link — tente de novo.");
+    } finally {
+      setGeneratingLink(false);
+    }
+  }
+
+  function handleCopy() {
+    if (!paymentLink) return;
+    navigator.clipboard.writeText(paymentLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  const clientPhone = quote.clients?.phone || null;
+
+  function handleSendWhatsApp() {
+    if (!paymentLink || !clientPhone) return;
+    const clientName = quote!.clients?.name ?? quote!.buyer_name ?? "";
+    const orderRef = formatOrderNumber(quote!.order_number);
+    const text = `Olá${clientName ? `, ${clientName}` : ""}! Segue o link de pagamento da sua compra #${orderRef} (${formatBRL(
+      quote!.final_price
+    )}): ${paymentLink}`;
+    window.open(`${buildWhatsAppLink(clientPhone)}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  }
+
+  return (
+    <>
+      <Modal open={!!quote} onClose={onClose} title="Venda Criada" maxWidthClass="max-w-sm">
+        <div className="flex flex-col items-center gap-4 py-2 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-neon-green/15 text-neon-green">
+            <CheckCircle2 size={28} />
+          </div>
+          <div>
+            <p className="text-sm text-text-secondary">
+              Venda {formatOrderNumber(quote.order_number)} registrada com sucesso
+            </p>
+            <p className="neon-text font-numeric text-2xl font-semibold">{formatBRL(quote.final_price)}</p>
+          </div>
+          <div className="flex w-full flex-col gap-2 pt-2">
+            <div className="flex w-full gap-2">
+              <NeonButton variant="ghost" size="sm" className="flex-1" onClick={onClose}>
+                Fechar
+              </NeonButton>
+              <NeonButton size="sm" className="flex-1" onClick={() => setReceiptOpen(true)}>
+                Gerar Comprovante
+              </NeonButton>
+            </div>
+
+            {paymentLink ? (
+              <>
+                <div className="flex items-center gap-2 rounded-xl border border-border-glass bg-white/[0.02] px-3 py-2">
+                  <Link2 size={13} className="shrink-0 text-text-muted" />
+                  <span className="min-w-0 flex-1 truncate text-xs text-text-secondary">{paymentLink}</span>
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className={`flex shrink-0 items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                      copied ? "text-neon-green" : "text-neon-pink hover:bg-white/5"
+                    }`}
+                  >
+                    {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copiado" : "Copiar"}
+                  </button>
+                </div>
+                {clientPhone && (
+                  <NeonButton size="sm" className="w-full" onClick={handleSendWhatsApp}>
+                    <MessageCircle size={14} /> Enviar Link de Cobrança
+                  </NeonButton>
+                )}
+              </>
+            ) : (
+              <NeonButton
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={handleGenerateLink}
+                disabled={generatingLink}
+              >
+                {generatingLink ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
+                {generatingLink ? "Gerando..." : "Gerar Link de Cobrança"}
+              </NeonButton>
+            )}
+            {!paymentLink && (
+              <p className="text-[11px] text-text-muted">
+                Ao gerar, essa venda volta pra "aguardando pagamento" até o cliente pagar pelo link.
+              </p>
+            )}
+            {linkError && <p className="text-xs text-red-400">{linkError}</p>}
+          </div>
+        </div>
+      </Modal>
+
+      <SaleReceiptModal quote={quote} open={receiptOpen} onClose={() => setReceiptOpen(false)} zIndexClass="z-[60]" />
+    </>
+  );
+}

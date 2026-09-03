@@ -1,0 +1,330 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { NeonButton } from "@/components/ui/NeonButton";
+import { SalesGoalModal } from "@/components/dashboard/SalesGoalModal";
+import { createClient } from "@/lib/supabase/client";
+import { cn, formatBRL } from "@/lib/utils";
+import { Target, Pencil, Loader2, ArrowUp, ArrowDown, Gauge, TrendingUp } from "lucide-react";
+import { Pie, PieChart, Cell, ResponsiveContainer } from "recharts";
+import type { SalesGoal } from "@/lib/types";
+
+function monthIso(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1).toISOString().slice(0, 10);
+}
+
+function monthLabel(iso: string) {
+  const [y, m] = iso.split("-").map(Number);
+  const label = new Date(y, m - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function shortMonthName(year: number, month1: number) {
+  return new Date(year, month1 - 1, 1).toLocaleDateString("pt-BR", { month: "long" });
+}
+
+/** Últimos 12 meses (incluindo o atual) pra dropdown de histórico. */
+function monthOptions() {
+  const now = new Date();
+  return Array.from({ length: 12 }, (_, i) => monthIso(new Date(now.getFullYear(), now.getMonth() - i, 1)));
+}
+
+export function SalesGoalsCard() {
+  const supabase = createClient();
+  const options = useMemo(monthOptions, []);
+  const currentMonth = useMemo(() => monthIso(new Date()), []);
+
+  const [month, setMonth] = useState(currentMonth);
+  const [loading, setLoading] = useState(true);
+  const [goal, setGoal] = useState<SalesGoal | null>(null);
+  const [revenue, setRevenue] = useState(0);
+  const [salesCount, setSalesCount] = useState(0);
+  const [prevMonthRevenue, setPrevMonthRevenue] = useState<number | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const isCurrentMonth = month === currentMonth;
+
+  useEffect(() => {
+    loadAll(month);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [month]);
+
+  async function loadAll(targetMonth: string) {
+    setLoading(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const [y, m] = targetMonth.split("-").map(Number);
+    const monthStart = new Date(y, m - 1, 1);
+    const monthEnd = new Date(y, m, 1);
+
+    const [{ data: goalData }, { data: quotesData }] = await Promise.all([
+      supabase.from("sales_goals").select("*").eq("user_id", user.id).eq("month", targetMonth).maybeSingle(),
+      supabase
+        .from("quotes")
+        .select("final_price")
+        .eq("user_id", user.id)
+        .in("status", ["paid", "in_production", "shipped"])
+        .gte("sent_at", monthStart.toISOString())
+        .lt("sent_at", monthEnd.toISOString()),
+    ]);
+
+    setGoal((goalData as SalesGoal) ?? null);
+    const rows = quotesData ?? [];
+    setRevenue(rows.reduce((s, r) => s + r.final_price, 0));
+    setSalesCount(rows.length);
+
+    // Comparação "mesmo dia" com o mês anterior — só faz sentido pro mês corrente em andamento.
+    if (targetMonth === monthIso(new Date())) {
+      const today = new Date().getDate();
+      const prevY = m === 1 ? y - 1 : y;
+      const prevM = m === 1 ? 12 : m - 1;
+      const daysInPrevMonth = new Date(prevY, prevM, 0).getDate();
+      const cutoffDay = Math.min(today, daysInPrevMonth);
+      const prevMonthStart = new Date(prevY, prevM - 1, 1);
+      const prevCutoffEnd = new Date(prevY, prevM - 1, cutoffDay + 1);
+
+      const { data: prevQuotes } = await supabase
+        .from("quotes")
+        .select("final_price")
+        .eq("user_id", user.id)
+        .in("status", ["paid", "in_production", "shipped"])
+        .gte("sent_at", prevMonthStart.toISOString())
+        .lt("sent_at", prevCutoffEnd.toISOString());
+
+      const prevRows = prevQuotes ?? [];
+      setPrevMonthRevenue(prevRows.length > 0 ? prevRows.reduce((s, r) => s + r.final_price, 0) : null);
+    } else {
+      setPrevMonthRevenue(null);
+    }
+
+    setLoading(false);
+  }
+
+  const revenueGoal = goal?.revenue_goal ?? null;
+  const salesCountGoal = goal?.sales_count_goal ?? null;
+  const salesCountPct = salesCountGoal && salesCountGoal > 0 ? Math.min(100, (salesCount / salesCountGoal) * 100) : null;
+
+  const rawPct = revenueGoal && revenueGoal > 0 ? (revenue / revenueGoal) * 100 : null;
+  const exceeded = rawPct != null && rawPct > 100;
+  const goalMet = rawPct != null && rawPct >= 100;
+  const pieData =
+    rawPct == null
+      ? []
+      : exceeded
+      ? [{ name: "done", value: 1 }]
+      : [
+          { name: "done", value: revenue },
+          { name: "remaining", value: Math.max((revenueGoal ?? 0) - revenue, 0) },
+        ];
+
+  // Ritmo necessário + projeção — só fazem sentido acompanhando o mês em andamento.
+  const [gy, gm] = month.split("-").map(Number);
+  const totalDaysInMonth = new Date(gy, gm, 0).getDate();
+  const dayOfMonth = isCurrentMonth ? new Date().getDate() : totalDaysInMonth;
+  const daysRemaining = Math.max(totalDaysInMonth - dayOfMonth + 1, 1);
+  const daysPassed = Math.max(dayOfMonth, 1);
+
+  const showPacing = isCurrentMonth && revenueGoal != null;
+
+  const remainingToGoal = revenueGoal != null ? Math.max(revenueGoal - revenue, 0) : null;
+  const dailyPaceNeeded = showPacing && !goalMet && remainingToGoal != null ? remainingToGoal / daysRemaining : null;
+
+  const avgDailySoFar = revenue / daysPassed;
+  const projectedTotal = avgDailySoFar * totalDaysInMonth;
+  const projectedPct = showPacing && revenueGoal ? (projectedTotal / revenueGoal) * 100 : null;
+  const projectionTone =
+    projectedPct == null ? "neutral" : projectedPct >= 100 ? "good" : projectedPct >= 70 ? "warn" : "bad";
+
+  const prevMonthVariation =
+    prevMonthRevenue != null && prevMonthRevenue > 0 ? ((revenue - prevMonthRevenue) / prevMonthRevenue) * 100 : null;
+
+  let motivationalMessage: { text: string; tone: "gold" | "good" | "warn" | "neutral" } | null = null;
+  if (showPacing) {
+    if (goalMet) {
+      motivationalMessage = { text: "Meta batida! 🎉", tone: "gold" };
+    } else if ((rawPct ?? 0) >= 70) {
+      motivationalMessage = { text: "Você está quase lá, continue assim!", tone: "good" };
+    } else if ((rawPct ?? 0) < 30 && dayOfMonth > totalDaysInMonth / 2) {
+      motivationalMessage = {
+        text: "Ainda dá tempo de acelerar — que tal uma promoção ou cupom de divulgação?",
+        tone: "warn",
+      };
+    } else {
+      motivationalMessage = { text: "Continue registrando suas vendas para acompanhar o progresso.", tone: "neutral" };
+    }
+  }
+
+  const toneTextClass = {
+    gold: "text-amber-400",
+    good: "text-neon-green",
+    warn: "text-amber-400",
+    bad: "text-red-400",
+    neutral: "text-text-secondary",
+  };
+
+  return (
+    <GlassCard padding="lg" className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-sm font-medium uppercase tracking-wider text-text-muted">Metas do Mês</h3>
+          {prevMonthVariation != null && (
+            <span
+              className={cn(
+                "flex items-center gap-1 rounded-pill border px-2 py-0.5 text-[11px] font-medium",
+                prevMonthVariation >= 0
+                  ? "border-neon-green/30 bg-neon-green/10 text-neon-green"
+                  : "border-red-500/30 bg-red-500/10 text-red-400"
+              )}
+            >
+              {prevMonthVariation >= 0 ? <ArrowUp size={11} /> : <ArrowDown size={11} />}
+              {Math.abs(Math.round(prevMonthVariation))}% vs. {shortMonthName(gy, gm === 1 ? 12 : gm - 1)}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <select value={month} onChange={(e) => setMonth(e.target.value)} className="glass-input h-9 !w-auto py-0 text-xs">
+            {options.map((opt) => (
+              <option key={opt} value={opt}>
+                {monthLabel(opt)}
+              </option>
+            ))}
+          </select>
+          <NeonButton variant="outline" size="sm" onClick={() => setModalOpen(true)} className="whitespace-nowrap">
+            {goal ? <Pencil size={13} /> : <Target size={13} />} {goal ? "Editar Meta" : "Definir Meta"}
+          </NeonButton>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-6 text-text-muted">
+          <Loader2 size={18} className="animate-spin" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {revenueGoal == null ? (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <p className="text-sm text-text-muted">
+                {month === currentMonth
+                  ? "Nenhuma meta definida pra este mês ainda."
+                  : `Nenhuma meta definida pra ${monthLabel(month)}.`}
+              </p>
+              <NeonButton size="sm" onClick={() => setModalOpen(true)}>
+                <Target size={13} /> Definir Meta do Mês
+              </NeonButton>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <div className="relative h-48 w-48 shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <defs>
+                      <linearGradient id="goalProgress" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#E86333" />
+                        <stop offset="50%" stopColor="#FF4EDF" />
+                        <stop offset="100%" stopColor="#AA17DB" />
+                      </linearGradient>
+                      <linearGradient id="goalComplete" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#00FF9D" />
+                        <stop offset="100%" stopColor="#FFD24D" />
+                      </linearGradient>
+                    </defs>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      innerRadius={68}
+                      outerRadius={90}
+                      startAngle={90}
+                      endAngle={-270}
+                      stroke="none"
+                      isAnimationActive={false}
+                    >
+                      {pieData.map((entry) => (
+                        <Cell
+                          key={entry.name}
+                          fill={
+                            entry.name === "remaining" ? "rgba(255,255,255,0.08)" : exceeded ? "url(#goalComplete)" : "url(#goalProgress)"
+                          }
+                        />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
+                  <span className={`font-numeric text-2xl font-semibold ${exceeded ? "text-neon-green" : "text-text-primary"}`}>
+                    {Math.round(rawPct ?? 0)}%
+                  </span>
+                  <span className="font-numeric text-[11px] leading-tight text-text-secondary">
+                    {formatBRL(revenue)}
+                    <br />
+                    de {formatBRL(revenueGoal)}
+                  </span>
+                </div>
+              </div>
+
+              {showPacing && (dailyPaceNeeded != null || projectedPct != null) && (
+                <div className="min-w-[200px] flex-1 space-y-2.5">
+                  {dailyPaceNeeded != null && (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-border-glass bg-white/[0.02] px-3 py-2.5">
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5 text-neon-pink">
+                        <Gauge size={13} />
+                      </span>
+                      <p className="text-[11px] leading-relaxed text-text-secondary">
+                        Faltam <span className="font-medium text-text-primary">{daysRemaining} dias</span> · você
+                        precisa vender{" "}
+                        <span className="font-numeric font-medium text-text-primary">{formatBRL(dailyPaceNeeded)}/dia</span>{" "}
+                        para bater a meta
+                      </p>
+                    </div>
+                  )}
+                  {projectedPct != null && (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-border-glass bg-white/[0.02] px-3 py-2.5">
+                      <span className={cn("mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5", toneTextClass[projectionTone])}>
+                        <TrendingUp size={13} />
+                      </span>
+                      <p className="text-[11px] leading-relaxed text-text-secondary">
+                        No ritmo atual, você deve fechar o mês em{" "}
+                        <span className={cn("font-numeric font-medium", toneTextClass[projectionTone])}>
+                          {formatBRL(projectedTotal)}
+                        </span>{" "}
+                        ({Math.round(projectedPct)}% da meta)
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {salesCountGoal != null && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-text-secondary">Vendas</span>
+                <span className="font-numeric text-text-primary">
+                  {salesCount} de {salesCountGoal}
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-pill bg-white/5">
+                <div className="h-full rounded-pill bg-neon-gradient" style={{ width: `${salesCountPct}%` }} />
+              </div>
+            </div>
+          )}
+
+          {motivationalMessage && (
+            <p className={cn("text-center text-xs font-medium", toneTextClass[motivationalMessage.tone])}>
+              {motivationalMessage.text}
+            </p>
+          )}
+        </div>
+      )}
+
+      <SalesGoalModal open={modalOpen} onClose={() => setModalOpen(false)} month={month} goal={goal} onSaved={setGoal} />
+    </GlassCard>
+  );
+}

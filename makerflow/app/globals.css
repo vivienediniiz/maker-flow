@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-bg text-text-primary font-sans antialiased;
+    background-image: radial-gradient(circle at 20% -10%, rgba(170, 23, 219, 0.18) 0%, transparent 55%),
+      radial-gradient(circle at 90% 10%, rgba(255, 78, 223, 0.12) 0%, transparent 50%);
+    background-attachment: fixed;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+  ::selection {
+    background: rgba(255, 78, 223, 0.35);
+  }
+  :focus-visible {
+    outline: 2px solid #ff4edf;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    @apply rounded-glass shadow-glass;
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300;
+  }
+  .glass-card-hover:hover {
+    border-color: rgba(255, 255, 255, 0.16);
+    transform: translateY(-2px);
+  }
+
+  .neon-text {
+    @apply bg-neon-gradient bg-clip-text text-transparent;
+  }
+
+  .neon-btn {
+    @apply relative inline-flex items-center justify-center gap-2 rounded-pill px-6 py-3
+      font-sans font-semibold text-white bg-neon-gradient
+      shadow-neon-glow transition-transform duration-200;
+  }
+  .neon-btn:hover {
+    transform: translateY(-1px) scale(1.01);
+  }
+  .neon-btn:active {
+    transform: translateY(0) scale(0.99);
+  }
+
+  .glass-input {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    @apply rounded-xl px-4 py-2.5 text-base text-text-primary placeholder:text-text-muted
+      focus:border-neon-pink/60 focus:outline-none transition-colors sm:text-sm;
+  }
+
+  .scrollbar-glass::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-glass::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+  }
+
+  .range-slider-green {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    width: 100%;
+    border-radius: 999px;
+    outline: none;
+    cursor: pointer;
+  }
+  .range-slider-green::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #00ff9d;
+    box-shadow: 0 0 12px rgba(0, 255, 157, 0.6);
+    cursor: pointer;
+    border: 3px solid #0b0914;
+  }
+  .range-slider-green::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #00ff9d;
+    box-shadow: 0 0 12px rgba(0, 255, 157, 0.6);
+    cursor: pointer;
+    border: 3px solid #0b0914;
+  }
+  .range-slider-green::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: transparent;
+  }
+}

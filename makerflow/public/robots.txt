@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /auth/
+
+Sitemap: https://studiomaker3d.com.br/sitemap.xml
+
+# Delay entre requisições (em segundos)
+Crawl-delay: 1

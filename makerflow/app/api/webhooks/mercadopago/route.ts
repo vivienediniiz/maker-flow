@@ -1,0 +1,259 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { decodeExternalReference, getCyclePricing, type PlanTier, type BillingCycle } from "@/lib/plans";
+import { decidePreapproval, decidePixPayment } from "@/lib/subscription";
+import { AFFILIATE_COMMISSION_RATE } from "@/lib/affiliates";
+import { trackPaymentServer } from "@/lib/analytics-server";
+
+function adminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
+/**
+ * Comissão de afiliado só na PRIMEIRA cobrança confirmada de cada usuário —
+ * nunca em renovações. `first_payment_confirmed_at` é o carimbo que garante
+ * isso: só entra aqui uma vez por usuário, então falha aqui nunca deve
+ * derrubar o webhook (a assinatura em si já foi confirmada antes de chamar
+ * isso), só loga e segue.
+ */
+async function maybeRecordAffiliateCommission(supabase: SupabaseClient, userId: string, tier: PlanTier, cycle: BillingCycle) {
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("first_payment_confirmed_at, referred_by")
+      .eq("id", userId)
+      .single();
+
+    if (!profile || profile.first_payment_confirmed_at) return;
+
+    await supabase.from("profiles").update({ first_payment_confirmed_at: new Date().toISOString() }).eq("id", userId);
+
+    if (!profile.referred_by) return;
+
+    // % customizada por afiliado (configurada pelo admin) sobrepõe o padrão
+    // global quando preenchida.
+    const { data: affiliateProfile } = await supabase
+      .from("profiles")
+      .select("affiliate_commission_rate")
+      .eq("id", profile.referred_by)
+      .maybeSingle();
+
+    const commissionRate = affiliateProfile?.affiliate_commission_rate ?? AFFILIATE_COMMISSION_RATE;
+    const amount = getCyclePricing(tier, cycle).price * commissionRate;
+    const { error } = await supabase.from("affiliate_commissions").insert({
+      affiliate_user_id: profile.referred_by,
+      referred_user_id: userId,
+      plan_id: tier,
+      amount,
+      status: "pending",
+    });
+    if (error) console.error("[mercadopago webhook] falha ao registrar comissão de afiliado", error);
+  } catch (err) {
+    console.error("[mercadopago webhook] erro ao processar comissão de afiliado", err);
+  }
+}
+
+/**
+ * Loga toda troca de plano/status pra alimentar o Overview do admin
+ * (crescimento/churn mês-a-mês) — sem histórico antes disso, só existia a
+ * "foto do agora" em profiles. Nunca derruba o webhook se falhar.
+ */
+async function logSubscriptionEvent(
+  supabase: SupabaseClient,
+  userId: string,
+  before: { tier: string | null; status: string | null } | null,
+  after: { tier: string; status: string }
+) {
+  try {
+    await supabase.from("subscription_events").insert({
+      user_id: userId,
+      from_tier: before?.tier ?? null,
+      from_status: before?.status ?? null,
+      to_tier: after.tier,
+      to_status: after.status,
+    });
+  } catch (err) {
+    console.error("[mercadopago webhook] falha ao registrar subscription_event", err);
+  }
+}
+
+/**
+ * Mercado Pago envia { type, data: { id } }. Sempre re-consultamos o recurso na API do MP
+ * (nunca confiamos só no corpo do POST). Dois fluxos possíveis, identificados pelo `topic`:
+ *
+ *  - "subscription_preapproval" / "preapproval" → assinatura automática por cartão.
+ *    external_reference no formato "userId|tier|cycle|card".
+ *
+ *  - "payment" → pagamento avulso via Pix (renovação manual).
+ *    external_reference no formato "userId|tier|cycle|pix".
+ *    Quando aprovado, estende profiles.paid_until em +30 (mensal) ou +360 (anual) dias.
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const topic = body.type ?? req.nextUrl.searchParams.get("topic");
+    const resourceId = body.data?.id ?? req.nextUrl.searchParams.get("id");
+
+    if (!topic || !resourceId) {
+      return NextResponse.json({ error: "Payload inválido" }, { status: 400 });
+    }
+
+    const supabase = adminClient();
+
+    // --- Fluxo 1: assinatura automática por cartão (preapproval) ---
+    if (topic === "subscription_preapproval" || topic === "preapproval") {
+      const mpRes = await fetch(`https://api.mercadopago.com/preapproval/${resourceId}`, {
+        headers: { Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}` },
+      });
+
+      if (!mpRes.ok) {
+        return NextResponse.json({ error: "Falha ao consultar Mercado Pago" }, { status: 502 });
+      }
+
+      const subscription = await mpRes.json();
+      const rawRef: string | undefined = subscription.external_reference;
+
+      if (!rawRef || !rawRef.includes("|")) {
+        console.warn("[mercadopago webhook] external_reference ausente ou em formato antigo:", rawRef);
+        return NextResponse.json({ received: true, skipped: "unrecognized_reference" }, { status: 200 });
+      }
+
+      const { userId, tier, cycle } = decodeExternalReference(rawRef);
+
+      const { data: beforeProfile } = await supabase
+        .from("profiles")
+        .select("subscription_tier, subscription_status, mp_subscription_id, trial_ends_at")
+        .eq("id", userId)
+        .maybeSingle();
+
+      const decision = decidePreapproval({
+        mpStatus: subscription.status,
+        preapprovalId: String(subscription.id),
+        tier,
+        cycle,
+        profile: beforeProfile,
+      });
+
+      if (decision.action === "skip") {
+        if (decision.reason === "stale_preapproval") {
+          console.warn(
+            `[mercadopago webhook] preapproval ${subscription.id} (${subscription.status}) ignorado: perfil ${userId} está na assinatura ${beforeProfile?.mp_subscription_id}.`
+          );
+        }
+        return NextResponse.json({ received: true, skipped: decision.reason }, { status: 200 });
+      }
+
+      const { subscription_tier: toTier, subscription_status: subscriptionStatus } = decision.update;
+      const isEffectivelyActive = subscriptionStatus === "active";
+
+      const { error } = await supabase.from("profiles").update(decision.update).eq("id", userId);
+
+      if (error) {
+        console.error("[mercadopago webhook] falha ao atualizar profile (preapproval)", error);
+        return NextResponse.json({ error: "Falha ao sincronizar assinatura" }, { status: 500 });
+      }
+
+      await logSubscriptionEvent(
+        supabase,
+        userId,
+        beforeProfile
+          ? { tier: beforeProfile.subscription_tier, status: beforeProfile.subscription_status }
+          : null,
+        { tier: toTier, status: subscriptionStatus }
+      );
+
+      if (isEffectivelyActive) {
+        await maybeRecordAffiliateCommission(supabase, userId, tier, cycle);
+
+        // Rastreia pagamento por cartão no GA4
+        const pricingData = getCyclePricing(tier, cycle);
+        trackPaymentServer({
+          userId,
+          amount: pricingData.price,
+          currency: "BRL",
+          tier,
+          method: "card",
+        });
+      }
+    }
+
+    // --- Fluxo 2: pagamento avulso via Pix (renovação manual) ---
+    if (topic === "payment") {
+      const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${resourceId}`, {
+        headers: { Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}` },
+      });
+
+      if (!mpRes.ok) {
+        return NextResponse.json({ error: "Falha ao consultar Mercado Pago" }, { status: 502 });
+      }
+
+      const payment = await mpRes.json();
+      const rawRef: string | undefined = payment.external_reference;
+
+      if (!rawRef || !rawRef.includes("|")) {
+        return NextResponse.json({ received: true, skipped: "unrecognized_reference" }, { status: 200 });
+      }
+
+      const { userId, tier, cycle, method } = decodeExternalReference(rawRef);
+
+      if (method !== "pix") {
+        return NextResponse.json({ received: true, skipped: "not_pix" }, { status: 200 });
+      }
+
+      if (payment.status === "approved") {
+        const { data: beforeProfile } = await supabase
+          .from("profiles")
+          .select("subscription_tier, subscription_status, paid_until, last_pix_payment_id")
+          .eq("id", userId)
+          .maybeSingle();
+
+        const decision = decidePixPayment({
+          paymentId: String(payment.id),
+          tier,
+          cycle,
+          profile: beforeProfile,
+        });
+
+        if (decision.action === "skip") {
+          return NextResponse.json({ received: true, skipped: decision.reason }, { status: 200 });
+        }
+
+        const { error } = await supabase.from("profiles").update(decision.update).eq("id", userId);
+
+        if (error) {
+          console.error("[mercadopago webhook] falha ao atualizar profile (pix)", error);
+          return NextResponse.json({ error: "Falha ao sincronizar pagamento Pix" }, { status: 500 });
+        }
+
+        await logSubscriptionEvent(
+          supabase,
+          userId,
+          beforeProfile
+            ? { tier: beforeProfile.subscription_tier, status: beforeProfile.subscription_status }
+            : null,
+          { tier, status: "active" }
+        );
+
+        await maybeRecordAffiliateCommission(supabase, userId, tier, cycle);
+
+        // Rastreia pagamento no GA4
+        const pricingData = getCyclePricing(tier, cycle);
+        trackPaymentServer({
+          userId,
+          amount: pricingData.price,
+          currency: "BRL",
+          tier,
+          method: "pix",
+        });
+      }
+    }
+
+    return NextResponse.json({ received: true }, { status: 200 });
+  } catch (err) {
+    console.error("[mercadopago webhook] erro", err);
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
+  }
+}

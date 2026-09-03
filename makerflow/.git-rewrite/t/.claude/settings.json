@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import tkinter; print\\('tkinter OK', tkinter.TkVersion\\)\")",
+      "PowerShell(Get-Process python -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force)",
+      "Bash(git commit -m ' *)",
+      "WebFetch(domain:glama.ai)",
+      "WebFetch(domain:api.github.com)",
+      "PowerShell(Get-Process MakerFlowBridge -ErrorAction SilentlyContinue)"
+    ]
+  }
+}

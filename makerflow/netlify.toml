@@ -1,0 +1,18 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[redirects]]
+  from = "/home"
+  to = "/"
+  status = 308
+  force = false
+
+[[redirects]]
+  from = "/*"
+  to = "/"
+  status = 200
+  condition = {Status = "404"}
+
+# Security headers delegated to public/_headers for better Netlify compatibility
+# Force rebuild Thu Sep  3 13:32:50     2026
