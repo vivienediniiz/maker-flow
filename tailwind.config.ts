@@ -44,9 +44,9 @@ const config: Config = {
           "radial-gradient(circle at 50% 0%, rgba(170,23,219,0.25) 0%, rgba(11,9,20,0) 60%)",
       },
       fontFamily: {
-        display: ["var(--font-display)", "Exo 2", "system-ui", "sans-serif"],
-        numeric: ["var(--font-numeric)", "Chakra Petch", "system-ui", "sans-serif"],
-        sans: ["var(--font-sans)", "Montserrat", "system-ui", "sans-serif"],
+        display: ["'Exo 2'", "system-ui", "sans-serif"],
+        numeric: ["'Chakra Petch'", "system-ui", "sans-serif"],
+        sans: ["'Montserrat'", "system-ui", "sans-serif"],
       },
       boxShadow: {
         "neon-glow": "0 0 24px rgba(255,78,223,0.35), 0 0 48px rgba(170,23,219,0.25)",
