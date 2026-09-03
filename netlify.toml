@@ -2,7 +2,8 @@
   command = "npm run build"
   publish = ".next"
 
-# Arquivo de configuração da Netlify para StudioMaker
+# Arquivo de configuração da Netlify para StudioMaker 3D
+# Headers de segurança configurados: CSP, HSTS, X-Frame-Options
 # Define os caminhos corretos para:
 # - / → landing page (quando não autenticado) / dashboard (quando autenticado)
 # - /login → página de login
