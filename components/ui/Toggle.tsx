@@ -11,6 +11,14 @@ export function Toggle({
   onChange: (v: boolean) => void;
   label?: string;
 }) {
+  // ✅ A11y: Keyboard support for Space to toggle
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      onChange(!checked);
+    }
+  };
+
   return (
     <label className="flex cursor-pointer items-center gap-3">
       {label && <span className="text-sm text-text-secondary">{label}</span>}
@@ -19,8 +27,9 @@ export function Toggle({
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
+        onKeyDown={handleKeyDown}
         className={cn(
-          "relative h-6 w-11 rounded-pill transition-colors",
+          "relative h-6 w-11 rounded-pill transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neon-pink",
           checked ? "bg-neon-gradient shadow-neon-glow" : "bg-white/10"
         )}
       >

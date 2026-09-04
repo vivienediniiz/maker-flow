@@ -3,19 +3,23 @@
 import { useEffect, useState } from "react";
 
 /**
- * ✅ ACCESSIBILITY: Provides light/dark theme toggle
+ * ✅ ACCESSIBILITY: Provides light/dark theme toggle with SSR-safe rendering
  * Allows users to choose their preferred color scheme
+ * Prevents flash of unstyled content (FOUC) by reading theme before render
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
 
   useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem("theme") || "dark";
+    // Read theme from localStorage immediately (before render completes)
+    const saved = (localStorage.getItem("theme") || "dark") as "light" | "dark";
+    setTheme(saved);
     applyTheme(saved);
+    setMounted(true);
   }, []);
 
-  const applyTheme = (theme: string) => {
+  const applyTheme = (theme: "light" | "dark") => {
     const html = document.documentElement;
     if (theme === "light") {
       html.classList.remove("dark");
@@ -28,12 +32,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleTheme = () => {
-    const current = localStorage.getItem("theme") || "dark";
-    const next = current === "dark" ? "light" : "dark";
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
     applyTheme(next);
     window.dispatchEvent(new CustomEvent("theme-change", { detail: { theme: next } }));
   };
 
+  // ✅ SSR-safe: Render button only after hydration to avoid mismatch
   if (!mounted) return children;
 
   return (

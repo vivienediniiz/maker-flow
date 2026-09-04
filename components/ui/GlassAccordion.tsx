@@ -18,11 +18,21 @@ export function GlassAccordion({
 }) {
   const [open, setOpen] = useState(defaultOpen);
 
+  // ✅ A11y: Keyboard support for Space/Enter
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      setOpen((o) => !o);
+    }
+  };
+
   return (
     <GlassCard padding="none" className="overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between px-6 py-4 text-left"
+        onKeyDown={handleKeyDown}
+        className="flex w-full items-center justify-between px-6 py-4 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-neon-pink"
+        aria-expanded={open}
       >
         <div>
           <p className="text-sm font-medium text-text-primary">{title}</p>
