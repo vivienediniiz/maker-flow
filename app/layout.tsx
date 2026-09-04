@@ -50,7 +50,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="pt-BR"
       className={`dark ${exo2.className}`}
-      style={exo2.style as React.CSSProperties}
+      style={{
+        ...exo2.style,
+        fontFamily: "Exo 2, system-ui, sans-serif",
+      } as React.CSSProperties}
     >
       <body>
         {children}
