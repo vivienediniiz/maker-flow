@@ -1,4 +1,5 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -11,7 +12,14 @@ import { PriorityAlertsSection } from "@/components/dashboard/PriorityAlertsSect
 import { DashboardClock } from "@/components/dashboard/DashboardClock";
 import { GreetingTypewriter } from "@/components/dashboard/GreetingTypewriter";
 import { GlassAccordion } from "@/components/ui/GlassAccordion";
-import { FinancialChart } from "@/components/charts/FinancialChart";
+
+const FinancialChart = dynamic(
+  () => import("@/components/charts/FinancialChart").then((m) => m.FinancialChart),
+  {
+    loading: () => <div className="h-96 animate-pulse rounded-lg bg-gradient-to-r from-gray-900 to-gray-800" />,
+    ssr: false,
+  }
+);
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { formatBRL } from "@/lib/utils";
 import { TIER_LIMITS, isPaid } from "@/lib/entitlements";
@@ -23,58 +31,56 @@ import type { Printer, SubscriptionTier, Quote } from "@/lib/types";
 // Reative via env var NEXT_PUBLIC_ENABLE_REALTIME_TELEMETRY=true.
 const SHOW_PRINTER_FARM = process.env.NEXT_PUBLIC_ENABLE_REALTIME_TELEMETRY === "true";
 
-async function getPrinters(): Promise<Printer[]> {
+async function getDashboardData(): Promise<{
+  printers: Printer[];
+  farmStatus: { active: number; total: number };
+  filamentStockKg: number;
+  studioName: string | null;
+  subscriptionTier: SubscriptionTier;
+}> {
   const supabase = createClient();
   const user = await getCurrentUser();
-  if (!user) return [];
+  if (!user) {
+    return {
+      printers: [],
+      farmStatus: { active: 0, total: 0 },
+      filamentStockKg: 0,
+      studioName: null,
+      subscriptionTier: "free",
+    };
+  }
 
-  const { data } = await supabase
-    .from("printers")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  // ✅ All queries in parallel (batched)
+  const [
+    { data: printers },
+    { data: assets },
+    { data: filaments },
+    { data: profile },
+  ] = await Promise.all([
+    supabase
+      .from("printers")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase.from("printer_assets").select("status").eq("user_id", user.id),
+    supabase.from("filaments").select("remaining_weight_g").eq("user_id", user.id),
+    supabase.from("profiles").select("studio_name,subscription_tier").eq("id", user.id).single(),
+  ]);
 
-  return (data as Printer[]) ?? [];
-}
+  const assetRows = assets ?? [];
+  const filamentRows = filaments ?? [];
+  const totalGrams = filamentRows.reduce((s, f) => s + (f.remaining_weight_g ?? 0), 0);
 
-/** "Status do Farm" agora reflete o controle patrimonial (printer_assets), não mais a telemetria. */
-async function getPrinterAssetsSummary(): Promise<{ active: number; total: number }> {
-  const supabase = createClient();
-  const user = await getCurrentUser();
-  if (!user) return { active: 0, total: 0 };
-
-  const { data } = await supabase.from("printer_assets").select("status").eq("user_id", user.id);
-  const rows = data ?? [];
-  return { active: rows.filter((r) => r.status === "active").length, total: rows.length };
-}
-
-/** Soma o que resta de filamento em todos os rolos cadastrados. */
-async function getFilamentStockKg(): Promise<number> {
-  const supabase = createClient();
-  const user = await getCurrentUser();
-  if (!user) return 0;
-
-  const { data } = await supabase.from("filaments").select("remaining_weight_g").eq("user_id", user.id);
-  const totalGrams = (data ?? []).reduce((s, f) => s + (f.remaining_weight_g ?? 0), 0);
-  return totalGrams / 1000;
-}
-
-async function getStudioName(): Promise<string | null> {
-  const supabase = createClient();
-  const user = await getCurrentUser();
-  if (!user) return null;
-
-  const { data } = await supabase.from("profiles").select("studio_name").eq("id", user.id).single();
-  return data?.studio_name ?? null;
-}
-
-async function getSubscriptionTier(): Promise<SubscriptionTier> {
-  const supabase = createClient();
-  const user = await getCurrentUser();
-  if (!user) return "free";
-
-  const { data } = await supabase.from("profiles").select("subscription_tier").eq("id", user.id).single();
-  return (data?.subscription_tier as SubscriptionTier) ?? "free";
+  return {
+    printers: (printers as Printer[]) ?? [],
+    farmStatus: {
+      active: assetRows.filter((r) => r.status === "active").length,
+      total: assetRows.length,
+    },
+    filamentStockKg: totalGrams / 1000,
+    studioName: profile?.studio_name ?? null,
+    subscriptionTier: (profile?.subscription_tier as SubscriptionTier) ?? "free",
+  };
 }
 
 /** Plano Grátis: só contagens simples (sem detalhamento financeiro). */
@@ -206,13 +212,13 @@ function DashboardHeader({ studioName }: { studioName: string | null }) {
 }
 
 export default async function DashboardPage() {
-  const [studioName, tier] = await Promise.all([getStudioName(), getSubscriptionTier()]);
+  const dashboardData = await getDashboardData();
+  const { studioName, subscriptionTier: tier, filamentStockKg } = dashboardData;
 
   if (!isPaid(tier)) {
-    const [counts, todaySales, filamentStockKg] = await Promise.all([
+    const [counts, todaySales] = await Promise.all([
       getSimpleCounts(),
       getTodayManualSales(),
-      getFilamentStockKg(),
     ]);
 
     return (
@@ -268,12 +274,8 @@ export default async function DashboardPage() {
     );
   }
 
-  const [printers, financials, farmStatus, filamentStockKg] = await Promise.all([
-    getPrinters(),
-    getPreviousMonthFinancials(),
-    getPrinterAssetsSummary(),
-    getFilamentStockKg(),
-  ]);
+  const financials = await getPreviousMonthFinancials();
+  const { printers, farmStatus } = dashboardData;
 
   return (
     <>

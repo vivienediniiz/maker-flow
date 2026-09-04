@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -13,7 +14,15 @@ import { CouponsPeriodSummary } from "@/components/dashboard/CouponsPeriodSummar
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 import { useConfirm } from "@/components/dashboard/ConfirmDialogContext";
 import { useSubscription } from "@/components/dashboard/SubscriptionContext";
-import { FinancialEvolutionChart, type FinancialEvolutionPoint } from "@/components/charts/FinancialEvolutionChart";
+import type { FinancialEvolutionPoint } from "@/components/charts/FinancialEvolutionChart";
+
+const FinancialEvolutionChart = dynamic(
+  () => import("@/components/charts/FinancialEvolutionChart").then((m) => m.FinancialEvolutionChart),
+  {
+    loading: () => <div className="h-96 animate-pulse rounded-lg bg-gradient-to-r from-gray-900 to-gray-800" />,
+    ssr: false,
+  }
+);
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { QUOTE_SOURCE_LABELS } from "@/lib/quotes";
