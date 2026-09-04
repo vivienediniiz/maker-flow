@@ -50,6 +50,25 @@ export async function POST(req: NextRequest) {
   }
 
   const webhookSecret = process.env.MERCADO_PAGO_VENDAS_WEBHOOK_SECRET;
+
+  // Fail closed in production: webhook secret is mandatory to prevent unauthorized order injection
+  if (!webhookSecret) {
+    const isProd = process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+    if (isProd) {
+      console.error(
+        "[webhook] mercado-pago: MERCADO_PAGO_VENDAS_WEBHOOK_SECRET ausente em PRODUÇÃO — rejeitando webhook. Configure a variável de ambiente antes de continuar."
+      );
+      return NextResponse.json(
+        { error: "Configuração de segurança faltando" },
+        { status: 503 }
+      );
+    } else {
+      console.warn(
+        "[webhook] mercado-pago: MERCADO_PAGO_VENDAS_WEBHOOK_SECRET ausente em desenvolvimento — processando sem validar assinatura."
+      );
+    }
+  }
+
   if (webhookSecret) {
     const validSignature = validateMercadoPagoSignature({
       xSignature: req.headers.get("x-signature"),
@@ -67,10 +86,6 @@ export async function POST(req: NextRequest) {
       );
       return NextResponse.json({ error: "Assinatura inválida" }, { status: 401 });
     }
-  } else {
-    console.warn(
-      "[webhook] mercado-pago: MERCADO_PAGO_VENDAS_WEBHOOK_SECRET ausente — processando sem validar assinatura."
-    );
   }
 
   try {

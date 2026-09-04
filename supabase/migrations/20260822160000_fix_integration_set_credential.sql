@@ -36,3 +36,7 @@ begin
   return v_id;
 end;
 $$;
+
+-- Security: revoke execute permissions from public roles; only service_role should call this
+revoke execute on function public.integration_set_credential(uuid, text, text) from public, authenticated;
+grant execute on function public.integration_set_credential(uuid, text, text) to service_role;
