@@ -17,6 +17,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme(saved);
     applyTheme(saved);
     setMounted(true);
+
+    // ✅ Listen for storage changes (e.g., multiple tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "theme" && e.newValue) {
+        const newTheme = e.newValue as "light" | "dark";
+        setTheme(newTheme);
+        applyTheme(newTheme);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    // ✅ CLEANUP: Remove listener when component unmounts
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
 
   const applyTheme = (theme: "light" | "dark") => {
