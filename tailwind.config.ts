@@ -45,8 +45,8 @@ const config: Config = {
       },
       fontFamily: {
         display: "var(--font-display)",
-        numeric: ["Chakra Petch", "system-ui", "sans-serif"],
-        sans: ["Montserrat", "system-ui", "sans-serif"],
+        numeric: "var(--font-numeric)",
+        sans: "var(--font-sans)",
       },
       boxShadow: {
         "neon-glow": "0 0 24px rgba(255,78,223,0.35), 0 0 48px rgba(170,23,219,0.25)",
