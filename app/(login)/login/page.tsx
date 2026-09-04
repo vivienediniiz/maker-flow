@@ -102,7 +102,7 @@ export default function LoginPage() {
                 />
               </div>
 
-              {error && <p className="text-xs text-red-400">{error}</p>}
+              {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
 
               <NeonButton type="submit" className="w-full" disabled={loading}>
                 {loading ? "Entrando..." : "Entrar"}

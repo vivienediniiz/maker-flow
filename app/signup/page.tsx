@@ -155,7 +155,7 @@ function SignupForm() {
           </span>
         </label>
 
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
 
         <NeonButton type="submit" className="w-full" disabled={loading || !acceptedTerms}>
           {loading ? "Criando..." : "Criar conta"}

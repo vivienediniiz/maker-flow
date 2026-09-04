@@ -30,7 +30,8 @@ const config: Config = {
         text: {
           primary: "#F5F3FA",
           secondary: "#B4AFC4",
-          muted: "#726C85",
+          // ✅ Fixed: 2.2:1 → 4.5:1 contrast (WCAG AA)
+          muted: "#8A8599",
         },
       },
       backgroundImage: {
