@@ -1,16 +1,4 @@
 {
   "buildCommand": "npm run build",
-  "framework": "nextjs",
-  "env": {
-    "NEXT_PUBLIC_SUPABASE_URL": "@next_public_supabase_url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@next_public_supabase_anon_key",
-    "NEXT_PUBLIC_APP_URL": "@next_public_app_url",
-    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
-    "MERCADO_PAGO_VENDAS_CLIENT_ID": "@mercado_pago_vendas_client_id",
-    "MERCADO_PAGO_VENDAS_CLIENT_SECRET": "@mercado_pago_vendas_client_secret",
-    "MERCADOPAGO_ACCESS_TOKEN": "@mercadopago_access_token",
-    "MERCADOPAGO_PUBLIC_KEY": "@mercadopago_public_key",
-    "MERCADO_PAGO_WEBHOOK_SECRET": "@mercado_pago_webhook_secret",
-    "SENTRY_AUTH_TOKEN": "@sentry_auth_token"
-  }
+  "framework": "nextjs"
 }
