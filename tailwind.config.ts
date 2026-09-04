@@ -44,7 +44,7 @@ const config: Config = {
           "radial-gradient(circle at 50% 0%, rgba(170,23,219,0.25) 0%, rgba(11,9,20,0) 60%)",
       },
       fontFamily: {
-        display: ["Exo 2", "system-ui", "sans-serif"],
+        display: "var(--font-display)",
         numeric: ["Chakra Petch", "system-ui", "sans-serif"],
         sans: ["Montserrat", "system-ui", "sans-serif"],
       },

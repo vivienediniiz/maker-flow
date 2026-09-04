@@ -5,6 +5,7 @@ import "./globals.css";
 
 const exo2 = Exo_2({
   subsets: ["latin"],
+  variable: "--font-display",
   weight: ["500", "600", "700", "800"],
 });
 
