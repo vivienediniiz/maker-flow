@@ -1,8 +1,6 @@
 {
   "buildCommand": "npm run build",
   "framework": "nextjs",
-  "productionBranch": "main",
-  "public": false,
   "env": [
     {
       "key": "NEXT_PUBLIC_SUPABASE_URL",
