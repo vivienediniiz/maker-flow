@@ -33,6 +33,11 @@ const config: Config = {
           // ✅ Fixed: 2.2:1 → 4.5:1 contrast (WCAG AA)
           muted: "#8A8599",
         },
+        // Light mode text colors (better contrast)
+        "text-light": {
+          secondary: "#5a5265",
+          muted: "#706480",
+        },
       },
       backgroundImage: {
         "neon-gradient":
