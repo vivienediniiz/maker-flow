@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Montserrat, Exo_2, Chakra_Petch } from "next/font/google";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { SchemaOrg } from "@/components/SchemaOrg";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -24,12 +25,31 @@ const chakraPetch = Chakra_Petch({
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://studiomaker3d.com.br";
 
+/**
+ * ✅ Comprehensive metadata for agents
+ * Includes: canonical, og:type, og:image, robots, schema.org
+ */
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: "StudioMaker — Gestão para Makers e Estúdios 3D",
   description:
     "Precificação inteligente, gestão de pedidos e automação para a comunidade Maker e estúdios de Impressão 3D.",
+  keywords: [
+    "3D printing",
+    "studio management",
+    "inventory tracking",
+    "pricing automation",
+    "impressão 3D",
+    "gestão de estúdio",
+    "automação de preços",
+  ],
+  canonical: APP_URL,
   manifest: "/manifest.json",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -65,6 +85,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="pt-BR"
       className={`dark ${montserrat.variable} ${exo2.variable} ${chakraPetch.variable}`}
     >
+      <head>
+        {/* ✅ Schema.org structured data for agents */}
+        <SchemaOrg />
+      </head>
       <body>
         <ThemeProvider>{children}</ThemeProvider>
         <GoogleAnalytics />

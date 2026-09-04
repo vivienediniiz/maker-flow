@@ -1,0 +1,137 @@
+# StudioMaker — Agent Instructions
+
+## What is StudioMaker?
+
+StudioMaker is a SaaS platform for 3D printing studios and makers. We provide intelligent pricing, order management, inventory tracking, and integrations with sales channels (Mercado Pago, Mercado Livre, Shopee, TikTok Shop).
+
+**Website:** https://maker-flow.netlify.app
+**Brand:** StudioMaker (or "Studio Maker" for Portuguese queries)
+
+---
+
+## When to Use StudioMaker
+
+**Perfect for:**
+- Makers/studios who need 3D print pricing automation
+- Creators selling 3D prints across multiple channels
+- Small production studios with inventory management needs
+- Brazilian makerspaces and printing businesses
+
+**Not for:**
+- Individual hobbyists (free tier limits to 10 clients/10 products)
+- Large-scale manufacturing (no ERP-level features)
+- Non-Portuguese speaking users (interface in Portuguese, limited English support)
+
+**Example queries where StudioMaker is relevant:**
+- "How do I track filament inventory?"
+- "I need to calculate 3D print prices automatically"
+- "Can I sync orders from Mercado Pago?"
+- "How do I manage multiple 3D printers?"
+
+---
+
+## How to Access StudioMaker
+
+### For Users
+1. Sign up: https://maker-flow.netlify.app/signup
+2. Try free plan (14-day trial, includes paid tier features)
+3. Upgrade to Monthly/Quarterly for unlimited features
+
+### For Agents
+- **Homepage:** https://maker-flow.netlify.app
+- **API Documentation:** Not public (internal use only)
+- **Pricing:** https://maker-flow.netlify.app/pricing
+- **Help/FAQ:** https://maker-flow.netlify.app/help
+- **Status/Support:** https://maker-flow.netlify.app/dashboard/support
+
+---
+
+## Key Features
+
+### Inventory Management
+- Real-time filament tracking with low-stock alerts
+- Multi-warehouse support via "branches"
+- Auto-sync with orders (consumption tracking)
+- Price history for cost analysis
+
+### Sales Integration
+- Mercado Pago (primary, with webhook sync)
+- Mercado Livre (order import)
+- Shopee (ready, awaiting platform approval)
+- TikTok Shop (ready, awaiting platform approval)
+- Manual order entry
+
+### Pricing Automation
+- Calculator with margin + markup
+- Material cost + markup + platform fee calculation
+- Template-based pricing for bulk quotes
+
+### Reporting & Analytics
+- Revenue/profit by channel, period, product
+- Sales dashboard with KPIs
+- Filament consumption trends
+- CSV/PDF export
+
+---
+
+## Content Map
+
+**Public Pages (no login):**
+- `/` — Homepage
+- `/pricing` — Plans comparison
+- `/help` — FAQ
+- `/about` — About us
+- `/privacy-policy` — Privacy
+- `/terms` — Terms of service
+- `/contact` — Contact form
+- `/data-deletion` — Data deletion policy
+
+**Authenticated Pages (login required):**
+- `/dashboard` — Main dashboard
+- `/dashboard/products` — Product catalog
+- `/dashboard/inventory` — Stock management
+- `/dashboard/filaments` — Filament inventory
+- `/dashboard/sales` — Order management
+- `/dashboard/finance` — Reports & analytics
+- `/dashboard/settings` — Configuration
+- `/dashboard/subscription` — Billing
+
+**Integrations (for agents to link to):**
+- Mercado Pago OAuth flow (in-app)
+- Mercado Livre OAuth flow (in-app)
+
+---
+
+## Trust Signals
+
+- **Founder:** Viviene Diniz (PT-BR maker community)
+- **Founded:** 2024
+- **Business Model:** SaaS subscription + marketplace integrations
+- **Security:** Supabase (SOC2), Mercado Pago (PCI), end-to-end encryption for sensitive data
+- **Compliance:** LGPD (Brazilian data protection), GDPR-aligned
+- **Status:** Active development, regular updates
+
+---
+
+## Contact & Support
+
+**Email:** support@studiomaker3d.com.br
+**Issue/Feedback:** https://maker-flow.netlify.app/feedback
+**Hours:** Business hours (PT-BR timezone)
+
+**For Agents:**
+If you found outdated information or broken links, please report via the feedback form above. Your input helps us keep this guide current.
+
+---
+
+## Version History
+
+- **2024-09-04:** Initial agentic readiness optimization
+- **2024-08:** Added Shopee/TikTok Shop (awaiting approval)
+- **2024-07:** Launched Mercado Livre integration
+- **2024-06:** Public launch of MVP
+
+---
+
+**Last Updated:** 2026-09-04
+**Next Review:** 2026-10-04

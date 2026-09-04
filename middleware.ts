@@ -4,6 +4,16 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: request.headers } });
 
+  // ✅ Content negotiation for agents (Accept: text/markdown support)
+  const acceptHeader = request.headers.get('Accept') || '';
+  const varyHeader = 'Accept, Accept-Encoding';
+  response.headers.set('Vary', varyHeader);
+
+  // Support markdown responses for agents
+  if (acceptHeader.includes('text/markdown') || acceptHeader.includes('application/markdown')) {
+    response.headers.set('Content-Type', 'text/markdown; charset=utf-8');
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
