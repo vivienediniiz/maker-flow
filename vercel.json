@@ -1,47 +1,16 @@
 {
   "buildCommand": "npm run build",
   "framework": "nextjs",
-  "env": [
-    {
-      "key": "NEXT_PUBLIC_SUPABASE_URL",
-      "value": "@next_public_supabase_url"
-    },
-    {
-      "key": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-      "value": "@next_public_supabase_anon_key"
-    },
-    {
-      "key": "NEXT_PUBLIC_APP_URL",
-      "value": "@next_public_app_url"
-    },
-    {
-      "key": "SUPABASE_SERVICE_ROLE_KEY",
-      "value": "@supabase_service_role_key"
-    },
-    {
-      "key": "MERCADO_PAGO_VENDAS_CLIENT_ID",
-      "value": "@mercado_pago_vendas_client_id"
-    },
-    {
-      "key": "MERCADO_PAGO_VENDAS_CLIENT_SECRET",
-      "value": "@mercado_pago_vendas_client_secret"
-    },
-    {
-      "key": "MERCADOPAGO_ACCESS_TOKEN",
-      "value": "@mercadopago_access_token"
-    },
-    {
-      "key": "MERCADOPAGO_PUBLIC_KEY",
-      "value": "@mercadopago_public_key"
-    },
-    {
-      "key": "MERCADO_PAGO_WEBHOOK_SECRET",
-      "value": "@mercado_pago_webhook_secret"
-    },
-    {
-      "key": "SENTRY_AUTH_TOKEN",
-      "value": "@sentry_auth_token"
-    }
-  ],
-  "ignoreCommand": "git diff --quiet HEAD~ HEAD -- . ':(exclude).vercel' ':(exclude)docs' || exit 0"
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "@next_public_supabase_url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@next_public_supabase_anon_key",
+    "NEXT_PUBLIC_APP_URL": "@next_public_app_url",
+    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
+    "MERCADO_PAGO_VENDAS_CLIENT_ID": "@mercado_pago_vendas_client_id",
+    "MERCADO_PAGO_VENDAS_CLIENT_SECRET": "@mercado_pago_vendas_client_secret",
+    "MERCADOPAGO_ACCESS_TOKEN": "@mercadopago_access_token",
+    "MERCADOPAGO_PUBLIC_KEY": "@mercadopago_public_key",
+    "MERCADO_PAGO_WEBHOOK_SECRET": "@mercado_pago_webhook_secret",
+    "SENTRY_AUTH_TOKEN": "@sentry_auth_token"
+  }
 }
