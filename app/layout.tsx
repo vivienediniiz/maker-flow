@@ -1,24 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Montserrat, Exo_2, Chakra_Petch } from "next/font/google";
+import { Exo_2 } from "next/font/google";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import "./globals.css";
 
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  weight: ["400", "500", "600", "700", "800"],
-});
-
 const exo2 = Exo_2({
   subsets: ["latin"],
-  variable: "--font-display",
   weight: ["500", "600", "700", "800"],
-});
-
-const chakraPetch = Chakra_Petch({
-  subsets: ["latin"],
-  variable: "--font-numeric",
-  weight: ["500", "600", "700"],
 });
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://studiomaker3d.com.br";
