@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Montserrat, Exo_2, Chakra_Petch } from "next/font/google";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -65,7 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`dark ${montserrat.variable} ${exo2.variable} ${chakraPetch.variable}`}
     >
       <body>
-        {children}
+        <ThemeProvider>{children}</ThemeProvider>
         <GoogleAnalytics />
       </body>
     </html>

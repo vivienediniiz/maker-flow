@@ -381,8 +381,15 @@ export default function ProductsPage() {
                         <tr
                           key={p.id}
                           onClick={() => setSelectedProduct(p)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setSelectedProduct(p);
+                            }
+                          }}
+                          tabIndex={0}
                           className={cn(
-                            "cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02]",
+                            "cursor-pointer border-b border-border-glass/60 transition-colors hover:bg-white/[0.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-neon-pink",
                             selectedIds.has(p.id) && "bg-neon-pink/[0.04]"
                           )}
                         >
