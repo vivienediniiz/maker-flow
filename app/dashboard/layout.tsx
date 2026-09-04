@@ -85,6 +85,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <SubscriptionProvider tier={tier}>
       <ConfirmDialogProvider>
         <MobileSidebarProvider>
+          {/* ✅ Skip-to-content link for keyboard users */}
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[10000] focus:block focus:bg-neon-pink focus:px-4 focus:py-2 focus:rounded focus:text-text-primary"
+          >
+            Pular para conteúdo principal
+          </a>
+
           <div className="min-h-screen">
             <Sidebar
               studioName={profile?.full_name}
@@ -102,7 +110,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                   trialEndsAt={profile?.trial_ends_at ?? null}
                 />
               )}
-              {children}
+              <main id="main-content">{children}</main>
             </div>
           </div>
         </MobileSidebarProvider>

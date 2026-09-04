@@ -28,6 +28,7 @@ export function Modal({
   maxWidthClass?: string;
 }) {
   const instanceId = useRef(Symbol("modal")).current;
+  const modalRef = useRef<HTMLDivElement>(null);
   // Deslocamento (arraste) do painel a partir da posição centralizada padrão
   // — reseta toda vez que o modal reabre.
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -42,10 +43,42 @@ export function Modal({
     if (!open) return;
     openModalStack.push(instanceId);
 
+    // ✅ Focus trap: Auto-focus first focusable element
+    const firstFocusable = modalRef.current?.querySelector(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    ) as HTMLElement;
+    firstFocusable?.focus();
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       // Só o modal do topo da pilha (o último aberto) responde ao Esc.
       if (openModalStack[openModalStack.length - 1] === instanceId) onClose();
+
+      // ✅ Focus trap: Tab navigation
+      if (e.key === "Tab") {
+        const focusables = modalRef.current?.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        ) as NodeListOf<HTMLElement>;
+
+        if (!focusables?.length) return;
+
+        const firstFocusable = focusables[0];
+        const lastFocusable = focusables[focusables.length - 1];
+
+        if (e.shiftKey) {
+          // Shift+Tab no primeiro → vai pro último
+          if (document.activeElement === firstFocusable) {
+            e.preventDefault();
+            lastFocusable.focus();
+          }
+        } else {
+          // Tab no último → vai pro primeiro
+          if (document.activeElement === lastFocusable) {
+            e.preventDefault();
+            firstFocusable.focus();
+          }
+        }
+      }
     };
     document.addEventListener("keydown", onKey);
 
@@ -78,8 +111,12 @@ export function Modal({
 
   return createPortal(
     <div className={cn("fixed inset-0 flex items-center justify-center px-4 py-8", zIndexClass)}>
-      <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" onClick={onClose} aria-hidden="true" />
       <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
         className={cn(
           "glass-card relative flex max-h-[85vh] w-full flex-col p-5 shadow-neon-glow sm:p-6",
           maxWidthClass,
@@ -94,7 +131,7 @@ export function Modal({
           onPointerUp={handleDragEnd}
           onPointerCancel={handleDragEnd}
         >
-          <h3 className="font-display text-lg">{title}</h3>
+          <h3 id="modal-title" className="font-display text-lg">{title}</h3>
           <button
             onClick={onClose}
             onPointerDown={(e) => e.stopPropagation()}
