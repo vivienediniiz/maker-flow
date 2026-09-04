@@ -4,6 +4,8 @@ import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { OrganizationJsonLd, WebsiteJsonLd, SoftwareApplicationJsonLd } from "@/components/seo/JsonLd";
 import "./globals.css";
 
+// CRÍTICO: Nunca importar Chakra_Petch ou qualquer outra fonte além de Exo_2 e Montserrat
+
 // Exo 2 é a fonte principal (corpo + títulos). Montserrat para subtítulos.
 // Nenhuma outra fonte deve ser usada como principal.
 const exo2 = Exo_2({
