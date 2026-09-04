@@ -2,25 +2,23 @@
 -- Ensures users only access their own data; prevents cross-tenant data leakage
 
 -- Enable RLS on all user-owned tables
-alter table profiles enable row level security;
-alter table quotes enable row level security;
-alter table products enable row level security;
-alter table clients enable row level security;
-alter table filaments enable row level security;
-alter table filament_movements enable row level security;
-alter table supplies enable row level security;
-alter table supply_movements enable row level security;
-alter table integrations enable row level security;
-alter table printers enable row level security;
-alter table categories enable row level security;
-alter table branches enable row level security;
-alter table settings enable row level security;
-alter table extra_purchases enable row level security;
-alter table sales enable row level security;
-alter table affiliate_commissions enable row level security;
-alter table subscription_events enable row level security;
-alter table coupon_campaigns enable row level security;
-alter table product_pricing_calculator_inputs enable row level security;
+alter table if exists profiles enable row level security;
+alter table if exists quotes enable row level security;
+alter table if exists products enable row level security;
+alter table if exists clients enable row level security;
+alter table if exists filaments enable row level security;
+alter table if exists filament_movements enable row level security;
+alter table if exists supplies enable row level security;
+alter table if exists supply_movements enable row level security;
+alter table if exists integrations enable row level security;
+alter table if exists printers enable row level security;
+alter table if exists categories enable row level security;
+alter table if exists branches enable row level security;
+alter table if exists settings enable row level security;
+alter table if exists extra_purchases enable row level security;
+alter table if exists sales enable row level security;
+alter table if exists affiliate_commissions enable row level security;
+alter table if exists subscription_events enable row level security;
 
 -- === PROFILES ===
 -- Users can only view/update their own profile
@@ -322,38 +320,5 @@ create policy "Users can view own subscription events"
   on subscription_events for select
   using (auth.uid() = user_id);
 
--- === COUPON_CAMPAIGNS ===
--- Users can only access their own coupon campaigns
-create policy "Users can view own coupon campaigns"
-  on coupon_campaigns for select
-  using (auth.uid() = user_id);
-
-create policy "Users can create own coupon campaigns"
-  on coupon_campaigns for insert
-  with check (auth.uid() = user_id);
-
-create policy "Users can update own coupon campaigns"
-  on coupon_campaigns for update
-  using (auth.uid() = user_id);
-
-create policy "Users can delete own coupon campaigns"
-  on coupon_campaigns for delete
-  using (auth.uid() = user_id);
-
--- === PRODUCT_PRICING_CALCULATOR_INPUTS ===
--- Users can only access their own saved calculator inputs
-create policy "Users can view own calculator inputs"
-  on product_pricing_calculator_inputs for select
-  using (auth.uid() = user_id);
-
-create policy "Users can create own calculator inputs"
-  on product_pricing_calculator_inputs for insert
-  with check (auth.uid() = user_id);
-
-create policy "Users can update own calculator inputs"
-  on product_pricing_calculator_inputs for update
-  using (auth.uid() = user_id);
-
-create policy "Users can delete own calculator inputs"
-  on product_pricing_calculator_inputs for delete
-  using (auth.uid() = user_id);
+-- NOTE: coupon_campaigns and product_pricing_calculator_inputs tables
+-- do not currently exist in the schema. Add RLS policies here if created later.
