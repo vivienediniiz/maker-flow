@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getIntegrationCredential, setIntegrationCredential } from "@/lib/vault";
 
@@ -533,4 +534,18 @@ export async function calculateShipping(
   }
 
   return { quotes, unavailable };
+}
+
+export function validateMelhorEnvioWebhookSignature(params: {
+  xSignature: string | null;
+  xToken: string | null;
+  secret: string;
+}): boolean {
+  if (!params.xSignature || !params.xToken) return false;
+
+  const hmac = crypto.createHmac("sha256", params.secret);
+  hmac.update(params.xToken, "utf-8");
+  const expectedSignature = hmac.digest("hex");
+
+  return params.xSignature === expectedSignature;
 }

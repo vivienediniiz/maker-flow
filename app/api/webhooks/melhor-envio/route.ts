@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { fetchMelhorEnvioCartItem } from "@/lib/melhorEnvio";
+import { fetchMelhorEnvioCartItem, validateMelhorEnvioWebhookSignature } from "@/lib/melhorEnvio";
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -41,6 +41,41 @@ function extractShipmentId(body: unknown): string | null {
 export async function POST(req: NextRequest) {
   const admin = adminClient();
   const body = await req.json().catch(() => null);
+
+  const webhookSecret = process.env.MELHOR_ENVIO_WEBHOOK_SECRET;
+  const xSignature = req.headers.get("x-signature");
+  const xToken = req.headers.get("x-token");
+
+  if (!webhookSecret) {
+    const isProd = process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+    if (isProd) {
+      console.error(
+        "[webhook] melhor-envio: MELHOR_ENVIO_WEBHOOK_SECRET ausente em PRODUÇÃO — rejeitando webhook. Configure a variável de ambiente antes de continuar."
+      );
+      return NextResponse.json(
+        { error: "Configuração de segurança faltando" },
+        { status: 503 }
+      );
+    } else {
+      console.warn(
+        "[webhook] melhor-envio: MELHOR_ENVIO_WEBHOOK_SECRET ausente em desenvolvimento — processando sem validar assinatura."
+      );
+    }
+  }
+
+  if (webhookSecret) {
+    const validSignature = validateMelhorEnvioWebhookSignature({
+      xSignature,
+      xToken,
+      secret: webhookSecret,
+    });
+    if (!validSignature) {
+      console.error(
+        `[webhook] melhor-envio: ASSINATURA INVÁLIDA — webhook DESCARTADO. Conferir MELHOR_ENVIO_WEBHOOK_SECRET contra o token de autenticação do webhook no painel do Melhor Envio.`
+      );
+      return NextResponse.json({ error: "Assinatura inválida" }, { status: 401 });
+    }
+  }
 
   const shipmentId = extractShipmentId(body);
 

@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getIntegrationCredential, setIntegrationCredential } from "@/lib/vault";
 
@@ -210,4 +211,29 @@ export async function upsertQuoteFromMercadoLivreOrder(admin: SupabaseClient, us
 
   if (error) throw new Error(error.message);
   return data;
+}
+
+export function validateMercadoLivreWebhookSignature(params: {
+  xSignature: string | null;
+  authToken: string | null;
+  secret: string;
+}): boolean {
+  if (!params.xSignature || !params.authToken) return false;
+
+  const parts = params.xSignature.split(",").reduce((acc: Record<string, string>, chunk) => {
+    const [key, value] = chunk.split("=");
+    if (key && value) acc[key.trim()] = value.trim();
+    return acc;
+  }, {});
+
+  const ts = parts.ts || parts.timestamp;
+  const v1 = parts.v1;
+
+  if (!ts || !v1) return false;
+
+  const hmac = crypto.createHmac("sha256", params.secret);
+  hmac.update(`${ts}.${params.authToken}`, "utf-8");
+  const expectedSignature = hmac.digest("hex");
+
+  return v1 === expectedSignature;
 }

@@ -4,6 +4,7 @@ import { decodeExternalReference, getCyclePricing, type PlanTier, type BillingCy
 import { decidePreapproval, decidePixPayment } from "@/lib/subscription";
 import { AFFILIATE_COMMISSION_RATE } from "@/lib/affiliates";
 import { trackPaymentServer } from "@/lib/analytics-server";
+import { validateMercadoPagoSignature } from "@/lib/mercadoPago";
 
 function adminClient() {
   return createClient(
@@ -99,6 +100,40 @@ export async function POST(req: NextRequest) {
 
     if (!topic || !resourceId) {
       return NextResponse.json({ error: "Payload inválido" }, { status: 400 });
+    }
+
+    const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+
+    if (!webhookSecret) {
+      const isProd = process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+      if (isProd) {
+        console.error(
+          "[webhook] mercadopago (subscription): MERCADOPAGO_WEBHOOK_SECRET ausente em PRODUÇÃO — rejeitando webhook. Configure a variável de ambiente antes de continuar."
+        );
+        return NextResponse.json(
+          { error: "Configuração de segurança faltando" },
+          { status: 503 }
+        );
+      } else {
+        console.warn(
+          "[webhook] mercadopago (subscription): MERCADOPAGO_WEBHOOK_SECRET ausente em desenvolvimento — processando sem validar assinatura."
+        );
+      }
+    }
+
+    if (webhookSecret) {
+      const validSignature = validateMercadoPagoSignature({
+        xSignature: req.headers.get("x-signature"),
+        xRequestId: req.headers.get("x-request-id"),
+        dataId: String(resourceId),
+        secret: webhookSecret,
+      });
+      if (!validSignature) {
+        console.error(
+          `[webhook] mercadopago (subscription): ASSINATURA INVÁLIDA pro evento ${topic}/${resourceId} — evento DESCARTADO. Conferir MERCADOPAGO_WEBHOOK_SECRET contra a assinatura secreta no painel do Mercado Pago.`
+        );
+        return NextResponse.json({ error: "Assinatura inválida" }, { status: 401 });
+      }
     }
 
     const supabase = adminClient();

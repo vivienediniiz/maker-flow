@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { fetchMercadoLivreOrderForIntegration, upsertQuoteFromMercadoLivreOrder } from "@/lib/mercadoLivre";
+import { fetchMercadoLivreOrderForIntegration, upsertQuoteFromMercadoLivreOrder, validateMercadoLivreWebhookSignature } from "@/lib/mercadoLivre";
 import { apiError } from "@/lib/apiError";
 
 function adminClient() {
@@ -31,6 +31,39 @@ export async function POST(req: NextRequest) {
   if (!mlUserId || !orderId) {
     console.log("[webhook] mercado-livre: payload incompleto, ignorado", JSON.stringify(body).slice(0, 300));
     return NextResponse.json({ ok: true, skipped: "incomplete payload" });
+  }
+
+  const webhookSecret = process.env.MERCADO_LIVRE_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    const isProd = process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+    if (isProd) {
+      console.error(
+        "[webhook] mercado-livre: MERCADO_LIVRE_WEBHOOK_SECRET ausente em PRODUÇÃO — rejeitando webhook. Configure a variável de ambiente antes de continuar."
+      );
+      return NextResponse.json(
+        { error: "Configuração de segurança faltando" },
+        { status: 503 }
+      );
+    } else {
+      console.warn(
+        "[webhook] mercado-livre: MERCADO_LIVRE_WEBHOOK_SECRET ausente em desenvolvimento — processando sem validar assinatura."
+      );
+    }
+  }
+
+  if (webhookSecret) {
+    const validSignature = validateMercadoLivreWebhookSignature({
+      xSignature: req.headers.get("x-signature"),
+      authToken: body.id ? String(body.id) : null,
+      secret: webhookSecret,
+    });
+    if (!validSignature) {
+      console.error(
+        `[webhook] mercado-livre: ASSINATURA INVÁLIDA pro pedido ${orderId} (user_id ${mlUserId}) — notificação DESCARTADA. Conferir MERCADO_LIVRE_WEBHOOK_SECRET contra a assinatura secreta no DevCenter do Mercado Livre.`
+      );
+      return NextResponse.json({ error: "Assinatura inválida" }, { status: 401 });
+    }
   }
 
   const { data: integration } = await admin
