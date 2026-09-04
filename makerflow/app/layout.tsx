@@ -4,7 +4,8 @@ import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { OrganizationJsonLd, WebsiteJsonLd, SoftwareApplicationJsonLd } from "@/components/seo/JsonLd";
 import "./globals.css";
 
-// Exo 2 é a fonte principal do site inteiro (corpo + títulos).
+// Exo 2 é a fonte principal (corpo + títulos). Montserrat para subtítulos.
+// Nenhuma outra fonte deve ser usada como principal.
 const exo2 = Exo_2({
   subsets: ["latin"],
   variable: "--font-display",
