@@ -1,3 +1,4 @@
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { TrialBanner } from "@/components/dashboard/TrialBanner";
 import { PixRenewalBanner } from "@/components/dashboard/PixRenewalBanner";
@@ -82,39 +83,41 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const pixState = isPix ? pixBillingState(profile?.paid_until) : null;
 
   return (
-    <SubscriptionProvider tier={tier}>
-      <ConfirmDialogProvider>
-        <MobileSidebarProvider>
-          {/* ✅ Skip-to-content link for keyboard users */}
-          <a
-            href="#main-content"
-            className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[10000] focus:block focus:bg-neon-pink focus:px-4 focus:py-2 focus:rounded focus:text-text-primary"
-          >
-            Pular para conteúdo principal
-          </a>
+    <ThemeProvider>
+      <SubscriptionProvider tier={tier}>
+        <ConfirmDialogProvider>
+          <MobileSidebarProvider>
+            {/* ✅ Skip-to-content link for keyboard users */}
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[10000] focus:block focus:bg-neon-pink focus:px-4 focus:py-2 focus:rounded focus:text-text-primary"
+            >
+              Pular para conteúdo principal
+            </a>
 
-          <div className="min-h-screen">
-            <Sidebar
-              studioName={profile?.full_name}
-              avatarUrl={profile?.avatar_url}
-              tier={tier}
-              isAdmin={profile?.is_admin ?? false}
-            />
-            <div className="md:pl-72">
-              {isPix && pixState === "grace" ? (
-                <PixRenewalBanner paidUntil={profile!.paid_until} />
-              ) : (
-                <TrialBanner
-                  tier={tier}
-                  subscriptionStatus={subscriptionStatus}
-                  trialEndsAt={profile?.trial_ends_at ?? null}
-                />
-              )}
-              <main id="main-content">{children}</main>
+            <div className="min-h-screen">
+              <Sidebar
+                studioName={profile?.full_name}
+                avatarUrl={profile?.avatar_url}
+                tier={tier}
+                isAdmin={profile?.is_admin ?? false}
+              />
+              <div className="md:pl-72">
+                {isPix && pixState === "grace" ? (
+                  <PixRenewalBanner paidUntil={profile!.paid_until} />
+                ) : (
+                  <TrialBanner
+                    tier={tier}
+                    subscriptionStatus={subscriptionStatus}
+                    trialEndsAt={profile?.trial_ends_at ?? null}
+                  />
+                )}
+                <main id="main-content">{children}</main>
+              </div>
             </div>
-          </div>
-        </MobileSidebarProvider>
-      </ConfirmDialogProvider>
-    </SubscriptionProvider>
+          </MobileSidebarProvider>
+        </ConfirmDialogProvider>
+      </SubscriptionProvider>
+    </ThemeProvider>
   );
 }

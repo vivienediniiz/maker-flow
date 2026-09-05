@@ -29,9 +29,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener("storage", handleStorageChange);
 
-    // ✅ CLEANUP: Remove listener when component unmounts
+    // ✅ CLEANUP: Remove listener when component unmounts, and reset <html> pro
+    // tema escuro fixo — esse provider só existe dentro do dashboard, então
+    // saltar pra landing/login (navegação client-side, sem reload) não pode
+    // carregar o modo light escolhido lá dentro.
     return () => {
       window.removeEventListener("storage", handleStorageChange);
+      const html = document.documentElement;
+      html.classList.add("dark");
+      html.removeAttribute("data-theme");
     };
   }, []);
 

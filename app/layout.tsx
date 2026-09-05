@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Montserrat, Exo_2, Chakra_Petch } from "next/font/google";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
-import { ThemeProvider } from "@/components/ThemeProvider";
 import { SchemaOrg } from "@/components/SchemaOrg";
 import "./globals.css";
 
@@ -90,7 +89,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SchemaOrg />
       </head>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        {children}
         <GoogleAnalytics />
       </body>
     </html>
