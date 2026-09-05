@@ -29,7 +29,11 @@ export function Toggle({
         onClick={() => onChange(!checked)}
         onKeyDown={handleKeyDown}
         className={cn(
-          "relative h-6 w-14 rounded-xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neon-pink",
+          // min-h-0/min-w-0/p-0 anulam a regra global de alvo de toque (button
+          // { min-width/min-height: 44px } em globals.css) que estava forçando
+          // esse switch a crescer pra ~44px de altura e virar um blob quase
+          // quadrado, não importa o rounded-* usado.
+          "relative h-6 w-14 min-h-0 min-w-0 rounded-full p-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neon-pink",
           checked
             ? "dark:bg-neon-gradient dark:shadow-neon-glow light:bg-neon-pink"
             : "dark:bg-white/10 light:bg-black/10"
