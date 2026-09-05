@@ -5,9 +5,17 @@
 @layer base {
   html {
     color-scheme: dark;
+    /* Cores de texto do tema escuro (padrão) */
+    --color-text-primary: #F5F3FA;
+    --color-text-secondary: #B4AFC4;
+    --color-text-muted: #8A8599;
   }
   html:not(.dark) {
     color-scheme: light;
+    /* Mesmas variáveis, valores escuros o suficiente pra ler sobre o fundo claro */
+    --color-text-primary: #1a1820;
+    --color-text-secondary: #5a5265;
+    --color-text-muted: #706480;
   }
   body {
     @apply bg-bg text-text-primary font-sans antialiased;
@@ -17,14 +25,8 @@
   }
   html:not(.dark) body {
     background-color: #f8f6fa;
-    color: #1a1820;
     background-image: radial-gradient(circle at 20% -10%, rgba(170, 23, 219, 0.08) 0%, transparent 55%),
       radial-gradient(circle at 90% 10%, rgba(255, 78, 223, 0.06) 0%, transparent 50%);
-    --text-secondary-light: #5a5265;
-    --text-muted-light: #706480;
-  }
-  html:not(.dark) {
-    color-scheme: light;
   }
   h1, h2, h3, h4 {
     @apply font-display;

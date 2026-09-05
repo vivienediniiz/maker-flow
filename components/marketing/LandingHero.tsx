@@ -125,7 +125,7 @@ export function LandingHero() {
             initial={{ opacity: 0, y: reduced ? 0 : 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1, ease: EASE }}
-            className="mt-5 max-w-xl text-sm text-text-secondary dark:text-text-secondary text-text-light-secondary"
+            className="mt-5 max-w-xl text-sm text-text-secondary"
           >
             {EYEBROW}
           </motion.p>
@@ -138,7 +138,7 @@ export function LandingHero() {
             segments={HEADLINE_SEGMENTS}
             className="font-display mt-4 text-4xl leading-none md:text-5xl xl:min-h-[240px] xl:text-6xl"
           />
-          <p className="mt-4 min-h-[2rem] max-w-xl text-lg text-text-secondary dark:text-text-secondary text-text-light-secondary md:text-xl">
+          <p className="mt-4 min-h-[2rem] max-w-xl text-lg text-text-secondary md:text-xl">
             {typed}
             <span className="animate-caret-blink ml-0.5 inline-block h-[0.85em] w-[2px] translate-y-0.5 bg-neon-pink align-middle" />
           </p>
@@ -164,7 +164,7 @@ export function LandingHero() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.75 }}
-          className="mt-3 text-xs text-text-muted dark:text-text-muted text-text-light-muted"
+          className="mt-3 text-xs text-text-muted"
         >
           Sem cartão de crédito · 14 dias de acesso completo
         </motion.p>

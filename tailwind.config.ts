@@ -27,16 +27,13 @@ const config: Config = {
           glass: "rgba(255,255,255,0.08)",
           glassStrong: "rgba(255,255,255,0.16)",
         },
+        // Cores de texto via CSS variable — trocam de valor sozinhas entre dark/light
+        // (definidas em globals.css), então text-text-primary etc. já ficam legíveis
+        // nos dois temas sem precisar de dark:/light: espalhado pelos componentes.
         text: {
-          primary: "#F5F3FA",
-          secondary: "#B4AFC4",
-          // ✅ Fixed: 2.2:1 → 4.5:1 contrast (WCAG AA)
-          muted: "#8A8599",
-        },
-        // Light mode text colors (better contrast)
-        "text-light": {
-          secondary: "#5a5265",
-          muted: "#706480",
+          primary: "var(--color-text-primary)",
+          secondary: "var(--color-text-secondary)",
+          muted: "var(--color-text-muted)",
         },
       },
       backgroundImage: {
