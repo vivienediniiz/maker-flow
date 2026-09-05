@@ -12,8 +12,26 @@ export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
   const refCode = req.nextUrl.searchParams.get("ref");
   const termsVersion = req.nextUrl.searchParams.get("terms");
+  const error_desc = req.nextUrl.searchParams.get("error_description");
+  const error_code = req.nextUrl.searchParams.get("error");
+
+  console.log("[auth/callback] iniciado", {
+    hasCode: !!code,
+    hasError: !!error_code,
+    errorCode: error_code,
+    errorDesc: error_desc,
+  });
+
+  // Se houver erro vindo do Google/Supabase
+  if (error_code) {
+    console.error("[auth/callback] erro do OAuth provider", error_code, error_desc);
+    return NextResponse.redirect(
+      `${SITE_URL}/login?oauth_error=${encodeURIComponent(error_desc || error_code)}`
+    );
+  }
 
   if (!code) {
+    console.error("[auth/callback] código não encontrado");
     return NextResponse.redirect(`${SITE_URL}/login`);
   }
 
@@ -21,8 +39,11 @@ export async function GET(req: NextRequest) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
+    console.error("[auth/callback] falha ao trocar código por sessão", error.message);
     return NextResponse.redirect(`${SITE_URL}/login?oauth_error=${encodeURIComponent(error.message)}`);
   }
+
+  console.log("[auth/callback] sessão criada com sucesso");
 
   // Resolve indicação de afiliado (só pra cadastro via Google, já que o
   // e-mail/senha já resolve isso na trigger handle_new_user). Nunca deve

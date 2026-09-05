@@ -65,11 +65,18 @@ export function SocialAuthButtons({ refCode, termsVersion, blockedReason }: Soci
     // `ref` viaja junto no redirectTo pro callback conseguir resolver a
     // indicação depois do round-trip pelo provedor OAuth (sessionStorage não
     // é confiável aqui pq alguns provedores abrem em nova aba/popup).
-    const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const callbackUrl = new URL(`${siteUrl}/auth/callback`);
     if (refCode) callbackUrl.searchParams.set("ref", refCode);
     // signInWithOAuth não aceita metadata de usuário, então o aceite viaja na
     // própria URL de retorno — o callback é quem grava no perfil.
     if (termsVersion) callbackUrl.searchParams.set("terms", termsVersion);
+
+    console.log("[OAuth] iniciando fluxo", {
+      provider,
+      callbackUrl: callbackUrl.toString(),
+      siteUrl,
+    });
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -77,6 +84,7 @@ export function SocialAuthButtons({ refCode, termsVersion, blockedReason }: Soci
     });
 
     if (error) {
+      console.error("[OAuth] erro ao iniciar", error);
       setError(error.message);
       setLoadingProvider(null);
     }
