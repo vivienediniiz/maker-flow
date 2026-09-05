@@ -29,7 +29,7 @@ export function Toggle({
         onClick={() => onChange(!checked)}
         onKeyDown={handleKeyDown}
         className={cn(
-          "relative h-6 w-11 rounded-pill transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neon-pink",
+          "relative h-6 w-14 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neon-pink",
           checked
             ? "dark:bg-neon-gradient dark:shadow-neon-glow light:bg-neon-pink"
             : "dark:bg-white/10 light:bg-black/10"
