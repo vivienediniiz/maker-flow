@@ -4,8 +4,8 @@ SaaS de gestão para makers/estúdios de impressão 3D. Next.js 14 (App Router) 
 
 ## Stack e infraestrutura
 
-- **Deploy:** Netlify, auto-deploy a partir do repositório GitHub `vivienediniiz/maker-flow` (com hífen — existe também um `makerflow` sem hífen, mais antigo e **não usado**, cuidado pra não confundir)
-- **Site:** maker-flow.netlify.app
+- **Deploy:** Vercel, auto-deploy a partir do repositório GitHub `vivienediniiz/maker-flow` (com hífen — existe também um `makerflow` sem hífen, mais antigo e **não usado**, cuidado pra não confundir)
+- **Site:** studiomaker3d.com.br (hospedado no Vercel)
 - **Supabase:** projeto `makerflow`, ID `dgcdltcpvnultwduypcu`, região `sa-east-1` (São Paulo)
 - **Mercado Pago — DOIS apps separados, não confundir:**
   - **"Makerflow3d"**: `MERCADOPAGO_ACCESS_TOKEN`/`MERCADOPAGO_PUBLIC_KEY`, cobra a assinatura do StudioMaker em si (cartão automático + Pix manual). Webhook: `/api/webhooks/mercadopago`. Não mexer nisso pra vendas.
