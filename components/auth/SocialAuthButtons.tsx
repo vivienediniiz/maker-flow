@@ -72,19 +72,12 @@ export function SocialAuthButtons({ refCode, termsVersion, blockedReason }: Soci
     // própria URL de retorno — o callback é quem grava no perfil.
     if (termsVersion) callbackUrl.searchParams.set("terms", termsVersion);
 
-    console.log("[OAuth] iniciando fluxo", {
-      provider,
-      callbackUrl: callbackUrl.toString(),
-      siteUrl,
-    });
-
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: callbackUrl.toString() },
     });
 
     if (error) {
-      console.error("[OAuth] erro ao iniciar", error);
       setError(error.message);
       setLoadingProvider(null);
     }
