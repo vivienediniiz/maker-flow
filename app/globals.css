@@ -3,19 +3,70 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    color-scheme: dark;
-    /* Cores de texto do tema escuro (padrão) */
-    --color-text-primary: #F5F3FA;
-    --color-text-secondary: #B4AFC4;
-    --color-text-muted: #8A8599;
-  }
-  html:not(.dark) {
-    color-scheme: light;
-    /* Mesmas variáveis, valores escuros o suficiente pra ler sobre o fundo claro */
+  :root {
+    /* Light mode (padrão) */
+    --background: 250 250 249;
+    --foreground: 11 12 14;
+    --card: 255 255 255;
+    --card-foreground: 11 12 14;
+    --primary: 255 107 44;
+    --primary-foreground: 255 255 255;
+    --secondary: 82 82 91;
+    --secondary-foreground: 255 255 255;
+    --muted: 82 82 91;
+    --muted-foreground: 120 113 108;
+    --accent: 255 107 44;
+    --accent-foreground: 255 255 255;
+    --destructive: 220 38 38;
+    --destructive-foreground: 255 255 255;
+    --border: 229 231 235;
+    --input: 255 255 255;
+    --ring: 255 107 44;
+
     --color-text-primary: #1a1820;
     --color-text-secondary: #5a5265;
     --color-text-muted: #706480;
+  }
+
+  html.dark, @media (prefers-color-scheme: dark) {
+    :root {
+      /* Dark mode */
+      --background: 11 12 14;
+      --foreground: 245 245 244;
+      --card: 21 23 26;
+      --card-foreground: 245 245 244;
+      --primary: 255 107 44;
+      --primary-foreground: 255 255 255;
+      --secondary: 82 82 91;
+      --secondary-foreground: 255 255 255;
+      --muted: 161 161 170;
+      --muted-foreground: 212 212 216;
+      --accent: 255 107 44;
+      --accent-foreground: 255 255 255;
+      --destructive: 239 68 68;
+      --destructive-foreground: 255 255 255;
+      --border: 39 39 42;
+      --input: 21 23 26;
+      --ring: 255 107 44;
+
+      --color-text-primary: #F5F3FA;
+      --color-text-secondary: #B4AFC4;
+      --color-text-muted: #8A8599;
+    }
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html:not(.light) {
+      color-scheme: dark;
+    }
   }
   body {
     @apply bg-bg text-text-primary font-sans antialiased;
