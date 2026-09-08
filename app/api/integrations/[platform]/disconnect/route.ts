@@ -39,13 +39,26 @@ export async function POST(_req: NextRequest, { params }: { params: { platform: 
   }
 
   if (integration.credential_secret_id) {
-    await deleteIntegrationCredential(admin, integration.credential_secret_id);
+    // Best-effort: se o Vault falhar em apagar o secret, ainda assim
+    // desconectamos a integração aqui (o registro fica órfão no Vault, mas
+    // o botão não pode travar por causa disso — antes disso quebrar aqui
+    // impedia até a marcação de "disconnected" no banco).
+    try {
+      await deleteIntegrationCredential(admin, integration.credential_secret_id);
+    } catch (err) {
+      console.error(`[disconnect] ${platform}: falha ao apagar credencial do Vault`, err);
+    }
   }
 
-  await admin
+  const { error: updateError } = await admin
     .from("integrations")
     .update({ status: "disconnected", credential_secret_id: null, webhook_secret: null, last_event_at: null })
     .eq("id", integration.id);
+
+  if (updateError) {
+    console.error(`[disconnect] ${platform}: falha ao atualizar status no banco`, updateError);
+    return NextResponse.json({ error: "Não foi possível desconectar — tente de novo." }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }

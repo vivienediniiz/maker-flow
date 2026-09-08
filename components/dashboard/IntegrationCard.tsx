@@ -60,6 +60,7 @@ export function IntegrationCard({
   const { paid } = useSubscription();
   const confirm = useConfirm();
   const [disconnecting, setDisconnecting] = useState(false);
+  const [disconnectError, setDisconnectError] = useState<string | null>(null);
   const status = integration?.status ?? "disconnected";
   const available = AVAILABLE_PLATFORMS.includes(platform);
 
@@ -70,9 +71,20 @@ export function IntegrationCard({
         : "";
     if (!(await confirm(`Desconectar ${PLATFORM_LABELS[platform]}? As credenciais salvas serão removidas.${extra}`))) return;
     setDisconnecting(true);
-    await fetch(`/api/integrations/${platform}/disconnect`, { method: "POST" });
-    setDisconnecting(false);
-    onDisconnected();
+    setDisconnectError(null);
+    try {
+      const res = await fetch(`/api/integrations/${platform}/disconnect`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setDisconnectError(data.error ?? "Não foi possível desconectar — tente de novo.");
+        return;
+      }
+      onDisconnected();
+    } catch {
+      setDisconnectError("Erro de rede ao desconectar.");
+    } finally {
+      setDisconnecting(false);
+    }
   }
 
   function handleConnect() {
@@ -124,6 +136,7 @@ export function IntegrationCard({
           autorizados nas configurações da conta MP.
         </p>
       )}
+      {disconnectError && <p className="text-[11px] text-red-400">{disconnectError}</p>}
     </GlassCard>
   );
 }
