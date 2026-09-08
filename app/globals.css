@@ -28,9 +28,34 @@
     --color-text-muted: #706480;
   }
 
-  html.dark, @media (prefers-color-scheme: dark) {
-    :root {
-      /* Dark mode */
+  html.dark :root {
+    /* Dark mode - classe .dark */
+    --background: 11 12 14;
+    --foreground: 245 245 244;
+    --card: 21 23 26;
+    --card-foreground: 245 245 244;
+    --primary: 255 107 44;
+    --primary-foreground: 255 255 255;
+    --secondary: 82 82 91;
+    --secondary-foreground: 255 255 255;
+    --muted: 161 161 170;
+    --muted-foreground: 212 212 216;
+    --accent: 255 107 44;
+    --accent-foreground: 255 255 255;
+    --destructive: 239 68 68;
+    --destructive-foreground: 255 255 255;
+    --border: 39 39 42;
+    --input: 21 23 26;
+    --ring: 255 107 44;
+
+    --color-text-primary: #F5F3FA;
+    --color-text-secondary: #B4AFC4;
+    --color-text-muted: #8A8599;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+      /* Dark mode - preferência do sistema */
       --background: 11 12 14;
       --foreground: 245 245 244;
       --card: 21 23 26;
