@@ -1154,6 +1154,12 @@ export default function CalculatorPage() {
                 Total do Pedido {quantity > 1 && `(${quantity} unidades)`}
               </p>
               <SummaryRow label="Custo Total do Pedido" value={formatBRL(calc.orderCost)} />
+              {marketplaceFee > 0 && (
+                <SummaryRow
+                  label={`Desconto Marketplace (${marketplaceFee}%)`}
+                  value={formatBRL((calc.costPerUnit * marketplaceFee / 100) * quantity)}
+                />
+              )}
             </div>
 
             <div className="glass-card space-y-1 p-4 text-center">
