@@ -43,7 +43,7 @@ const NAV = [
   { href: "/dashboard/integrations", label: "Integrações", icon: Plug },
   { href: "/dashboard/store", label: "Minha Loja", icon: Store },
   { href: "/dashboard/subscription", label: "Assinatura", icon: CreditCard },
-  { href: "/dashboard/affiliates", label: "Afiliados", icon: Gift },
+  // { href: "/dashboard/affiliates", label: "Afiliados", icon: Gift }, // Desativado
   { href: "/dashboard/support", label: "Suporte", icon: Headset },
   { href: "/dashboard/settings", label: "Configurações", icon: Settings },
 ];

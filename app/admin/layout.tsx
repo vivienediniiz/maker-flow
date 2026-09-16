@@ -6,7 +6,7 @@ import { ArrowLeft, LayoutDashboard, MessageSquare, Users, Gift } from "lucide-r
 const ADMIN_NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/subscribers", label: "Assinantes", icon: Users },
-  { href: "/admin/affiliates", label: "Afiliados", icon: Gift },
+  // { href: "/admin/affiliates", label: "Afiliados", icon: Gift }, // Desativado
   { href: "/admin/support", label: "Suporte", icon: MessageSquare },
 ];
 

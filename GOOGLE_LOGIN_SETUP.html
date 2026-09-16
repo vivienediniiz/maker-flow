@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurar Login Google - StudioMaker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #0B0914 0%, #1a1520 100%);
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #E86333, #FF4EDF, #AA17DB);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #999;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .step {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #E86333, #FF4EDF);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+
+        .step h2 {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            border-left: 3px solid #FF4EDF;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+        }
+
+        .instruction-list {
+            list-style: none;
+            margin: 20px 0;
+        }
+
+        .instruction-list li {
+            padding: 12px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .instruction-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #FF4EDF;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .warning {
+            background: rgba(255, 152, 0, 0.1);
+            border-left: 3px solid #FF9800;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            color: #FFB74D;
+        }
+
+        .success {
+            background: rgba(76, 175, 80, 0.1);
+            border-left: 3px solid #4CAF50;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            color: #81C784;
+        }
+
+        .variables-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .variables-table th,
+        .variables-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .variables-table th {
+            background: rgba(255, 78, 223, 0.1);
+            color: #FF4EDF;
+            font-weight: bold;
+        }
+
+        .variables-table code {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .summary {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 40px;
+        }
+
+        .summary h3 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+        }
+
+        a {
+            color: #FF4EDF;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        h3 {
+            color: #fff;
+            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        ol {
+            margin-left: 20px;
+        }
+
+        ul {
+            margin-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Configurar Login Google</h1>
+        <p class="subtitle">Guia passo-a-passo para ativar Google OAuth no StudioMaker</p>
+
+        <!-- PASSO 1: VERCEL -->
+        <div class="step">
+            <div class="step-number">1</div>
+            <h2>Adicionar Variáveis de Ambiente no Vercel</h2>
+
+            <p><strong>Objetivo:</strong> Configurar as credenciais do Supabase no Vercel para que o app saiba qual banco de dados usar.</p>
+
+            <ol class="instruction-list">
+                <li>Acesse o Vercel Dashboard: <a href="https://vercel.com/dashboard" target="_blank">vercel.com/dashboard</a></li>
+                <li>Encontre o projeto <strong>studio-maker3d</strong></li>
+                <li>Clique em <strong>Settings</strong> (engrenagem no topo)</li>
+                <li>Na barra lateral esquerda, clique em <strong>Environment Variables</strong></li>
+            </ol>
+
+            <h3>Adicionar cada variável:</h3>
+
+            <table class="variables-table">
+                <thead>
+                    <tr>
+                        <th>Nome da Variável</th>
+                        <th>Valor</th>
+                        <th>Onde Copiar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>NEXT_PUBLIC_SUPABASE_URL</code></td>
+                        <td><code>https://dgcdltcpvnultwduypcu.supabase.co</code></td>
+                        <td>Já conhecida</td>
+                    </tr>
+                    <tr>
+                        <td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td>
+                        <td><code>eyJhbGc...</code> (copie do Supabase)</td>
+                        <td><a href="https://app.supabase.com" target="_blank">Supabase → Settings → API Keys</a></td>
+                    </tr>
+                    <tr>
+                        <td><code>NEXT_PUBLIC_APP_URL</code></td>
+                        <td><code>https://studio-maker3d.vercel.app</code></td>
+                        <td>URL do seu site</td>
+                    </tr>
+                    <tr>
+                        <td><code>NEXT_PUBLIC_SITE_URL</code></td>
+                        <td><code>https://studio-maker3d.vercel.app</code></td>
+                        <td>MESMA URL acima</td>
+                    </tr>
+                    <tr>
+                        <td><code>SUPABASE_SERVICE_ROLE_KEY</code></td>
+                        <td><code>eyJhbGc...</code> (copie do Supabase)</td>
+                        <td><a href="https://app.supabase.com" target="_blank">Supabase → Settings → API Keys</a></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="warning">
+                <strong>⚠️ Importante:</strong> <code>NEXT_PUBLIC_SITE_URL</code> deve ser igual a <code>NEXT_PUBLIC_APP_URL</code>
+            </div>
+
+            <h3>Como adicionar:</h3>
+
+            <ol class="instruction-list">
+                <li>Clique no botão <strong>"Add New"</strong></li>
+                <li>Em <strong>"Name"</strong>, cole o nome da variável</li>
+                <li>Em <strong>"Value"</strong>, cole o valor</li>
+                <li>Clique <strong>"Save"</strong></li>
+                <li>Repita para cada variável</li>
+            </ol>
+
+            <div class="success">
+                <strong>✓ Quando terminar:</strong> Você deve ver todas as 5 variáveis listadas
+            </div>
+        </div>
+
+        <!-- PASSO 2: REDEPLOY -->
+        <div class="step">
+            <div class="step-number">2</div>
+            <h2>Redeploy no Vercel</h2>
+
+            <p><strong>Objetivo:</strong> Forçar o Vercel a reconstruir o app com as novas variáveis.</p>
+
+            <ol class="instruction-list">
+                <li>No Vercel Dashboard, vá em <strong>Deployments</strong></li>
+                <li>Clique no deployment mais recente</li>
+                <li>Clique no botão <strong>"Redeploy"</strong> (canto superior direito)</li>
+                <li>Selecione <strong>"Use existing Build Cache"</strong></li>
+                <li>Clique <strong>"Redeploy"</strong> novamente</li>
+            </ol>
+
+            <div class="warning">
+                <strong>⏳ Aguarde:</strong> O deployment leva 1-2 minutos. Espere até ficar verde (Ready)
+            </div>
+        </div>
+
+        <!-- PASSO 3: SUPABASE -->
+        <div class="step">
+            <div class="step-number">3</div>
+            <h2>Configurar Callback URL no Supabase</h2>
+
+            <p><strong>Objetivo:</strong> Informar ao Google para redirecionar de volta para studio-maker3d.vercel.app após autenticação.</p>
+
+            <ol class="instruction-list">
+                <li>Acesse <a href="https://app.supabase.com" target="_blank">app.supabase.com</a></li>
+                <li>Selecione seu projeto <strong>makerflow</strong></li>
+                <li>Na barra lateral, vá em <strong>Authentication</strong></li>
+                <li>Clique em <strong>Providers</strong></li>
+                <li>Procure por <strong>Google</strong></li>
+                <li>Clique em <strong>Google</strong> para expandir</li>
+            </ol>
+
+            <h3>Adicionar URLs de Redirect:</h3>
+
+            <p>Você verá um campo <strong>"Authorized redirect URIs"</strong> com:</p>
+
+            <div class="code-block">
+https://dgcdltcpvnultwduypcu.supabase.co/auth/v1/callback
+            </div>
+
+            <p><strong>Você precisa ADICIONAR (não substituir):</strong></p>
+
+            <div class="code-block">
+https://studio-maker3d.vercel.app/auth/callback
+http://localhost:3000/auth/callback
+            </div>
+
+            <p><strong>Resultado final:</strong></p>
+
+            <div class="code-block">
+https://dgcdltcpvnultwduypcu.supabase.co/auth/v1/callback
+https://studio-maker3d.vercel.app/auth/callback
+http://localhost:3000/auth/callback
+            </div>
+
+            <div class="warning">
+                <strong>⚠️ Importante:</strong> Mantenha a primeira linha! Apenas ADICIONE as outras duas.
+            </div>
+
+            <ol class="instruction-list" style="margin-top: 20px;">
+                <li>Clique no campo "Authorized redirect URIs"</li>
+                <li>Posicione no final da última linha</li>
+                <li>Pressione Enter</li>
+                <li>Cole: <code>https://studio-maker3d.vercel.app/auth/callback</code></li>
+                <li>Pressione Enter novamente</li>
+                <li>Cole: <code>http://localhost:3000/auth/callback</code></li>
+                <li>Clique <strong>"Save"</strong></li>
+            </ol>
+
+            <div class="success">
+                <strong>✓ Quando terminar:</strong> As 3 URLs devem estar listadas
+            </div>
+        </div>
+
+        <!-- PASSO 4: TESTE -->
+        <div class="step">
+            <div class="step-number">4</div>
+            <h2>Testar Login Google</h2>
+
+            <p><strong>Objetivo:</strong> Verificar se tudo está funcionando.</p>
+
+            <ol class="instruction-list">
+                <li>Aguarde o Vercel Redeploy terminar (fica verde)</li>
+                <li>Acesse: <a href="https://studio-maker3d.vercel.app/login" target="_blank">https://studio-maker3d.vercel.app/login</a></li>
+                <li>Clique em <strong>"Continuar com Google"</strong></li>
+                <li>Selecione sua conta Google</li>
+                <li>Conceda permissão</li>
+            </ol>
+
+            <div class="success">
+                <strong>✓ Sucesso!</strong> Se conseguir fazer login, está tudo funcionando!
+            </div>
+        </div>
+
+        <!-- RESUMO -->
+        <div class="summary">
+            <h3>📋 Checklist Final</h3>
+            <ul class="instruction-list">
+                <li><strong>Vercel:</strong> 5 variáveis de ambiente adicionadas</li>
+                <li><strong>Vercel:</strong> Redeploy concluído (status: Ready)</li>
+                <li><strong>Supabase:</strong> 3 URLs adicionadas em Google Providers</li>
+                <li><strong>Teste:</strong> Login Google funcionando</li>
+            </ul>
+
+            <p style="margin-top: 20px; color: #81C784;">
+                Se tudo passou no checklist: Login Google está 100% funcional! 🎉
+            </p>
+        </div>
+
+    </div>
+</body>
+</html>

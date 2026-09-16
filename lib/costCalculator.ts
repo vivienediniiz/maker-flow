@@ -170,13 +170,16 @@ export function calculateCost(input: CalcInput): CalcResult {
   const paint = paintedByHand ? paintCost : 0;
   const fixedCosts = laborCost + paint + extras;
 
+  // Taxa do marketplace adicionada ao custo (é um custo real que precisa ser coberto)
+  const clampedFee = Math.min(Math.max(marketplaceFee, 0), 99);
+  const marketplaceFeeAmount = (costPerUnit * clampedFee) / 100;
+  const costWithMarketplaceFee = costPerUnit + marketplaceFeeAmount;
+
   // Margem sobre o preço de venda (não markup sobre custo): só é válida abaixo de 100%,
   // já que nesse ponto o preço tenderia ao infinito — a UI restringe a faixa (0-99%) via slider.
   const clampedMargin = Math.min(Math.max(marginPercent, 0), 99);
-  const priceWithMargin = costPerUnit / (1 - clampedMargin / 100);
-  // Mesma proteção da margem: taxa >= 100% faz o preço virar Infinity/negativo.
-  const clampedFee = Math.min(Math.max(marketplaceFee, 0), 99);
-  const pricePerUnitBeforeRisk = clampedFee > 0 ? priceWithMargin / (1 - clampedFee / 100) : priceWithMargin;
+  const priceWithMargin = costWithMarketplaceFee / (1 - clampedMargin / 100);
+  const pricePerUnitBeforeRisk = priceWithMargin;
   const pricePerUnit = pricePerUnitBeforeRisk * (1 + riskMarginPercent / 100);
 
   const qty = Math.max(quantity, 1);

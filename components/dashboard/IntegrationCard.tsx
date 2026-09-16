@@ -26,9 +26,9 @@ const PLATFORM_DESCRIPTIONS: Record<IntegrationPlatform, string> = {
   melhor_envio: "Conecte sua conta pra cotar frete, comprar e imprimir etiquetas direto pelo StudioMaker.",
 };
 
-// Mercado Pago, Mercado Livre e Melhor Envio já conectam de verdade via OAuth.
-// Shopee/TikTok Shop ficam desabilitados até o app do StudioMaker ser aprovado nas duas plataformas.
-const AVAILABLE_PLATFORMS: IntegrationPlatform[] = ["mercado_pago", "mercado_livre", "melhor_envio"];
+// Mercado Pago, Mercado Livre, Melhor Envio e Shopee já conectam de verdade via OAuth.
+// TikTok Shop fica desabilitado até o app do StudioMaker ser aprovado.
+const AVAILABLE_PLATFORMS: IntegrationPlatform[] = ["mercado_pago", "mercado_livre", "melhor_envio", "shopee"];
 
 // As pastas de rota de /api/integrations/*/connect usam hífen (padrão de URL),
 // mas o valor do tipo/enum usa underscore (padrão de coluna) — os dois nomes

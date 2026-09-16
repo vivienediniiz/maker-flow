@@ -1,0 +1,288 @@
+{
+  "$schema": "https://tokens.studio/schema.json",
+  "name": "Studio Maker Design System",
+  "colors": {
+    "light": {
+      "background": {
+        "value": "#FAFAF9",
+        "type": "color",
+        "description": "Light mode background"
+      },
+      "foreground": {
+        "value": "#0B0C0E",
+        "type": "color",
+        "description": "Light mode text"
+      },
+      "card": {
+        "value": "#FFFFFF",
+        "type": "color",
+        "description": "Card background (light)"
+      },
+      "border": {
+        "value": "#E5E7EB",
+        "type": "color",
+        "description": "Border color (light)"
+      }
+    },
+    "dark": {
+      "background": {
+        "value": "#0B0C0E",
+        "type": "color",
+        "description": "Dark mode background"
+      },
+      "foreground": {
+        "value": "#F5F5F4",
+        "type": "color",
+        "description": "Dark mode text"
+      },
+      "card": {
+        "value": "#15171A",
+        "type": "color",
+        "description": "Card background (dark)"
+      },
+      "border": {
+        "value": "#262A2D",
+        "type": "color",
+        "description": "Border color (dark)"
+      }
+    },
+    "primary": {
+      "base": {
+        "value": "#FF6B2C",
+        "type": "color",
+        "description": "Primary accent - Laranja filamento"
+      },
+      "foreground": {
+        "value": "#FFFFFF",
+        "type": "color",
+        "description": "Text on primary"
+      }
+    },
+    "success": {
+      "base": {
+        "value": "#16A34A",
+        "type": "color",
+        "description": "Success green"
+      }
+    },
+    "destructive": {
+      "base": {
+        "value": "#DC2626",
+        "type": "color",
+        "description": "Destructive red"
+      }
+    },
+    "muted": {
+      "base": {
+        "value": "#52525B",
+        "type": "color",
+        "description": "Muted text color"
+      },
+      "foreground": {
+        "value": "#D4D4D8",
+        "type": "color",
+        "description": "Muted text (dark mode)"
+      }
+    },
+    "neon": {
+      "green": {
+        "value": "#00FF9D",
+        "type": "color",
+        "description": "Neon green accent"
+      },
+      "pink": {
+        "value": "#FF4EDF",
+        "type": "color",
+        "description": "Neon pink accent"
+      },
+      "purple": {
+        "value": "#AA17DB",
+        "type": "color",
+        "description": "Neon purple accent"
+      },
+      "orange": {
+        "value": "#E86333",
+        "type": "color",
+        "description": "Neon orange accent"
+      }
+    }
+  },
+  "typography": {
+    "display": {
+      "fontFamily": {
+        "value": "Exo 2",
+        "type": "fontFamily"
+      },
+      "fontSize": {
+        "value": 48,
+        "type": "fontSize"
+      },
+      "fontWeight": {
+        "value": 700,
+        "type": "fontWeight"
+      },
+      "lineHeight": {
+        "value": 1.2,
+        "type": "lineHeight"
+      }
+    },
+    "heading-1": {
+      "fontFamily": {
+        "value": "Exo 2",
+        "type": "fontFamily"
+      },
+      "fontSize": {
+        "value": 32,
+        "type": "fontSize"
+      },
+      "fontWeight": {
+        "value": 700,
+        "type": "fontWeight"
+      }
+    },
+    "heading-2": {
+      "fontFamily": {
+        "value": "Exo 2",
+        "type": "fontFamily"
+      },
+      "fontSize": {
+        "value": 28,
+        "type": "fontSize"
+      },
+      "fontWeight": {
+        "value": 700,
+        "type": "fontWeight"
+      }
+    },
+    "body": {
+      "fontFamily": {
+        "value": "Montserrat",
+        "type": "fontFamily"
+      },
+      "fontSize": {
+        "value": 16,
+        "type": "fontSize"
+      },
+      "fontWeight": {
+        "value": 400,
+        "type": "fontWeight"
+      },
+      "lineHeight": {
+        "value": 1.5,
+        "type": "lineHeight"
+      }
+    },
+    "body-small": {
+      "fontFamily": {
+        "value": "Montserrat",
+        "type": "fontFamily"
+      },
+      "fontSize": {
+        "value": 14,
+        "type": "fontSize"
+      },
+      "fontWeight": {
+        "value": 400,
+        "type": "fontWeight"
+      }
+    },
+    "numeric": {
+      "fontFamily": {
+        "value": "Chakra Petch",
+        "type": "fontFamily"
+      },
+      "fontSize": {
+        "value": 18,
+        "type": "fontSize"
+      },
+      "fontWeight": {
+        "value": 600,
+        "type": "fontWeight"
+      }
+    }
+  },
+  "spacing": {
+    "xs": {
+      "value": "4px",
+      "type": "spacing"
+    },
+    "sm": {
+      "value": "8px",
+      "type": "spacing"
+    },
+    "md": {
+      "value": "16px",
+      "type": "spacing"
+    },
+    "lg": {
+      "value": "24px",
+      "type": "spacing"
+    },
+    "xl": {
+      "value": "32px",
+      "type": "spacing"
+    },
+    "2xl": {
+      "value": "48px",
+      "type": "spacing"
+    }
+  },
+  "borderRadius": {
+    "none": {
+      "value": "0px",
+      "type": "borderRadius"
+    },
+    "sm": {
+      "value": "4px",
+      "type": "borderRadius"
+    },
+    "md": {
+      "value": "10px",
+      "type": "borderRadius",
+      "description": "Studio Maker default radius"
+    },
+    "lg": {
+      "value": "16px",
+      "type": "borderRadius"
+    },
+    "xl": {
+      "value": "20px",
+      "type": "borderRadius",
+      "description": "Glass card radius"
+    },
+    "full": {
+      "value": "999px",
+      "type": "borderRadius",
+      "description": "Pill shape"
+    }
+  },
+  "shadow": {
+    "sm": {
+      "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+      "type": "shadow"
+    },
+    "md": {
+      "value": "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+      "type": "shadow"
+    },
+    "lg": {
+      "value": "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+      "type": "shadow"
+    },
+    "neon-glow": {
+      "value": "0 0 24px rgb(255 78 223 / 0.35), 0 0 48px rgb(170 23 219 / 0.25)",
+      "type": "shadow",
+      "description": "Neon pink-purple glow"
+    },
+    "neon-glow-green": {
+      "value": "0 0 20px rgb(0 255 157 / 0.35)",
+      "type": "shadow",
+      "description": "Neon green glow"
+    },
+    "glass": {
+      "value": "0 8px 32px rgb(0 0 0 / 0.35)",
+      "type": "shadow",
+      "description": "Glass effect shadow"
+    }
+  }
+}
