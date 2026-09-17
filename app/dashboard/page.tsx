@@ -11,6 +11,7 @@ import { OnboardingChecklistCard } from "@/components/dashboard/OnboardingCheckl
 import { PriorityAlertsSection } from "@/components/dashboard/PriorityAlertsSection";
 import { DashboardClock } from "@/components/dashboard/DashboardClock";
 import { GreetingTypewriter } from "@/components/dashboard/GreetingTypewriter";
+import { NewOrderButton } from "@/components/dashboard/NewOrderButton";
 import { GlassAccordion } from "@/components/ui/GlassAccordion";
 
 const FinancialChart = dynamic(
@@ -23,7 +24,7 @@ const FinancialChart = dynamic(
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { formatBRL } from "@/lib/utils";
 import { TIER_LIMITS, isPaid } from "@/lib/entitlements";
-import { DollarSign, TrendingUp, Layers, Server, Plus, Package, ClipboardList, Users } from "lucide-react";
+import { DollarSign, TrendingUp, Layers, Server, Package, ClipboardList, Users } from "lucide-react";
 import type { Printer, SubscriptionTier, Quote } from "@/lib/types";
 
 // Seção "Impressoras em Tempo Real" (telemetria via bridge/webhook) escondida
@@ -203,9 +204,7 @@ function DashboardHeader({ studioName }: { studioName: string | null }) {
         >
           <ClipboardList size={16} /> Vendas
         </Link>
-        <Link href="/dashboard/calculator" className="neon-btn">
-          <Plus size={16} /> Novo Orçamento
-        </Link>
+        <NewOrderButton />
       </div>
     </div>
   );
