@@ -2,21 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 
 /**
- * TODO(aguardando aprovação): TikTok Shop Partner Center exige um app
- * aprovado (TIKTOK_APP_KEY + TIKTOK_APP_SECRET) antes desse fluxo funcionar
- * de verdade. Estrutura pronta - até lá, o botão "Conectar" no frontend fica
- * desabilitado e essa rota nem é chamada.
+ * Redireciona pro fluxo de autorização do TikTok Shop. Diferente de
+ * Mercado Pago/Livre/Shopee, o TikTok Shop NÃO usa client_id/redirect_uri
+ * na URL — usa `service_id` (identificador do app OAuth registrado,
+ * visível em Partner Center → App & Service → detalhes do app), e o
+ * Redirect URL/escopos ficam configurados no próprio app, não na URL.
+ * Confirmado em https://partner.tiktokshop.com/docv2/page/authorization-overview:
+ *  - US: https://services.us.tiktokshop.com/open/authorize?service_id={service_id}
+ *  - ROW: https://services.tiktokshop.com/open/authorize?service_id={service_id}
+ * Após aprovação, o TikTok Shop redireciona pro Redirect URL configurado
+ * no app com `?code={auth_code}&state={state}`.
  *
- * Fluxo real (quando configurado): GET redireciona pra
- * https://auth.tiktok-shops.com/oauth/authorize; o TikTok Shop volta pro
- * nosso /callback com `code`.
+ * TIKTOK_SERVICE_ID é opcional — quando ausente, cai pro Client key
+ * (TIKTOK_APP_KEY), que costuma ser o mesmo identificador nesse tipo de app.
+ * Se a autorização falhar com "invalid service_id", configure
+ * TIKTOK_SERVICE_ID explicitamente com o valor correto do painel.
  */
 export async function GET(_req: NextRequest) {
-  const appKey = process.env.TIKTOK_APP_KEY;
+  const serviceId = process.env.TIKTOK_SERVICE_ID || process.env.TIKTOK_APP_KEY;
 
-  if (!appKey) {
+  if (!serviceId) {
     return NextResponse.json(
-      { error: "Integração com TikTok Shop ainda não disponível — aguardando aprovação do app no TikTok Shop Partner Center." },
+      { error: "Integração com TikTok Shop ainda não disponível — falta configurar TIKTOK_APP_KEY." },
       { status: 503 }
     );
   }
@@ -29,8 +36,9 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  const authorizeUrl = new URL("https://auth.tiktok-shops.com/oauth/authorize");
-  authorizeUrl.searchParams.set("app_key", appKey);
+  // Mercado ROW (fora dos EUA) — StudioMaker é uma plataforma brasileira.
+  const authorizeUrl = new URL("https://services.tiktokshop.com/open/authorize");
+  authorizeUrl.searchParams.set("service_id", serviceId);
   authorizeUrl.searchParams.set("state", user.id);
 
   return NextResponse.redirect(authorizeUrl.toString());
