@@ -15,7 +15,7 @@ import { getMonthlyQuoteCount, canCreateMoreQuotes, limitFor } from "@/lib/entit
 import { formatBRL, cn } from "@/lib/utils";
 import { buildPriceTierRanges } from "@/lib/priceTiers";
 import type { Client, Product, QuoteWithClient, QuotePaymentMethod, QuoteStatus, QuoteChannel, Coupon, QuoteDiscountType, Filament, Supply } from "@/lib/types";
-import { QUOTE_CHANNEL_LABELS } from "@/lib/quotes";
+import { QUOTE_CHANNEL_LABELS, QUOTE_EXPIRY_DAYS } from "@/lib/quotes";
 import { isCouponValid, computeCouponDiscount, getCouponStatusLabel } from "@/lib/coupons";
 
 interface UsedFilamentRow {
@@ -59,6 +59,14 @@ interface NewSaleModalProps {
   quote?: QuoteWithClient | null;
   /** Na criação, recebe a venda recém-criada (com joins) — usado pra abrir a tela de sucesso/comprovante. Na edição, é chamado sem argumento. */
   onCreated?: (createdQuote?: QuoteWithClient) => void;
+  /**
+   * "sale" (padrão) = fluxo de Vendas > Nova Venda Manual, nasce paga/aguardando
+   * pagamento conforme a forma de pagamento escolhida. "quote" = fluxo de
+   * "Novo Orçamento" no Dashboard, nasce sempre com status "sent" (orçamento
+   * enviado ao cliente, ainda não confirmado) — esconde o toggle Já
+   * pago/Aguardando, que não faz sentido nessa etapa.
+   */
+  mode?: "sale" | "quote";
 }
 
 const PAYMENT_METHODS: { value: QuotePaymentMethod; label: string }[] = [
@@ -93,10 +101,12 @@ export function NewSaleModal({
   initialQuantity,
   quote = null,
   onCreated,
+  mode = "sale",
 }: NewSaleModalProps) {
   const supabase = createClient();
   const { tier } = useSubscription();
   const isEditing = !!quote;
+  const isQuoteMode = mode === "quote" && !isEditing;
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState("");
   const [clientModalOpen, setClientModalOpen] = useState(false);
@@ -460,7 +470,9 @@ export function NewSaleModal({
   // Ambas as formas geram um link e resolvem o status sozinhas via webhook —
   // não faz sentido o toggle manual "Já pago/Aguardando" nesses dois casos.
   const isLinkBasedPayment = isPaymentLink || isInfinitePay;
-  const showPaidToggle = statusEditable && !isLinkBasedPayment;
+  // Em modo Orçamento a venda sempre nasce "sent" — não faz sentido perguntar
+  // se já foi paga antes mesmo de o cliente confirmar o orçamento.
+  const showPaidToggle = statusEditable && !isLinkBasedPayment && !isQuoteMode;
   const showUnitPricing = !!selectedProduct;
   const tierRanges = selectedProduct ? buildPriceTierRanges(selectedProduct.price_tiers) : [];
   const hasTiers = tierRanges.length > 0;
@@ -572,11 +584,13 @@ export function NewSaleModal({
     // prospect, essa venda já está confirmada, só falta o pagamento.
     const resolvedStatus: QuoteStatus | undefined = !statusEditable
       ? undefined
-      : isLinkBasedPayment
-        ? "awaiting_payment"
-        : alreadyPaid
-          ? "paid"
-          : "awaiting_payment";
+      : isQuoteMode
+        ? "sent"
+        : isLinkBasedPayment
+          ? "awaiting_payment"
+          : alreadyPaid
+            ? "paid"
+            : "awaiting_payment";
 
     const sharedPayload = {
       project_name: projectName || "Projeto sem nome",
@@ -721,7 +735,11 @@ export function NewSaleModal({
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title={isEditing ? "Editar Venda" : "Nova Venda Manual"}>
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title={isEditing ? "Editar Venda" : isQuoteMode ? "Novo Orçamento" : "Nova Venda Manual"}
+    >
       <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto scrollbar-glass pr-1">
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Cliente</label>
@@ -1004,12 +1022,16 @@ export function NewSaleModal({
             onChange={(e) => setPaymentMethod(e.target.value as QuotePaymentMethod)}
             className="glass-input w-full"
           >
-            {PAYMENT_METHODS.map((pm) => (
-              <option key={pm.value} value={pm.value} className="bg-bg-raised">
-                {pm.label}
-              </option>
-            ))}
-            {showInfinitePayOption && (
+            {PAYMENT_METHODS
+              // Em modo Orçamento a venda ainda não foi confirmada — gerar um
+              // link de cobrança real (Mercado Pago) não faz sentido nessa etapa.
+              .filter((pm) => !isQuoteMode || pm.value !== "payment_link")
+              .map((pm) => (
+                <option key={pm.value} value={pm.value} className="bg-bg-raised">
+                  {pm.label}
+                </option>
+              ))}
+            {showInfinitePayOption && !isQuoteMode && (
               <option value="infinitepay" className="bg-bg-raised">
                 InfinitePay
               </option>
@@ -1113,7 +1135,13 @@ export function NewSaleModal({
           )}
         </div>
 
-        {!isEditing && <p className="text-[11px] text-text-muted">Entra em Vendas já como Pago.</p>}
+        {!isEditing && (
+          <p className="text-[11px] text-text-muted">
+            {isQuoteMode
+              ? `Entra em Vendas como "Orçamento Enviado" — válido por ${QUOTE_EXPIRY_DAYS} dias, aguardando confirmação do cliente.`
+              : "Entra em Vendas já como Pago."}
+          </p>
+        )}
 
         {shippingValue != null && (
           <div className="flex items-center justify-between px-1 text-xs text-text-secondary">
@@ -1133,7 +1161,7 @@ export function NewSaleModal({
             Cancelar
           </NeonButton>
           <NeonButton type="submit" disabled={saving}>
-            {saving ? "Salvando..." : isEditing ? "Salvar Alterações" : "Criar Venda"}
+            {saving ? "Salvando..." : isEditing ? "Salvar Alterações" : isQuoteMode ? "Criar Orçamento" : "Criar Venda"}
           </NeonButton>
         </div>
       </form>

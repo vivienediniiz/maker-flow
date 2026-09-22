@@ -26,12 +26,13 @@ export function NewOrderButton() {
       <NewSaleModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
+        mode="quote"
         onCreated={(createdQuote) => {
           router.refresh();
           if (createdQuote) setSuccessQuote(createdQuote);
         }}
       />
-      <SaleSuccessModal quote={successQuote} onClose={() => setSuccessQuote(null)} />
+      <SaleSuccessModal quote={successQuote} onClose={() => setSuccessQuote(null)} mode="quote" />
     </>
   );
 }

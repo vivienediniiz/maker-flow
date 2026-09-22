@@ -7,10 +7,19 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { SaleReceiptModal } from "@/components/dashboard/SaleReceiptModal";
 import { buildWhatsAppLink } from "@/components/ui/WhatsAppLink";
 import { formatBRL } from "@/lib/utils";
-import { formatOrderNumber } from "@/lib/quotes";
+import { formatOrderNumber, QUOTE_EXPIRY_DAYS } from "@/lib/quotes";
 import type { QuoteWithClient } from "@/lib/types";
 
-export function SaleSuccessModal({ quote, onClose }: { quote: QuoteWithClient | null; onClose: () => void }) {
+export function SaleSuccessModal({
+  quote,
+  onClose,
+  mode = "sale",
+}: {
+  quote: QuoteWithClient | null;
+  onClose: () => void;
+  /** "quote" ajusta os textos e esconde ações que só fazem sentido pra uma venda já paga (comprovante, link de cobrança) — o orçamento em si ainda não foi confirmado pelo cliente. */
+  mode?: "sale" | "quote";
+}) {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [paymentLink, setPaymentLink] = useState<string | null>(null);
   const [generatingLink, setGeneratingLink] = useState(false);
@@ -57,6 +66,7 @@ export function SaleSuccessModal({ quote, onClose }: { quote: QuoteWithClient | 
   }
 
   const clientPhone = quote.clients?.phone || null;
+  const isQuoteMode = mode === "quote";
 
   function handleSendWhatsApp() {
     if (!paymentLink || !clientPhone) return;
@@ -68,73 +78,101 @@ export function SaleSuccessModal({ quote, onClose }: { quote: QuoteWithClient | 
     window.open(`${buildWhatsAppLink(clientPhone)}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   }
 
+  function handleSendQuoteWhatsApp() {
+    if (!clientPhone) return;
+    const clientName = quote!.clients?.name ?? quote!.buyer_name ?? "";
+    const orderRef = formatOrderNumber(quote!.order_number);
+    const text = `Olá${clientName ? `, ${clientName}` : ""}! Segue o orçamento #${orderRef}: ${quote!.project_name} — ${formatBRL(
+      quote!.final_price
+    )}. Válido por ${QUOTE_EXPIRY_DAYS} dias.`;
+    window.open(`${buildWhatsAppLink(clientPhone)}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  }
+
   return (
     <>
-      <Modal open={!!quote} onClose={onClose} title="Venda Criada" maxWidthClass="max-w-sm">
+      <Modal open={!!quote} onClose={onClose} title={isQuoteMode ? "Orçamento Criado" : "Venda Criada"} maxWidthClass="max-w-sm">
         <div className="flex flex-col items-center gap-4 py-2 text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-neon-green/15 text-neon-green">
             <CheckCircle2 size={28} />
           </div>
           <div>
             <p className="text-sm text-text-secondary">
-              Venda {formatOrderNumber(quote.order_number)} registrada com sucesso
+              {isQuoteMode ? "Orçamento" : "Venda"} {formatOrderNumber(quote.order_number)}{" "}
+              {isQuoteMode ? "criado" : "registrada"} com sucesso
             </p>
             <p className="neon-text font-numeric text-2xl font-semibold">{formatBRL(quote.final_price)}</p>
           </div>
           <div className="flex w-full flex-col gap-2 pt-2">
-            <div className="flex w-full gap-2">
-              <NeonButton variant="ghost" size="sm" className="flex-1" onClick={onClose}>
-                Fechar
-              </NeonButton>
-              <NeonButton size="sm" className="flex-1" onClick={() => setReceiptOpen(true)}>
-                Gerar Comprovante
-              </NeonButton>
-            </div>
-
-            {paymentLink ? (
-              <>
-                <div className="flex items-center gap-2 rounded-xl border border-border-glass bg-white/[0.02] px-3 py-2">
-                  <Link2 size={13} className="shrink-0 text-text-muted" />
-                  <span className="min-w-0 flex-1 truncate text-xs text-text-secondary">{paymentLink}</span>
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    className={`flex shrink-0 items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                      copied ? "text-neon-green" : "text-neon-pink hover:bg-white/5"
-                    }`}
-                  >
-                    {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copiado" : "Copiar"}
-                  </button>
-                </div>
+            {isQuoteMode ? (
+              <div className="flex w-full gap-2">
+                <NeonButton variant="ghost" size="sm" className="flex-1" onClick={onClose}>
+                  Fechar
+                </NeonButton>
                 {clientPhone && (
-                  <NeonButton size="sm" className="w-full" onClick={handleSendWhatsApp}>
-                    <MessageCircle size={14} /> Enviar Link de Cobrança
+                  <NeonButton size="sm" className="flex-1" onClick={handleSendQuoteWhatsApp}>
+                    <MessageCircle size={14} /> Enviar por WhatsApp
                   </NeonButton>
                 )}
-              </>
+              </div>
             ) : (
-              <NeonButton
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={handleGenerateLink}
-                disabled={generatingLink}
-              >
-                {generatingLink ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
-                {generatingLink ? "Gerando..." : "Gerar Link de Cobrança"}
-              </NeonButton>
+              <>
+                <div className="flex w-full gap-2">
+                  <NeonButton variant="ghost" size="sm" className="flex-1" onClick={onClose}>
+                    Fechar
+                  </NeonButton>
+                  <NeonButton size="sm" className="flex-1" onClick={() => setReceiptOpen(true)}>
+                    Gerar Comprovante
+                  </NeonButton>
+                </div>
+
+                {paymentLink ? (
+                  <>
+                    <div className="flex items-center gap-2 rounded-xl border border-border-glass bg-white/[0.02] px-3 py-2">
+                      <Link2 size={13} className="shrink-0 text-text-muted" />
+                      <span className="min-w-0 flex-1 truncate text-xs text-text-secondary">{paymentLink}</span>
+                      <button
+                        type="button"
+                        onClick={handleCopy}
+                        className={`flex shrink-0 items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                          copied ? "text-neon-green" : "text-neon-pink hover:bg-white/5"
+                        }`}
+                      >
+                        {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copiado" : "Copiar"}
+                      </button>
+                    </div>
+                    {clientPhone && (
+                      <NeonButton size="sm" className="w-full" onClick={handleSendWhatsApp}>
+                        <MessageCircle size={14} /> Enviar Link de Cobrança
+                      </NeonButton>
+                    )}
+                  </>
+                ) : (
+                  <NeonButton
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={handleGenerateLink}
+                    disabled={generatingLink}
+                  >
+                    {generatingLink ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
+                    {generatingLink ? "Gerando..." : "Gerar Link de Cobrança"}
+                  </NeonButton>
+                )}
+                {!paymentLink && (
+                  <p className="text-[11px] text-text-muted">
+                    Ao gerar, essa venda volta pra "aguardando pagamento" até o cliente pagar pelo link.
+                  </p>
+                )}
+                {linkError && <p className="text-xs text-red-400">{linkError}</p>}
+              </>
             )}
-            {!paymentLink && (
-              <p className="text-[11px] text-text-muted">
-                Ao gerar, essa venda volta pra "aguardando pagamento" até o cliente pagar pelo link.
-              </p>
-            )}
-            {linkError && <p className="text-xs text-red-400">{linkError}</p>}
           </div>
         </div>
       </Modal>
 
-      <SaleReceiptModal quote={quote} open={receiptOpen} onClose={() => setReceiptOpen(false)} zIndexClass="z-[60]" />
+      {!isQuoteMode && (
+        <SaleReceiptModal quote={quote} open={receiptOpen} onClose={() => setReceiptOpen(false)} zIndexClass="z-[60]" />
+      )}
     </>
   );
 }
