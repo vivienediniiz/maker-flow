@@ -13,17 +13,16 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
  * Após aprovação, o TikTok Shop redireciona pro Redirect URL configurado
  * no app com `?code={auth_code}&state={state}`.
  *
- * TIKTOK_SERVICE_ID é opcional — quando ausente, cai pro Client key
- * (TIKTOK_APP_KEY), que costuma ser o mesmo identificador nesse tipo de app.
- * Se a autorização falhar com "invalid service_id", configure
- * TIKTOK_SERVICE_ID explicitamente com o valor correto do painel.
+ * TIKTOK_SERVICE_ID NÃO é o Client key/app_key (testado e confirmado —
+ * usar o Client key aqui retorna "This service does not exist" da TikTok).
+ * É o "App ID" (número longo) visível em Manage apps -> seu app.
  */
 export async function GET(_req: NextRequest) {
-  const serviceId = process.env.TIKTOK_SERVICE_ID || process.env.TIKTOK_APP_KEY;
+  const serviceId = process.env.TIKTOK_SERVICE_ID;
 
   if (!serviceId) {
     return NextResponse.json(
-      { error: "Integração com TikTok Shop ainda não disponível — falta configurar TIKTOK_APP_KEY." },
+      { error: "Integração com TikTok Shop ainda não disponível — falta configurar TIKTOK_SERVICE_ID." },
       { status: 503 }
     );
   }
