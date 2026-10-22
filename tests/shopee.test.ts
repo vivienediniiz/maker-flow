@@ -88,6 +88,15 @@ describe("buildShopeeAuthUrl", () => {
     expect(getShopeeConfig()?.apiHost).toBe("https://openplatform.sandbox.test-stable.shopee.sg");
   });
 
+  it("a chave do push cai na chave da API, a menos que SHOPEE_PUSH_PARTNER_KEY exista", () => {
+    vi.stubEnv("SHOPEE_PARTNER_ID", "123");
+    vi.stubEnv("SHOPEE_PARTNER_KEY", "chave-api");
+    vi.stubEnv("SHOPEE_PUSH_PARTNER_KEY", "");
+    expect(getShopeeConfig()?.pushPartnerKey).toBe("chave-api");
+    vi.stubEnv("SHOPEE_PUSH_PARTNER_KEY", "chave-push");
+    expect(getShopeeConfig()?.pushPartnerKey).toBe("chave-push");
+  });
+
   it("sem credenciais, a configuração fica indisponível", () => {
     vi.stubEnv("SHOPEE_PARTNER_ID", "");
     vi.stubEnv("SHOPEE_PARTNER_KEY", "");

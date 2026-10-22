@@ -28,6 +28,8 @@ const AUTH_HOSTS = {
 export interface ShopeeConfig {
   partnerId: string;
   partnerKey: string;
+  /** Chave que assina os pushes (campo "Live Push Partner Key" do Console) — igual à partnerKey quando não há uma separada. */
+  pushPartnerKey: string;
   sandbox: boolean;
   apiHost: string;
   authHost: string;
@@ -60,6 +62,7 @@ export function getShopeeConfig(): ShopeeConfig | null {
   return {
     partnerId,
     partnerKey,
+    pushPartnerKey: process.env.SHOPEE_PUSH_PARTNER_KEY || partnerKey,
     sandbox,
     apiHost: process.env.SHOPEE_API_HOST || (sandbox ? API_HOSTS.sandbox : API_HOSTS.production),
     authHost: sandbox ? AUTH_HOSTS.sandbox : AUTH_HOSTS.production,

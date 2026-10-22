@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   // A URL assinada é a cadastrada no Console. SHOPEE_PUSH_URL força um valor
   // exato se o proxy mudar o host/esquema que o Next enxerga.
   const url = process.env.SHOPEE_PUSH_URL || `${req.nextUrl.origin}${req.nextUrl.pathname}`;
-  if (!validateShopeePushSignature({ url, rawBody, authHeader: req.headers.get("authorization"), partnerKey: cfg.partnerKey })) {
+  if (!validateShopeePushSignature({ url, rawBody, authHeader: req.headers.get("authorization"), partnerKey: cfg.pushPartnerKey })) {
     return new NextResponse(null, { status: 401 });
   }
 
