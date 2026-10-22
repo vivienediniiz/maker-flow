@@ -35,17 +35,21 @@ function IntegrationsPageContent() {
   const mlError = searchParams.get("ml_error");
   const meConnected = searchParams.get("me_connected");
   const meError = searchParams.get("me_error");
+  const spConnected = searchParams.get("sp_connected");
+  const spError = searchParams.get("sp_error");
+  const ttConnected = searchParams.get("tt_connected");
+  const ttError = searchParams.get("tt_error");
 
   useEffect(() => {
     loadIntegrations();
   }, []);
 
   useEffect(() => {
-    if (!mpConnected && !mpError && !mlConnected && !mlError && !meConnected && !meError) return;
+    if (!mpConnected && !mpError && !mlConnected && !mlError && !meConnected && !meError && !spConnected && !spError && !ttConnected && !ttError) return;
     // Limpa os query params depois de mostrar o resultado, pra não reaparecer num refresh.
     const timeout = setTimeout(() => router.replace("/dashboard/integrations"), 4000);
     return () => clearTimeout(timeout);
-  }, [mpConnected, mpError, mlConnected, mlError, meConnected, meError, router]);
+  }, [mpConnected, mpError, mlConnected, mlError, meConnected, meError, spConnected, spError, ttConnected, ttError, router]);
 
   async function loadIntegrations() {
     setLoading(true);
@@ -114,6 +118,26 @@ function IntegrationsPageContent() {
         {meError && (
           <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
             <AlertCircle size={16} /> Falha ao conectar Melhor Envio: {meError}
+          </div>
+        )}
+        {spConnected && (
+          <div className="flex items-center gap-2 rounded-xl border border-neon-green/30 bg-neon-green/10 px-4 py-3 text-sm text-neon-green">
+            <CheckCircle2 size={16} /> Shopee conectada com sucesso.
+          </div>
+        )}
+        {spError && (
+          <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <AlertCircle size={16} /> Falha ao conectar Shopee: {spError}
+          </div>
+        )}
+        {ttConnected && (
+          <div className="flex items-center gap-2 rounded-xl border border-neon-green/30 bg-neon-green/10 px-4 py-3 text-sm text-neon-green">
+            <CheckCircle2 size={16} /> TikTok Shop conectado com sucesso.
+          </div>
+        )}
+        {ttError && (
+          <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <AlertCircle size={16} /> Falha ao conectar TikTok Shop: {ttError}
           </div>
         )}
 

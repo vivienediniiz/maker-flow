@@ -1,106 +1,98 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { fetchShopeeOrderForIntegration, upsertQuoteFromShopeeOrder, validateShopeeWebhookSignature } from "@/lib/shopee";
+import {
+  disconnectShopeeIntegration,
+  fetchShopeeOrderForIntegration,
+  findShopeeIntegrationByShopId,
+  getShopeeConfig,
+  mapShopeeOrderStatus,
+  upsertQuoteFromShopeeOrder,
+  validateShopeePushSignature,
+} from "@/lib/shopee";
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
+// Códigos de push confirmados em open.shopee.com/push-mechanism:
+//  2 = shop_authorization_canceled_push, 3 = order_status_push.
+const SHOP_AUTHORIZATION_CANCELED = 2;
+const ORDER_STATUS_PUSH = 3;
+
+const ok = () => NextResponse.json({ ok: true });
+
+/** shop_id pode vir na raiz, em data.shop_id ou em data.shop_id_list (cancelamento via conta principal). */
+function collectShopIds(payload: any): string[] {
+  const ids = new Set<string>();
+  const add = (v: unknown) => v != null && v !== "" && ids.add(String(v));
+  add(payload?.shop_id);
+  const data = Array.isArray(payload?.data) ? payload.data : [payload?.data];
+  for (const d of data) {
+    add(d?.shop_id);
+    (Array.isArray(d?.shop_id_list) ? d.shop_id_list : []).forEach(add);
+  }
+  return [...ids];
+}
+
 /**
- * Webhook do Shopee — recebe eventos de pedido.
- * Eventa suportados: order/new, order/status_updated, order/cancelled, etc.
- * Payload vem com: event (tipo), shop_id, order_sn, timestamp.
+ * Push da Shopee. Regras da doc: responder 200 em até 3s; entrega repetível
+ * (retries em 300s/1800s/10800s) — o upsert por order_sn já é idempotente.
+ * A assinatura (header Authorization) é HMAC-SHA256(partner_key, URL + "|" +
+ * corpo cru). Só mensagens que realmente processamos exigem assinatura
+ * válida: o ping de verificação da URL no Console e códigos que ignoramos
+ * recebem 200 sem fazer nada.
  */
 export async function POST(req: NextRequest) {
-  const partnerKey = process.env.SHOPEE_PARTNER_KEY;
+  const cfg = getShopeeConfig();
   const rawBody = await req.text();
+  if (!cfg) return ok();
 
-  // Valida assinatura HMAC-SHA256
-  if (partnerKey) {
-    const authHeader = req.headers.get("authorization") ?? "";
-    if (!validateShopeeWebhookSignature({ authHeader, rawBody, partnerKey })) {
-      console.warn("[webhook] shopee invalid signature");
-      return NextResponse.json({ error: "Assinatura inválida" }, { status: 401 });
-    }
-  } else {
-    console.warn("[webhook] shopee SHOPEE_PARTNER_KEY not configured");
-    return NextResponse.json({ ok: true }); // Pong pra validação inicial
-  }
-
-  let payload;
+  let payload: any;
   try {
     payload = JSON.parse(rawBody);
   } catch {
-    return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
+    return ok();
   }
 
-  const { event, shop_id: shopId, order_sn: orderSn } = payload;
-  if (!event || !shopId || !orderSn) {
-    console.warn("[webhook] shopee incomplete payload", { event, shopId, orderSn });
-    return NextResponse.json({ ok: true }); // Ignora silenciosamente
-  }
+  const code = Number(payload?.code);
+  if (code !== ORDER_STATUS_PUSH && code !== SHOP_AUTHORIZATION_CANCELED) return ok();
 
-  // Filtra eventos relevantes de pedido
-  if (!["order/new", "order/status_updated", "order/cancelled"].includes(event)) {
-    return NextResponse.json({ ok: true });
+  // A URL assinada é a cadastrada no Console. SHOPEE_PUSH_URL força um valor
+  // exato se o proxy mudar o host/esquema que o Next enxerga.
+  const url = process.env.SHOPEE_PUSH_URL || `${req.nextUrl.origin}${req.nextUrl.pathname}`;
+  if (!validateShopeePushSignature({ url, rawBody, authHeader: req.headers.get("authorization"), partnerKey: cfg.partnerKey })) {
+    return new NextResponse(null, { status: 401 });
   }
 
   const admin = adminClient();
 
   try {
-    // Acha a integração pelo shop_id (salvo nas credenciais do callback)
-    const { data: integrations } = await admin
-      .from("integrations")
-      .select("id, credential_secret_id, user_id")
-      .eq("platform", "shopee")
-      .eq("status", "connected");
-
-    if (!integrations || integrations.length === 0) {
-      console.warn("[webhook] shopee no integration found");
-      return NextResponse.json({ ok: true });
-    }
-
-    // Procura pela integração com esse shop_id
-    let targetIntegration = null;
-    for (const integration of integrations) {
-      if (!integration.credential_secret_id) continue;
-      try {
-        const { getIntegrationCredential } = await import("@/lib/vault");
-        const raw = await getIntegrationCredential(admin, integration.credential_secret_id);
-        if (raw) {
-          const creds = JSON.parse(raw);
-          if (creds.shop_id === shopId) {
-            targetIntegration = integration;
-            break;
-          }
-        }
-      } catch {
-        // Ignore credential errors, continue searching
+    if (code === SHOP_AUTHORIZATION_CANCELED) {
+      for (const shopId of collectShopIds(payload)) {
+        const integration = await findShopeeIntegrationByShopId(admin, shopId);
+        if (integration) await disconnectShopeeIntegration(admin, integration);
       }
+      return ok();
     }
 
-    if (!targetIntegration) {
-      console.warn("[webhook] shopee no matching shop_id found", { shopId });
-      return NextResponse.json({ ok: true });
+    const shopId = payload?.shop_id;
+    const orderSn = payload?.data?.ordersn;
+    // Status que não viram venda (ex.: UNPAID) nem chegam a gastar chamada de API.
+    if (!shopId || !orderSn || !mapShopeeOrderStatus(payload?.data?.status)) return ok();
+
+    const integration = await findShopeeIntegrationByShopId(admin, shopId);
+    if (!integration) {
+      console.warn("[webhook] shopee: nenhuma integração com esse shop_id", { shopId });
+      return ok();
     }
 
-    // Busca o pedido completo da API do Shopee
-    const order = await fetchShopeeOrderForIntegration(admin, targetIntegration, orderSn);
-
-    // Cria/atualiza a venda
-    await upsertQuoteFromShopeeOrder(admin, targetIntegration.user_id, order);
-
-    // Atualiza timestamp do último evento
-    await admin
-      .from("integrations")
-      .update({ last_event_at: new Date().toISOString() })
-      .eq("id", targetIntegration.id);
-
-    console.log("[webhook] shopee order processed", { event, shopId, orderSn });
+    const order = await fetchShopeeOrderForIntegration(admin, integration, String(orderSn));
+    await upsertQuoteFromShopeeOrder(admin, integration.user_id, order);
+    await admin.from("integrations").update({ last_event_at: new Date().toISOString() }).eq("id", integration.id);
   } catch (error) {
-    console.error("[webhook] shopee error processing", { error, event, shopId, orderSn });
-    // Retorna 200 mesmo com erro — Shopee não faz retry, e queremos evitar filas de eventos perdidos
+    // 200 mesmo assim: erro nosso não vira fila de retries; o próximo push do pedido tenta de novo.
+    console.error("[webhook] shopee erro ao processar", { error, code });
   }
 
-  return NextResponse.json({ ok: true });
+  return ok();
 }

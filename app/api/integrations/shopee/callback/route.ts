@@ -1,84 +1,79 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { setIntegrationCredential } from "@/lib/vault";
+import { exchangeShopeeCode, getShopeeConfig } from "@/lib/shopee";
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
+function backToIntegrations(req: NextRequest, query: string) {
+  return NextResponse.redirect(`${req.nextUrl.origin}/dashboard/integrations?${query}`);
+}
+
 /**
- * TODO(aguardando aprovação): recebe `code` + `shop_id` da Shopee e troca
- * por access_token via /api/v2/auth/token/get. `state` carrega o user_id
- * (setado em /connect). Sem SHOPEE_PARTNER_ID/SHOPEE_PARTNER_KEY configurados
- * isso nunca é alcançado, porque /connect já bloqueia antes.
+ * Recebe `code` + `shop_id` (autorização feita numa conta de loja) e `state`
+ * (user id setado em /connect). O code vale 1 vez e expira em 10 minutos —
+ * a troca por tokens acontece aqui mesmo. Conta principal (main_account_id)
+ * não é suportada: o vendedor precisa autorizar pela conta da própria loja.
  */
 export async function GET(req: NextRequest) {
-  const partnerId = process.env.SHOPEE_PARTNER_ID;
-  const partnerKey = process.env.SHOPEE_PARTNER_KEY;
-
-  if (!partnerId || !partnerKey) {
+  if (!getShopeeConfig()) {
     return NextResponse.json({ error: "Integração com Shopee ainda não disponível." }, { status: 503 });
   }
 
   const code = req.nextUrl.searchParams.get("code");
   const shopId = req.nextUrl.searchParams.get("shop_id");
+  const mainAccountId = req.nextUrl.searchParams.get("main_account_id");
   const state = req.nextUrl.searchParams.get("state");
 
-  if (!code || !shopId || !state) {
-    return NextResponse.json({ error: "Callback da Shopee incompleto" }, { status: 400 });
+  if (!code || (!shopId && !mainAccountId)) {
+    return backToIntegrations(req, "sp_error=" + encodeURIComponent("autorização não concluída"));
+  }
+  if (!shopId) {
+    return backToIntegrations(
+      req,
+      "sp_error=" + encodeURIComponent("autorize pela conta da loja (não pela conta principal)")
+    );
   }
 
-  // Identidade vem da sessão, não da URL — ver mesma nota em
-  // app/api/auth/mercado-pago/callback/route.ts.
+  // Identidade vem da sessão, não da URL — mesma regra dos outros callbacks.
   const supabase = createServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || user.id !== state) {
+  if (!user || !state || user.id !== state) {
     return NextResponse.json({ error: "Sessão inválida — conecte de novo a partir de Integrações." }, { status: 401 });
   }
-  const userId = user.id;
 
-  const path = "/api/v2/auth/token/get";
-  const timestamp = Math.floor(Date.now() / 1000);
-  const sign = crypto.createHmac("sha256", partnerKey).update(`${partnerId}${path}${timestamp}`).digest("hex");
-
-  const tokenRes = await fetch(
-    `https://partner.shopeemobile.com${path}?partner_id=${partnerId}&timestamp=${timestamp}&sign=${sign}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, shop_id: Number(shopId), partner_id: Number(partnerId) }),
-    }
-  );
-
-  if (!tokenRes.ok) {
-    return NextResponse.json({ error: `Shopee respondeu ${tokenRes.status}` }, { status: 502 });
+  let credentials;
+  try {
+    credentials = await exchangeShopeeCode(code, shopId);
+  } catch (err) {
+    console.error("[shopee] falha ao trocar o code por token", err);
+    return backToIntegrations(req, "sp_error=" + encodeURIComponent("não foi possível concluir a autorização"));
   }
 
-  const tokenData = await tokenRes.json();
   const admin = adminClient();
-
   const { data: existing } = await admin
     .from("integrations")
     .select("id, credential_secret_id")
-    .eq("user_id", userId)
+    .eq("user_id", user.id)
     .eq("platform", "shopee")
     .maybeSingle();
 
   const secretId = await setIntegrationCredential(
     admin,
     existing?.credential_secret_id ?? null,
-    JSON.stringify({ access_token: tokenData.access_token, refresh_token: tokenData.refresh_token, shop_id: shopId }),
-    `shopee:${userId}`
+    JSON.stringify(credentials),
+    `shopee:${user.id}`
   );
 
   await admin.from("integrations").upsert(
     {
       ...(existing?.id ? { id: existing.id } : {}),
-      user_id: userId,
+      user_id: user.id,
       platform: "shopee",
       status: "connected",
       credential_secret_id: secretId,
@@ -86,5 +81,5 @@ export async function GET(req: NextRequest) {
     { onConflict: "user_id,platform" }
   );
 
-  return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL || "https://studiomaker3d.com.br"}/dashboard/integrations`);
+  return backToIntegrations(req, "sp_connected=1");
 }
