@@ -1157,7 +1157,7 @@ export default function CalculatorPage() {
               {marketplaceFee > 0 && (
                 <SummaryRow
                   label={`Desconto Marketplace (${marketplaceFee}%)`}
-                  value={formatBRL((calc.costPerUnit * marketplaceFee / 100) * quantity)}
+                  value={formatBRL((calc.orderPrice * Math.min(marketplaceFee, 99)) / 100)}
                 />
               )}
             </div>
