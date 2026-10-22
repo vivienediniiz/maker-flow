@@ -5,15 +5,18 @@ import {
   upsertQuoteFromTikTokShopOrder,
   validateTikTokShopWebhookSignature,
 } from "@/lib/tiktokShop";
-import { getIntegrationCredential } from "@/lib/vault";
+import { deleteIntegrationCredential, getIntegrationCredential } from "@/lib/vault";
 
 function adminClient() {
   return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-// type=1 = "Order status change" (confirmado na doc de webhooks) — outros
-// tipos (produto, devolução, etc.) não são relevantes pro fluxo de Vendas.
+// type=1 = "Order status change" e type=6 = "Seller deauthorization"
+// (payload { type, shop_id, data: { message } }, sem order_id) — confirmados
+// na doc de webhooks. Outros tipos (produto, devolução, etc.) não são
+// relevantes pro fluxo de Vendas.
 const ORDER_STATUS_CHANGE_TYPE = 1;
+const SELLER_DEAUTHORIZATION_TYPE = 6;
 
 /**
  * Webhook do TikTok Shop — recebe eventos de pedido.
@@ -53,8 +56,10 @@ export async function POST(req: NextRequest) {
 
   const { type, shop_id: shopId, data } = payload ?? {};
   const orderId = data?.order_id;
+  const isDeauthorization = type === SELLER_DEAUTHORIZATION_TYPE;
+  const isOrderChange = type === ORDER_STATUS_CHANGE_TYPE && !!orderId;
 
-  if (type !== ORDER_STATUS_CHANGE_TYPE || !shopId || !orderId) {
+  if (!shopId || (!isDeauthorization && !isOrderChange)) {
     // Outros tipos de evento (produto, devolução, etc.) ou payload
     // incompleto — reconhece a entrega sem processar.
     return new NextResponse(null, { status: 200 });
@@ -92,6 +97,24 @@ export async function POST(req: NextRequest) {
 
     if (!targetIntegration) {
       console.warn("[webhook] tiktok-shop no matching shop_id found", { shopId });
+      return new NextResponse(null, { status: 200 });
+    }
+
+    if (isDeauthorization) {
+      // O vendedor revogou o app no TikTok Shop: os tokens deixam de valer,
+      // então remove a credencial e marca como desconectada — mesmo efeito do
+      // botão Desconectar em Integrações. Vendas já importadas ficam.
+      if (targetIntegration.credential_secret_id) {
+        try {
+          await deleteIntegrationCredential(admin, targetIntegration.credential_secret_id);
+        } catch (err) {
+          console.error("[webhook] tiktok-shop falha ao apagar credencial do Vault", err);
+        }
+      }
+      await admin
+        .from("integrations")
+        .update({ status: "disconnected", credential_secret_id: null, webhook_secret: null, last_event_at: null })
+        .eq("id", targetIntegration.id);
       return new NextResponse(null, { status: 200 });
     }
 
