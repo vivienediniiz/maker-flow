@@ -1,25 +1,64 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { formatBRL, cn } from "@/lib/utils";
 import { formatCep, cepDigits, fetchAddressByCep } from "@/lib/viaCep";
+import { computeCheckoutTotals, listDeliveryChoices, parseShippingOptions } from "@/lib/storeCheckout";
 import { Loader2, ArrowLeft } from "lucide-react";
+import type { StoreProfilePublic } from "@/lib/types";
 import type { CartLine } from "./page";
 
 interface CheckoutFormProps {
   slug: string;
+  seller: StoreProfilePublic;
   cart: CartLine[];
   total: number;
   onBack: () => void;
   onSuccess: () => void;
 }
 
+type PaymentMethod = "mercado_pago" | "infinitepay" | "pix_direto";
+
 const INFINITEPAY_AVAILABLE = process.env.NEXT_PUBLIC_INFINITEPAY_STORE_SLUG;
 
-export function CheckoutForm({ slug, cart, total, onBack, onSuccess }: CheckoutFormProps) {
-  const showPaymentChoice = !!INFINITEPAY_AVAILABLE && slug === INFINITEPAY_AVAILABLE;
-  const [paymentMethod, setPaymentMethod] = useState<"mercado_pago" | "infinitepay">("mercado_pago");
+export function CheckoutForm({ slug, seller, cart, total, onBack, onSuccess }: CheckoutFormProps) {
+  const paymentOptions = useMemo(() => {
+    const options: { value: PaymentMethod; label: string; hint?: string }[] = [];
+    if (seller.pix_ready) {
+      const discount = Number(seller.pix_discount_percent) || 0;
+      options.push({ value: "pix_direto", label: "Pix", hint: discount > 0 ? `${discount}% de desconto` : undefined });
+    }
+    if (seller.mp_ready) options.push({ value: "mercado_pago", label: "Cartão / Mercado Pago" });
+    if (INFINITEPAY_AVAILABLE && slug === INFINITEPAY_AVAILABLE) options.push({ value: "infinitepay", label: "InfinitePay" });
+    if (options.length === 0) options.push({ value: "mercado_pago", label: "Mercado Pago" });
+    return options;
+  }, [seller, slug]);
+  const showPaymentChoice = paymentOptions.length > 1;
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(paymentOptions[0].value);
+
+  const deliveryChoices = useMemo(
+    () =>
+      listDeliveryChoices({
+        pickup_enabled: !!seller.pickup_enabled,
+        pickup_address: seller.pickup_address ?? null,
+        arrange_enabled: !!seller.arrange_enabled,
+        arrange_note: seller.arrange_note ?? null,
+        shipping_options: parseShippingOptions(seller.shipping_options),
+      }),
+    [seller]
+  );
+  const [deliveryIndex, setDeliveryIndex] = useState(0);
+  const selectedDelivery = deliveryChoices[deliveryIndex] ?? null;
+  // Sem opções de entrega configuradas (loja antiga) o endereço continua obrigatório, como antes.
+  const needsAddress = deliveryChoices.length === 0 || selectedDelivery?.choice.type === "shipping";
+
+  const totals = computeCheckoutTotals({
+    subtotal: total,
+    pixDiscountPercent: Number(seller.pix_discount_percent) || 0,
+    isPixDirect: paymentMethod === "pix_direto",
+    shippingAmount: selectedDelivery?.amount ?? 0,
+  });
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -70,6 +109,7 @@ export function CheckoutForm({ slug, cart, total, onBack, onSuccess }: CheckoutF
         body: JSON.stringify({
           items: cart.map((l) => ({ productId: l.productId, quantity: l.quantity, customization: l.customization || undefined })),
           paymentMethod,
+          delivery: selectedDelivery?.choice,
           buyer: {
             name,
             email,
@@ -93,7 +133,7 @@ export function CheckoutForm({ slug, cart, total, onBack, onSuccess }: CheckoutF
       }
 
       onSuccess();
-      window.location.href = data.init_point;
+      window.location.href = data.pix ? `/loja/${slug}?pedido=pix&checkout_id=${data.checkout_id}` : data.init_point;
     } catch {
       setError("Erro de rede — tente novamente.");
       setSubmitting(false);
@@ -110,9 +150,27 @@ export function CheckoutForm({ slug, cart, total, onBack, onSuccess }: CheckoutF
         <ArrowLeft size={13} /> Voltar pro carrinho
       </button>
 
-      <div className="glass-card flex items-center justify-between px-4 py-3">
-        <span className="text-sm text-text-secondary">{cart.length} {cart.length === 1 ? "item" : "itens"}</span>
-        <span className="font-numeric text-lg font-semibold text-neon-pink">{formatBRL(total)}</span>
+      <div className="glass-card space-y-1.5 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-text-secondary">{cart.length} {cart.length === 1 ? "item" : "itens"}</span>
+          <span className="font-numeric text-sm text-text-secondary">{formatBRL(totals.subtotal)}</span>
+        </div>
+        {totals.discount > 0 && (
+          <div className="flex items-center justify-between text-xs text-neon-green">
+            <span>Desconto no Pix</span>
+            <span className="font-numeric">- {formatBRL(totals.discount)}</span>
+          </div>
+        )}
+        {selectedDelivery && (
+          <div className="flex items-center justify-between text-xs text-text-muted">
+            <span>{selectedDelivery.label}</span>
+            <span className="font-numeric">{totals.shipping > 0 ? formatBRL(totals.shipping) : "Grátis"}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-between border-t border-border-glass pt-1.5">
+          <span className="text-sm text-text-secondary">Total</span>
+          <span className="font-numeric text-lg font-semibold text-neon-pink">{formatBRL(totals.total)}</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -136,7 +194,7 @@ export function CheckoutForm({ slug, cart, total, onBack, onSuccess }: CheckoutF
             CEP {cepLoading && <Loader2 size={11} className="animate-spin" />}
           </label>
           <input
-            required
+            required={needsAddress}
             value={cep}
             onChange={(e) => handleCepChange(e.target.value)}
             className="glass-input w-full"
@@ -146,11 +204,11 @@ export function CheckoutForm({ slug, cart, total, onBack, onSuccess }: CheckoutF
         </div>
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Número</label>
-          <input required value={number} onChange={(e) => setNumber(e.target.value)} className="glass-input w-full" />
+          <input required={needsAddress} value={number}onChange={(e) => setNumber(e.target.value)} className="glass-input w-full" />
         </div>
         <div className="col-span-2">
           <label className="mb-1.5 block text-xs text-text-muted">Rua</label>
-          <input required value={street} onChange={(e) => setStreet(e.target.value)} className="glass-input w-full" />
+          <input required={needsAddress} value={street}onChange={(e) => setStreet(e.target.value)} className="glass-input w-full" />
         </div>
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Bairro</label>
@@ -163,25 +221,47 @@ export function CheckoutForm({ slug, cart, total, onBack, onSuccess }: CheckoutF
         <div className="col-span-2 grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">Cidade</label>
-            <input required value={city} onChange={(e) => setCity(e.target.value)} className="glass-input w-full" />
+            <input required={needsAddress} value={city}onChange={(e) => setCity(e.target.value)} className="glass-input w-full" />
           </div>
           <div>
             <label className="mb-1.5 block text-xs text-text-muted">UF</label>
-            <input required value={state} onChange={(e) => setState(e.target.value)} maxLength={2} className="glass-input w-full" />
+            <input required={needsAddress} value={state}onChange={(e) => setState(e.target.value)} maxLength={2} className="glass-input w-full" />
           </div>
         </div>
       </div>
+
+      {deliveryChoices.length > 0 && (
+        <div>
+          <label className="mb-1.5 block text-xs text-text-muted">Entrega</label>
+          <div className="space-y-2">
+            {deliveryChoices.map((d, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => setDeliveryIndex(index)}
+                className={cn(
+                  "w-full rounded-xl border px-3 py-2.5 text-left transition-colors",
+                  deliveryIndex === index
+                    ? "border-neon-pink/50 bg-neon-pink/10"
+                    : "border-border-glass bg-white/[0.02] hover:bg-white/[0.04]"
+                )}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-text-primary">{d.label}</span>
+                  <span className="font-numeric text-xs text-text-secondary">{d.amount > 0 ? formatBRL(d.amount) : "Grátis"}</span>
+                </div>
+                {d.note && <p className="mt-0.5 text-[11px] text-text-muted">{d.note}</p>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {showPaymentChoice && (
         <div>
           <label className="mb-1.5 block text-xs text-text-muted">Forma de pagamento</label>
           <div className="glass-card flex gap-1 p-1">
-            {(
-              [
-                { value: "mercado_pago", label: "Mercado Pago" },
-                { value: "infinitepay", label: "InfinitePay" },
-              ] as { value: "mercado_pago" | "infinitepay"; label: string }[]
-            ).map((opt) => (
+            {paymentOptions.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
@@ -192,6 +272,7 @@ export function CheckoutForm({ slug, cart, total, onBack, onSuccess }: CheckoutF
                 )}
               >
                 {opt.label}
+                {opt.hint && <span className="ml-1 text-[10px] opacity-80">({opt.hint})</span>}
               </button>
             ))}
           </div>
@@ -201,7 +282,7 @@ export function CheckoutForm({ slug, cart, total, onBack, onSuccess }: CheckoutF
       {error && <p className="text-xs text-red-400">{error}</p>}
 
       <NeonButton type="submit" className="w-full justify-center" disabled={submitting}>
-        {submitting ? <Loader2 size={14} className="animate-spin" /> : null} {submitting ? "Redirecionando..." : "Ir para o pagamento"}
+        {submitting ? <Loader2 size={14} className="animate-spin" /> : null} {submitting ? "Aguarde..." : paymentMethod === "pix_direto" ? "Gerar Pix" : "Ir para o pagamento"}
       </NeonButton>
     </form>
   );

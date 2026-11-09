@@ -120,7 +120,13 @@ export interface StoreCheckout {
   mp_preference_id: string | null;
   status: "pending" | "paid" | "expired";
   /** "infinitepay" só é usado pela loja em NEXT_PUBLIC_INFINITEPAY_STORE_SLUG — não é multi-tenant como o Mercado Pago. */
-  payment_provider: "mercado_pago" | "infinitepay";
+  payment_provider: "mercado_pago" | "infinitepay" | "pix_direto";
+  /** Pix Copia e Cola gerado no checkout (só `pix_direto`). */
+  pix_payload: string | null;
+  delivery_method: "pickup" | "arrange" | "shipping" | null;
+  delivery_label: string | null;
+  shipping_amount: number;
+  discount_amount: number;
   infinitepay_order_nsu: string | null;
   infinitepay_transaction_nsu: string | null;
   infinitepay_slug: string | null;
@@ -176,6 +182,16 @@ export interface StoreProfilePublic {
   whatsapp_default_message: string | null;
   /** Texto padrão pra prazo de produção quando o produto não tem `estimated_production_days`. */
   default_production_message: string | null;
+  /** Mercado Pago conectado (cartão/Pix com taxa). */
+  mp_ready: boolean;
+  /** Chave Pix própria cadastrada (Pix direto, sem taxa). A chave em si nunca é exposta aqui. */
+  pix_ready: boolean;
+  pix_discount_percent: number;
+  pickup_enabled: boolean;
+  pickup_address: string | null;
+  arrange_enabled: boolean;
+  arrange_note: string | null;
+  shipping_options: { id: string; label: string; price: number; note?: string | null }[];
 }
 
 /** Identidade visual + WhatsApp da Loja Online, configurados pelo lojista (1:1 com o usuário). */
@@ -190,6 +206,16 @@ export interface StoreSettings {
   whatsapp_number: string | null;
   whatsapp_default_message: string | null;
   default_production_message: string | null;
+  /** Pix direto: chave do lojista (só o servidor lê pra gerar o QR; não vai pra view pública). */
+  pix_key: string | null;
+  pix_holder_name: string | null;
+  pix_city: string | null;
+  pix_discount_percent: number;
+  pickup_enabled: boolean;
+  pickup_address: string | null;
+  arrange_enabled: boolean;
+  arrange_note: string | null;
+  shipping_options: { id: string; label: string; price: number; note?: string | null }[];
   updated_at: string;
 }
 

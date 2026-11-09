@@ -8,6 +8,7 @@ import { NeonButton } from "@/components/ui/NeonButton";
 import { Toggle } from "@/components/ui/Toggle";
 import { StoreBrandingCard } from "@/components/dashboard/StoreBrandingCard";
 import { StoreBannersCard } from "@/components/dashboard/StoreBannersCard";
+import { StorePaymentDeliveryCard } from "@/components/dashboard/StorePaymentDeliveryCard";
 import { createClient } from "@/lib/supabase/client";
 import { slugify } from "@/lib/slug";
 import { ExternalLink, Copy, Check, AlertTriangle, Loader2 } from "lucide-react";
@@ -44,7 +45,7 @@ export default function StorePage() {
     }
     setUserId(user.id);
 
-    const [{ data: profile }, { data: integration }] = await Promise.all([
+    const [{ data: profile }, { data: integration }, { data: storeSettings }] = await Promise.all([
       supabase
         .from("profiles")
         .select("store_enabled, store_slug, store_headline, studio_name, full_name")
@@ -57,6 +58,7 @@ export default function StorePage() {
         .eq("platform", "mercado_pago")
         .eq("status", "connected")
         .maybeSingle(),
+      supabase.from("store_settings").select("pix_key").eq("user_id", user.id).maybeSingle(),
     ]);
 
     setStoreEnabled(profile?.store_enabled ?? false);
@@ -64,7 +66,7 @@ export default function StorePage() {
     setSlugInput(profile?.store_slug ?? slugify(profile?.studio_name || profile?.full_name || "meu-estudio"));
     setHeadline(profile?.store_headline ?? "");
     setStudioName(profile?.studio_name || profile?.full_name || "");
-    setPaymentConnected(!!integration);
+    setPaymentConnected(!!integration || !!storeSettings?.pix_key);
     setLoading(false);
   }
 
@@ -149,7 +151,7 @@ export default function StorePage() {
             <div>
               <h3 className="font-display text-lg">Vitrine pública</h3>
               <p className="text-sm text-text-secondary">
-                Ative uma loja online pra vender direto pro consumidor final, com checkout via Mercado Pago.
+                Ative uma loja online pra vender direto pro consumidor final, com Pix na sua chave ou checkout via Mercado Pago.
               </p>
             </div>
             <Toggle checked={storeEnabled} onChange={handleToggleEnabled} label={storeEnabled ? "Ativada" : "Desativada"} />
@@ -159,7 +161,7 @@ export default function StorePage() {
             <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-300">
               <AlertTriangle size={15} className="shrink-0" />
               <span>
-                Conecte o Mercado Pago em{" "}
+                Cadastre sua chave Pix em &quot;Pagamento por Pix e Entrega&quot; (abaixo) ou conecte o Mercado Pago em{" "}
                 <Link href="/dashboard/integrations" className="underline hover:text-amber-200">
                   Integrações
                 </Link>{" "}
@@ -232,6 +234,7 @@ export default function StorePage() {
 
         {userId && (
           <>
+            <StorePaymentDeliveryCard userId={userId} studioName={studioName} />
             <StoreBrandingCard userId={userId} studioName={studioName} />
             <StoreBannersCard userId={userId} />
           </>

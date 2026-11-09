@@ -1,3 +1,4 @@
+import { allocateCheckoutTotals } from "@/lib/storeCheckout";
 import crypto from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getIntegrationCredential, setIntegrationCredential } from "@/lib/vault";
@@ -356,8 +357,10 @@ export async function upsertQuotesFromStorefrontCheckout(
   checkout: StoreCheckout,
   paymentId: string,
   sentAt: string,
-  totalPlatformFee: number
+  totalPlatformFee: number,
+  opts: { status?: "paid" | "awaiting_payment"; paymentMethod?: "pix" } = {}
 ) {
+  const status = opts.status ?? "paid";
   let clientId: string | null = null;
   const { data: existingClient } = await admin
     .from("clients")
@@ -395,15 +398,27 @@ export async function upsertQuotesFromStorefrontCheckout(
 
   const totalGross = checkout.items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0) || 1;
 
-  const rows = checkout.items.map((item) => {
+  // Desconto do Pix e frete (checkouts novos; antigos têm 0) são repartidos
+  // entre as linhas — a soma das vendas fecha com o total cobrado do cliente.
+  const allocation = allocateCheckoutTotals(
+    checkout.items.map((i) => i.unit_price * i.quantity),
+    { discount: checkout.discount_amount ?? 0, shipping: checkout.shipping_amount ?? 0 }
+  );
+
+  const rows = checkout.items.map((item, index) => {
     const itemGross = item.unit_price * item.quantity;
+    const alloc = allocation[index];
     return {
       user_id: checkout.seller_user_id,
       project_name: item.name,
-      final_price: itemGross,
+      final_price: alloc.finalPrice,
+      discount_amount: alloc.discount > 0 ? alloc.discount : null,
+      shipping_cost: alloc.shipping > 0 ? alloc.shipping : null,
+      shipping_service_name: checkout.delivery_label ?? null,
+      ...(opts.paymentMethod ? { payment_method: opts.paymentMethod } : {}),
       platform_fee: totalPlatformFee * (itemGross / totalGross),
       cost_amount: 0,
-      status: "paid" as const,
+      status,
       source: "loja_online" as const,
       external_order_id: `${paymentId}:${item.product_id}`,
       buyer_name: checkout.buyer_name,
@@ -430,7 +445,7 @@ export async function upsertQuotesFromStorefrontCheckout(
 
   if (error) throw new Error(error.message);
 
-  await admin.from("store_checkouts").update({ status: "paid" }).eq("id", checkout.id);
+  if (status === "paid") await admin.from("store_checkouts").update({ status: "paid" }).eq("id", checkout.id);
 
   return data;
 }

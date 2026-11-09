@@ -5,7 +5,16 @@ import { createMercadoPagoPreferenceForIntegration } from "@/lib/mercadoPago";
 import { createInfinitePayCheckoutLink, InfinitePayError } from "@/lib/infinitePay";
 import { checkoutRateLimit, requestIp } from "@/lib/rateLimit";
 import { apiError } from "@/lib/apiError";
-import type { StoreProfilePublic } from "@/lib/types";
+import { upsertQuotesFromStorefrontCheckout } from "@/lib/mercadoPago";
+import { buildPixPayload } from "@/lib/pixBrCode";
+import {
+  computeCheckoutTotals,
+  listDeliveryChoices,
+  parseShippingOptions,
+  resolveDelivery,
+  type StoreDeliveryConfig,
+} from "@/lib/storeCheckout";
+import type { StoreCheckout, StoreProfilePublic } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +52,14 @@ const checkoutSchema = z.object({
       })
     )
     .min(1),
-  paymentMethod: z.enum(["mercado_pago", "infinitepay"]).optional(),
+  paymentMethod: z.enum(["mercado_pago", "infinitepay", "pix_direto"]).optional(),
+  delivery: z
+    .discriminatedUnion("type", [
+      z.object({ type: z.literal("pickup") }),
+      z.object({ type: z.literal("arrange") }),
+      z.object({ type: z.literal("shipping"), optionId: z.string().max(60) }),
+    ])
+    .optional(),
   buyer: z.object({
     name: noHtmlText(120).min(1, "Nome é obrigatório"),
     email: z.string().trim().email().max(200),
@@ -94,8 +110,9 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
   if (!parsed.success) {
     return NextResponse.json({ error: "Dados do pedido inválidos." }, { status: 400 });
   }
-  const { items, buyer, paymentMethod: paymentMethodInput } = parsed.data;
-  const paymentMethod: "mercado_pago" | "infinitepay" = paymentMethodInput === "infinitepay" ? "infinitepay" : "mercado_pago";
+  const { items, buyer, paymentMethod: paymentMethodInput, delivery: deliveryInput } = parsed.data;
+  const paymentMethod: "mercado_pago" | "infinitepay" | "pix_direto" =
+    paymentMethodInput === "infinitepay" || paymentMethodInput === "pix_direto" ? paymentMethodInput : "mercado_pago";
 
   if (paymentMethod === "infinitepay" && (!INFINITEPAY_HANDLE || slug !== INFINITEPAY_STORE_SLUG)) {
     return NextResponse.json({ error: "InfinitePay não está disponível pra essa loja." }, { status: 400 });
@@ -147,7 +164,50 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
     return NextResponse.json({ error: "Nenhum produto do carrinho está disponível." }, { status: 400 });
   }
 
-  const totalAmount = checkoutItems.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
+  // Entrega: se a loja configurou opções, o cliente precisa escolher uma que
+  // exista de verdade (o valor do frete vem do banco, nunca do navegador).
+  const deliveryConfig: StoreDeliveryConfig = {
+    pickup_enabled: !!sellerProfile.pickup_enabled,
+    pickup_address: sellerProfile.pickup_address ?? null,
+    arrange_enabled: !!sellerProfile.arrange_enabled,
+    arrange_note: sellerProfile.arrange_note ?? null,
+    shipping_options: parseShippingOptions(sellerProfile.shipping_options),
+  };
+  const hasDeliveryChoices = listDeliveryChoices(deliveryConfig).length > 0;
+  let delivery: { method: "pickup" | "arrange" | "shipping"; label: string; amount: number } | null = null;
+  if (hasDeliveryChoices) {
+    delivery = deliveryInput ? resolveDelivery(deliveryConfig, deliveryInput) : null;
+    if (!delivery) {
+      return NextResponse.json({ error: "Escolha uma forma de entrega." }, { status: 400 });
+    }
+  }
+
+  // Pix direto precisa de chave cadastrada; a chave nunca vai pra view
+  // pública, então é lida aqui com o client admin.
+  let pixSettings: { pix_key: string; pix_holder_name: string | null; pix_city: string | null } | null = null;
+  if (paymentMethod === "pix_direto") {
+    const { data: settingsRow } = await admin
+      .from("store_settings")
+      .select("pix_key, pix_holder_name, pix_city")
+      .eq("user_id", sellerProfile.user_id)
+      .maybeSingle();
+    if (!settingsRow?.pix_key) {
+      return NextResponse.json({ error: "Essa loja não aceita Pix direto no momento." }, { status: 400 });
+    }
+    pixSettings = settingsRow as { pix_key: string; pix_holder_name: string | null; pix_city: string | null };
+  }
+  if (paymentMethod === "mercado_pago" && !sellerProfile.mp_ready) {
+    return NextResponse.json({ error: "Essa loja não aceita cartão no momento. Escolha Pix." }, { status: 400 });
+  }
+
+  const subtotal = checkoutItems.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
+  const totals = computeCheckoutTotals({
+    subtotal,
+    pixDiscountPercent: Number(sellerProfile.pix_discount_percent) || 0,
+    isPixDirect: paymentMethod === "pix_direto",
+    shippingAmount: delivery?.amount ?? 0,
+  });
+  const totalAmount = totals.total;
 
   const { data: checkout, error: checkoutError } = await admin
     .from("store_checkouts")
@@ -167,6 +227,10 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
       buyer_state: buyer.state || null,
       items: checkoutItems,
       total_amount: totalAmount,
+      delivery_method: delivery?.method ?? null,
+      delivery_label: delivery?.label ?? null,
+      shipping_amount: totals.shipping,
+      discount_amount: totals.discount,
     })
     .select()
     .single();
@@ -175,11 +239,42 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
     return NextResponse.json({ error: checkoutError?.message ?? "Falha ao iniciar o checkout." }, { status: 500 });
   }
 
+  if (paymentMethod === "pix_direto" && pixSettings) {
+    try {
+      const payload = buildPixPayload({
+        key: pixSettings.pix_key,
+        holderName: pixSettings.pix_holder_name || sellerProfile.studio_name || "Loja",
+        city: pixSettings.pix_city || "Brasil",
+        amount: totalAmount,
+        txid: `SM${checkout.id.replace(/-/g, "").slice(0, 12)}`,
+      });
+      await admin.from("store_checkouts").update({ pix_payload: payload }).eq("id", checkout.id);
+
+      // O pedido já entra em Vendas como "Aguardando pagamento": o lojista
+      // confere o Pix no banco e usa "Marcar como Pago" (fluxo que já existe).
+      await upsertQuotesFromStorefrontCheckout(
+        admin,
+        { ...(checkout as StoreCheckout), pix_payload: payload },
+        checkout.id,
+        new Date().toISOString(),
+        0,
+        { status: "awaiting_payment", paymentMethod: "pix" }
+      );
+
+      return NextResponse.json({ pix: true, checkout_id: checkout.id });
+    } catch (err) {
+      return apiError("checkout:pix-direto", err, "Não foi possível gerar o Pix. Tente novamente.");
+    }
+  }
+
+  const shippingItem =
+    totals.shipping > 0 ? { name: `Frete: ${delivery?.label ?? "Entrega"}`, unit_price: totals.shipping, quantity: 1 } : null;
+
   if (paymentMethod === "infinitepay") {
     try {
       const link = await createInfinitePayCheckoutLink({
         handle: INFINITEPAY_HANDLE!,
-        items: checkoutItems.map((i) => ({
+        items: [...checkoutItems, ...(shippingItem ? [shippingItem] : [])].map((i) => ({
           quantity: i.quantity,
           price: Math.round(i.unit_price * 100),
           description: i.name,
@@ -224,7 +319,7 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
 
   try {
     const preference = await createMercadoPagoPreferenceForIntegration(admin, integration, {
-      items: checkoutItems.map((i) => ({
+      items: [...checkoutItems, ...(shippingItem ? [shippingItem] : [])].map((i) => ({
         title: i.name,
         quantity: i.quantity,
         unit_price: i.unit_price,

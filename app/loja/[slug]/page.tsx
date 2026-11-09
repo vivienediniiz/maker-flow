@@ -6,13 +6,13 @@ import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/Modal";
 import { formatBRL } from "@/lib/utils";
 import { CheckoutForm } from "./CheckoutForm";
-import { buildWhatsAppLink } from "@/components/ui/WhatsAppLink";
+import { OrderTracking, type OrderSummary } from "./OrderTracking";
 import { BannerSlideshow } from "./BannerSlideshow";
 import { CategoryNav } from "./CategoryNav";
 import { ProductModal } from "./ProductModal";
 import { WhatsAppFloatingButton } from "./WhatsAppFloatingButton";
 import { getStoreFont, DEFAULT_STORE_PRIMARY_COLOR, DEFAULT_STORE_SECONDARY_COLOR, DEFAULT_STORE_TITLE_COLOR } from "@/lib/storeFonts";
-import { ShoppingCart, Plus, Minus, Trash2, Store, Loader2, CheckCircle2, Clock, MessageCircle } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Store, Loader2 } from "lucide-react";
 import type { StoreProductPublic, StoreProfilePublic, StoreBannerPublic } from "@/lib/types";
 
 export interface CartLine {
@@ -21,13 +21,6 @@ export interface CartLine {
   unitPrice: number;
   quantity: number;
   customization?: string | null;
-}
-
-interface OrderSummary {
-  id: string;
-  status: string;
-  items: { product_id: string; name: string; unit_price: number; quantity: number; customization?: string | null }[];
-  total_amount: number;
 }
 
 export default function StorePage({ params }: { params: { slug: string } }) {
@@ -87,15 +80,26 @@ function StorePageContent({ slug }: { slug: string }) {
     }
   }, [cart, slug]);
 
+  const showsOrderPanel = pedidoStatus === "sucesso" || pedidoStatus === "pix" || pedidoStatus === "acompanhar";
+
   useEffect(() => {
-    if (pedidoStatus !== "sucesso" || !checkoutId) return;
-    setOrderSummaryLoading(true);
-    fetch(`/api/store/${slug}/order?checkout_id=${checkoutId}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setOrderSummary(data))
-      .finally(() => setOrderSummaryLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pedidoStatus, checkoutId, slug]);
+    if (!showsOrderPanel || !checkoutId) return;
+    let active = true;
+    const load = (first: boolean) => {
+      if (first) setOrderSummaryLoading(true);
+      fetch(`/api/store/${slug}/order?checkout_id=${checkoutId}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => active && data && setOrderSummary(data))
+        .finally(() => first && active && setOrderSummaryLoading(false));
+    };
+    load(true);
+    // Enquanto o Pix não é conferido pela loja, atualiza sozinho pro cliente ver a confirmação.
+    const timer = setInterval(() => load(false), 20000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [showsOrderPanel, checkoutId, slug]);
 
   async function loadStore() {
     setLoading(true);
@@ -237,8 +241,8 @@ function StorePageContent({ slug }: { slug: string }) {
           </div>
         )}
 
-        {pedidoStatus === "sucesso" && (
-          <OrderConfirmation
+        {showsOrderPanel && (
+          <OrderTracking
             summary={orderSummary}
             loading={orderSummaryLoading}
             products={products}
@@ -417,100 +421,9 @@ function StorePageContent({ slug }: { slug: string }) {
             )}
           </div>
         ) : (
-          <CheckoutForm slug={slug} cart={cart} total={cartTotal} onBack={() => setStep("cart")} onSuccess={handleCheckoutSuccess} />
+          <CheckoutForm slug={slug} seller={seller} cart={cart} total={cartTotal} onBack={() => setStep("cart")} onSuccess={handleCheckoutSuccess} />
         )}
       </Modal>
-    </div>
-  );
-}
-
-function OrderConfirmation({
-  summary,
-  loading,
-  products,
-  primaryColor,
-  titleColor,
-  titleFontFamily,
-  subtitleFontFamily,
-  defaultProductionMessage,
-  whatsappNumber,
-}: {
-  summary: OrderSummary | null;
-  loading: boolean;
-  products: StoreProductPublic[];
-  primaryColor: string;
-  titleColor: string;
-  titleFontFamily: string;
-  subtitleFontFamily: string;
-  defaultProductionMessage: string | null;
-  whatsappNumber: string | null;
-}) {
-  if (loading) {
-    return (
-      <div className="mb-8 flex items-center gap-2.5 rounded-2xl bg-white/[0.06] px-4 py-3 text-sm text-white/70">
-        <Loader2 size={15} className="animate-spin" /> Carregando resumo do pedido...
-      </div>
-    );
-  }
-
-  if (!summary) {
-    return (
-      <div className="mb-8 flex items-center gap-2.5 rounded-xl border border-neon-green/30 bg-neon-green/10 px-4 py-3 text-sm text-neon-green">
-        <CheckCircle2 size={16} /> Pedido recebido — obrigado pela compra!
-      </div>
-    );
-  }
-
-  return (
-    <div className="mb-8 overflow-hidden rounded-2xl bg-white/[0.06]">
-      <div className="flex items-center gap-2.5 px-5 py-4" style={{ backgroundColor: primaryColor }}>
-        <CheckCircle2 size={18} className="text-white" />
-        <p style={{ fontFamily: titleFontFamily }} className="text-white">
-          Pedido confirmado!
-        </p>
-      </div>
-      <div className="space-y-3 p-5">
-        {summary.items.map((item, idx) => {
-          const product = products.find((p) => p.id === item.product_id);
-          const days = product?.estimated_production_days;
-          const productionText = days != null ? `Pronto em até ${days} dia${days === 1 ? " útil" : "s úteis"}` : defaultProductionMessage;
-          return (
-            <div key={idx} className="flex items-start justify-between gap-3 border-b border-white/10 pb-3 last:border-0 last:pb-0">
-              <div className="min-w-0">
-                <p style={{ fontFamily: titleFontFamily, color: titleColor }} className="text-sm">
-                  {item.quantity}x {item.name}
-                </p>
-                {item.customization && <p className="mt-0.5 text-xs text-white/60">&quot;{item.customization}&quot;</p>}
-                {productionText && (
-                  <p className="mt-0.5 flex items-center gap-1 text-xs text-white/50">
-                    <Clock size={11} /> {productionText}
-                  </p>
-                )}
-              </div>
-              <p className="shrink-0 text-sm text-white/85">{formatBRL(item.unit_price * item.quantity)}</p>
-            </div>
-          );
-        })}
-        <div className="flex items-center justify-between pt-1">
-          <span className="text-sm text-white/70">Total</span>
-          <span className="text-lg font-semibold" style={{ color: primaryColor }}>
-            {formatBRL(summary.total_amount)}
-          </span>
-        </div>
-        <p style={{ fontFamily: subtitleFontFamily }} className="text-xs text-white/50">
-          Você receberá a confirmação de pagamento e o acompanhamento por WhatsApp/e-mail. Pedido {summary.id.slice(0, 8)}.
-        </p>
-        {whatsappNumber && (
-          <a
-            href={buildWhatsAppLink(whatsappNumber, `Olá! Tenho uma dúvida sobre o pedido ${summary.id.slice(0, 8)}.`)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-white/85 hover:text-white"
-          >
-            <MessageCircle size={13} /> Tirar dúvida sobre esse pedido
-          </a>
-        )}
-      </div>
     </div>
   );
 }
