@@ -430,7 +430,7 @@ export interface CalcInputs {
     piecesInBed?: number;
     /** Só usado quando `modelType === "C"`. */
     mixedItems?: { id: string; description: string; weightG: number; quantity: number }[];
-    /** % aplicado só no cálculo de custo (filamento/energia) — peso/tempo digitados não mudam. */
+    /** @deprecated Substituído por `CalcInputs.riskMarginPercent` (campo único de risco e falhas) — mantido só pra ler registros salvos antes dessa mudança. */
     safetyMarginPercent?: number;
     /** @deprecated Modo Item Único/Lote removido — mantido só pra ler registros salvos antes dessa mudança (tratado como "single"). */
     mode?: "single" | "batch";
@@ -446,7 +446,11 @@ export interface CalcInputs {
   paintedByHand: boolean;
   paintCost: number;
   marketplaceFee: number;
+  /** R$ cobrados por venda além do percentual (ex.: Shopee). Ausente em cálculos salvos antes desse campo existir = 0. */
+  marketplaceFixedFee?: number;
   marginPercent: number;
+  /** % de reforço no preço final pra cobrir falhas e perdas (campo único de risco). Ausente = 0. */
+  riskMarginPercent?: number;
   quantity: number;
 }
 
@@ -638,13 +642,16 @@ export interface Sale {
   filament_id: string | null;
 }
 
+export type MarketplaceFeeValue = number | { percent: number; fixed?: number };
+
 export interface Settings {
   user_id: string;
   /** Sem valor até o usuário configurar de propósito (não vem pré-preenchido no cadastro) — ver ConfigNudgeBanner na Calculadora. */
   electricity_kwh_rate: number | null;
   default_markup: number | null;
   hourly_work_rate: number | null;
-  marketplace_fees_json: Record<string, number>;
+  /** Por marketplace: só o percentual (formato antigo) ou `{ percent, fixed }` quando há taxa fixa por venda em R$. Leia/grave via lib/marketplaceFees.ts. */
+  marketplace_fees_json: Record<string, MarketplaceFeeValue>;
   operational_risk_json: Record<string, number>;
   origin_cep: string | null;
   origin_address: string | null;

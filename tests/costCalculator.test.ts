@@ -169,6 +169,28 @@ describe("margem e taxa de marketplace", () => {
     const r = calculateCost(input({ marketplaceFee: -10 }));
     expect(r.pricePerUnit).toBeCloseTo(220);
   });
+
+  it("taxa fixa por venda entra antes da divisão por (1 − %): depois da taxa, sobra o preço-alvo", () => {
+    const r = calculateCost(input({ marginPercent: 50, marketplaceFee: 20, marketplaceFixedFee: 4.5 }));
+    expect(r.pricePerUnit).toBeCloseTo(280.625);
+    expect(r.pricePerUnit * 0.8 - 4.5).toBeCloseTo(220);
+  });
+
+  it("taxa fixa sem percentual soma direto ao preço", () => {
+    const r = calculateCost(input({ marginPercent: 50, marketplaceFee: 0, marketplaceFixedFee: 4.5 }));
+    expect(r.pricePerUnit).toBeCloseTo(224.5);
+  });
+
+  it("taxa fixa negativa ou ausente é ignorada", () => {
+    expect(calculateCost(input({ marketplaceFixedFee: -5 })).pricePerUnit).toBeCloseTo(220);
+    expect(calculateCost(input({ marketplaceFixedFee: undefined })).pricePerUnit).toBeCloseTo(220);
+  });
+
+  it("marketplaceFeeAmount = % sobre o total do pedido + taxa fixa × quantidade", () => {
+    const r = calculateCost(input({ marginPercent: 50, marketplaceFee: 20, marketplaceFixedFee: 4.5, quantity: 3 }));
+    expect(r.marketplaceFeeAmount).toBeCloseTo(r.orderPrice * 0.2 + 4.5 * 3);
+    expect(calculateCost(input()).marketplaceFeeAmount).toBe(0);
+  });
 });
 
 describe("faixa de risco operacional", () => {
@@ -279,5 +301,27 @@ describe("totais do pedido", () => {
     expect(r.orderPrice).toBe(0);
     expect(r.totalWeightG).toBe(0);
     expect(r.totalHours).toBe(0);
+  });
+});
+
+describe("fixos, preço mínimo e valor líquido", () => {
+  it("a taxa do marketplace também cobre os fixos: o líquido devolve custo + lucro", () => {
+    const r = calculateCost(input({ marketplaceFee: 20, marginPercent: 50, riskMarginPercent: 0, quantity: 1 }));
+    // sem taxa fixa e sem risco, líquido = custo ÷ (1 − margem) + fixos
+    expect(r.netReceived).toBeCloseTo(r.costPerUnit / 0.5 + r.fixedCosts);
+    expect(r.fixedCostsPrice).toBeCloseTo(r.fixedCosts / 0.8);
+  });
+
+  it("sem marketplace os fixos não mudam", () => {
+    const r = calculateCost(input({ marketplaceFee: 0 }));
+    expect(r.fixedCostsPrice).toBeCloseTo(r.fixedCosts);
+    expect(r.netReceived).toBeCloseTo(r.orderPrice);
+  });
+
+  it("preço mínimo deixa exatamente o custo depois da taxa", () => {
+    const r = calculateCost(input({ marketplaceFee: 20, marketplaceFixedFee: 4.5, quantity: 2 }));
+    const fee = (r.minOrderPrice * 20) / 100 + 4.5 * 2;
+    expect(r.minOrderPrice - fee).toBeCloseTo(r.orderCost);
+    expect(r.minOrderPrice).toBeLessThan(r.orderPrice);
   });
 });

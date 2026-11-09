@@ -10,6 +10,7 @@ import { Save, Plus, Trash2, Loader2 } from "lucide-react";
 import { RiskTiersManager } from "@/components/dashboard/RiskTiersManager";
 import { PdfAppearanceSettings } from "@/components/dashboard/PdfAppearanceSettings";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { parseMarketplaceFees, serializeMarketplaceFees, type MarketplaceFee } from "@/lib/marketplaceFees";
 
 const SECTIONS = [
   { id: "energy", label: "Tarifa de Luz" },
@@ -27,18 +28,13 @@ const DEFAULT_MARKETPLACES: Record<string, number> = {
   "Loja Própria": 0,
 };
 
-interface MarketplaceRow {
-  name: string;
-  fee: number;
-}
-
 export default function SettingsPage() {
   const supabase = createClient();
   const [active, setActive] = useState("energy");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [marketplaces, setMarketplaces] = useState<MarketplaceRow[]>([]);
+  const [marketplaces, setMarketplaces] = useState<MarketplaceFee[]>([]);
   const [newName, setNewName] = useState("");
   const [electricityKwhRate, setElectricityKwhRate] = useState<number | null>(null);
   const [hourlyWorkRate, setHourlyWorkRate] = useState<number | null>(null);
@@ -67,9 +63,9 @@ export default function SettingsPage() {
     if (data?.hourly_work_rate != null) setHourlyWorkRate(data.hourly_work_rate);
 
     const hasExisting = data?.marketplace_fees_json && Object.keys(data.marketplace_fees_json).length > 0;
-    const feesObj: Record<string, number> = hasExisting ? data!.marketplace_fees_json : DEFAULT_MARKETPLACES;
+    const feesObj = hasExisting ? data!.marketplace_fees_json : DEFAULT_MARKETPLACES;
 
-    setMarketplaces(Object.entries(feesObj).map(([name, fee]) => ({ name, fee: Number(fee) })));
+    setMarketplaces(parseMarketplaceFees(feesObj));
 
     // Se ainda não havia nada salvo, grava os padrões agora — assim outras
     // telas (Calculadora) já encontram os marketplaces sem precisar que o
@@ -90,6 +86,11 @@ export default function SettingsPage() {
     markDirty();
   }
 
+  function updateFixedFee(index: number, fixed: number) {
+    setMarketplaces((prev) => prev.map((m, i) => (i === index ? { ...m, fixed: Math.max(fixed, 0) } : m)));
+    markDirty();
+  }
+
   function removeMarketplace(index: number) {
     setMarketplaces((prev) => prev.filter((_, i) => i !== index));
     markDirty();
@@ -97,7 +98,7 @@ export default function SettingsPage() {
 
   function addMarketplace() {
     if (!newName.trim()) return;
-    setMarketplaces((prev) => [...prev, { name: newName.trim(), fee: 0 }]);
+    setMarketplaces((prev) => [...prev, { name: newName.trim(), fee: 0, fixed: 0 }]);
     setNewName("");
     markDirty();
   }
@@ -112,10 +113,7 @@ export default function SettingsPage() {
       return;
     }
 
-    const feesObj: Record<string, number> = {};
-    marketplaces.forEach((m) => {
-      feesObj[m.name] = m.fee;
-    });
+    const feesObj = serializeMarketplaceFees(marketplaces);
 
     await supabase
       .from("settings")
@@ -194,6 +192,19 @@ export default function SettingsPage() {
                             className="glass-input w-20"
                           />
                           <span className="text-xs text-text-muted">%</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-text-muted">+ R$</span>
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={mp.fixed || ""}
+                            onChange={(e) => updateFixedFee(i, Number(e.target.value))}
+                            className="glass-input w-20"
+                            placeholder="0,00"
+                            aria-label={`Taxa fixa por venda em ${mp.name}`}
+                          />
                         </div>
                         <button
                           onClick={() => removeMarketplace(i)}

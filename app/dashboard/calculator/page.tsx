@@ -20,6 +20,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { calculateCost, bedCostBreakdown, type CalcMixedItem } from "@/lib/costCalculator";
+import { describeMarketplaceFee, parseMarketplaceFees, type MarketplaceFee } from "@/lib/marketplaceFees";
 import {
   Plus,
   Trash2,
@@ -66,8 +67,6 @@ interface PrintBed {
   mixedItems: CalcMixedItem[];
   /** Opcional — só usada pra preencher `watts` automaticamente; não é salva no calc_inputs do produto. */
   printerAssetId: string;
-  /** % aplicado só no cálculo de custo (filamento/energia) — peso/tempo digitados não mudam. */
-  safetyMarginPercent: number;
 }
 
 interface SupplyLine {
@@ -89,7 +88,6 @@ function newBed(index: number): PrintBed {
     piecesInBed: 1,
     mixedItems: [],
     printerAssetId: "",
-    safetyMarginPercent: 0,
   };
 }
 
@@ -106,7 +104,7 @@ export default function CalculatorPage() {
   const confirm = useConfirm();
   const [selectedProductId, setSelectedProductId] = useState("");
   const [projectName, setProjectName] = useState("");
-  const [marketplaces, setMarketplaces] = useState<{ name: string; fee: number }[]>([]);
+  const [marketplaces, setMarketplaces] = useState<MarketplaceFee[]>([]);
   const [selectedMarketplace, setSelectedMarketplace] = useState("");
   const [beds, setBeds] = useState<PrintBed[]>([newBed(1)]);
   const [filaments, setFilaments] = useState<Filament[]>([]);
@@ -118,6 +116,8 @@ export default function CalculatorPage() {
   const [paintedByHand, setPaintedByHand] = useState(false);
   const [paintCost, setPaintCost] = useState(35);
   const [marketplaceFee, setMarketplaceFee] = useState(16);
+  /** R$ por venda, além do percentual — vem do marketplace escolhido e pode ser ajustado à mão. */
+  const [marketplaceFixedFee, setMarketplaceFixedFee] = useState(0);
   const [marginPercent, setMarginPercent] = useState(50);
   /** Quantidade de Produtos Finais do pedido — multiplica custo/preço por unidade, nunca os fixos (mão de obra/pintura/extras). */
   const [quantity, setQuantity] = useState(1);
@@ -127,7 +127,7 @@ export default function CalculatorPage() {
   const [energyConfigured, setEnergyConfigured] = useState(true);
   const [laborConfigured, setLaborConfigured] = useState(true);
   const [riskTiers, setRiskTiers] = useState<RiskTier[]>([]);
-  const [selectedRiskTierId, setSelectedRiskTierId] = useState("");
+  const [riskPercent, setRiskPercent] = useState(0);
 
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [newProductModalOpen, setNewProductModalOpen] = useState(false);
@@ -165,8 +165,7 @@ export default function CalculatorPage() {
       .eq("user_id", user.id)
       .single();
 
-    const feesObj = data?.marketplace_fees_json ?? {};
-    setMarketplaces(Object.entries(feesObj).map(([name, fee]) => ({ name, fee: Number(fee) })));
+    setMarketplaces(parseMarketplaceFees(data?.marketplace_fees_json));
   }
 
   async function loadSupplies() {
@@ -266,7 +265,10 @@ export default function CalculatorPage() {
   function handleSelectMarketplace(name: string) {
     setSelectedMarketplace(name);
     const mp = marketplaces.find((m) => m.name === name);
-    if (mp) setMarketplaceFee(mp.fee);
+    if (mp) {
+      setMarketplaceFee(mp.fee);
+      setMarketplaceFixedFee(mp.fixed);
+    }
   }
 
   /** Vínculo pro PDF de orçamento saber a qual produto recém-cadastrado se referir. */
@@ -332,15 +334,12 @@ export default function CalculatorPage() {
         timeM: b.timeM,
         watts: b.watts,
         filamentPricePerKg: filaments.find((f) => f.id === b.filamentId)?.price_per_kg ?? 0,
-        safetyMarginPercent: b.safetyMarginPercent,
         modelType: b.modelType,
         piecesInBed: b.piecesInBed,
         mixedItems: b.mixedItems,
       })),
     [beds, filaments]
   );
-
-  const selectedRiskTier = riskTiers.find((r) => r.id === selectedRiskTierId) ?? null;
 
   const calc = useMemo(
     () =>
@@ -354,8 +353,9 @@ export default function CalculatorPage() {
         paintCost,
         suppliesCost,
         marketplaceFee,
+        marketplaceFixedFee,
         marginPercent,
-        riskMarginPercent: selectedRiskTier?.extra_margin_percent ?? 0,
+        riskMarginPercent: riskPercent,
         quantity,
       }),
     [
@@ -368,8 +368,9 @@ export default function CalculatorPage() {
       paintCost,
       suppliesCost,
       marketplaceFee,
+      marketplaceFixedFee,
       marginPercent,
-      selectedRiskTier,
+      riskPercent,
       quantity,
     ]
   );
@@ -380,14 +381,14 @@ export default function CalculatorPage() {
   // produto no catálogo precisa carregar o custo de fabricação inteiro, não
   // só a fração que multiplica pela Quantidade de Produtos Finais do pedido.
   const fullUnitCost = calc.costPerUnit + calc.fixedCosts;
-  const fullUnitPrice = calc.pricePerUnit + calc.fixedCosts;
+  const fullUnitPrice = calc.pricePerUnit + calc.fixedCostsPrice;
 
   // Snapshot da receita pra "Cadastrar Produto" no fim da tela — igual ao que
   // o overlay "Calcular Custo Unitário" monta, só que a partir do estado já
   // preenchido aqui, sem pedir pra digitar tudo de novo.
   const calcInputsForProduct: CalcInputs = useMemo(
     () => ({
-      beds: beds.map(({ name, weightG, timeH, timeM, watts, filamentId, modelType, piecesInBed, mixedItems, safetyMarginPercent }) => ({
+      beds: beds.map(({ name, weightG, timeH, timeM, watts, filamentId, modelType, piecesInBed, mixedItems }) => ({
         name,
         weightG,
         timeH,
@@ -397,7 +398,6 @@ export default function CalculatorPage() {
         modelType,
         piecesInBed,
         mixedItems,
-        safetyMarginPercent,
       })),
       kwhRate,
       laborHours,
@@ -406,10 +406,12 @@ export default function CalculatorPage() {
       paintedByHand,
       paintCost,
       marketplaceFee,
+      marketplaceFixedFee,
       marginPercent,
+      riskMarginPercent: riskPercent,
       quantity: 1,
     }),
-    [beds, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, marketplaceFee, marginPercent]
+    [beds, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, marketplaceFee, marketplaceFixedFee, marginPercent, riskPercent]
   );
 
   // Igual ao snapshot de cima, mas preservando a Quantidade de Produtos Finais
@@ -471,7 +473,6 @@ export default function CalculatorPage() {
             piecesInBed: b.piecesInBed ?? 1,
             mixedItems: b.mixedItems ?? [],
             printerAssetId: "",
-            safetyMarginPercent: b.safetyMarginPercent ?? 0,
           }))
         : [newBed(1)]
     );
@@ -482,7 +483,13 @@ export default function CalculatorPage() {
     setPaintedByHand(inputs.paintedByHand);
     setPaintCost(inputs.paintCost);
     setMarketplaceFee(inputs.marketplaceFee);
+    setMarketplaceFixedFee(inputs.marketplaceFixedFee ?? 0);
     setMarginPercent(inputs.marginPercent);
+    // Rascunhos antigos tinham a margem de segurança por mesa; hoje é um campo
+    // único de risco — aproveita o maior valor que existia.
+    setRiskPercent(
+      inputs.riskMarginPercent ?? Math.max(0, ...inputs.beds.map((b) => b.safetyMarginPercent ?? 0))
+    );
     setQuantity(inputs.quantity || 1);
     setCurrentDraftId(draft.id);
     setDraftsListOpen(false);
@@ -670,7 +677,6 @@ export default function CalculatorPage() {
                         timeM: bed.timeM,
                         watts: bed.watts,
                         filamentPricePerKg: bedFilamentPricePerKg,
-                        safetyMarginPercent: bed.safetyMarginPercent,
                       },
                       kwhRate,
                       bedFilamentPricePerKg
@@ -792,17 +798,6 @@ export default function CalculatorPage() {
                       />
                     </Field>
                   )}
-                  <Field label="Margem de segurança (%, opcional)">
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={bed.safetyMarginPercent || ""}
-                      onChange={(e) => updateBed(bed.id, { safetyMarginPercent: Math.max(0, Number(e.target.value)) })}
-                      className="glass-input w-full"
-                      placeholder="5-10%"
-                    />
-                  </Field>
                   <div className="col-span-2 sm:col-span-1">
                     <Field label="Filamento">
                       <div className="flex items-center gap-2">
@@ -924,12 +919,6 @@ export default function CalculatorPage() {
                   </div>
                 )}
 
-                {bed.safetyMarginPercent > 0 && (
-                  <p className="text-[11px] text-neon-pink">
-                    Considerando +{bed.safetyMarginPercent}% de margem no custo: {Math.round(bed.weightG * (1 + bed.safetyMarginPercent / 100))}g e{" "}
-                    {Math.round((bed.timeH * 60 + bed.timeM) * (1 + bed.safetyMarginPercent / 100))}min
-                  </p>
-                )}
                 {!bed.filamentId && (
                   <p className="text-[11px] text-amber-400">Selecione um filamento cadastrado pra calcular o custo desta mesa.</p>
                 )}
@@ -1059,46 +1048,69 @@ export default function CalculatorPage() {
                   </option>
                   {marketplaces.map((mp) => (
                     <option key={mp.name} value={mp.name} className="bg-bg-raised">
-                      {mp.name} ({mp.fee}%)
+                      {mp.name} ({describeMarketplaceFee(mp.fee, mp.fixed)})
                     </option>
                   ))}
                 </select>
-                <input
-                  type="number"
-                  min={0}
-                  max={99}
-                  value={marketplaceFee || ""}
-                  onChange={(e) => setMarketplaceFee(Math.min(Math.max(Number(e.target.value), 0), 99))}
-                  className="glass-input w-full"
-                  placeholder="Ajustar % manualmente"
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={99}
+                    value={marketplaceFee || ""}
+                    onChange={(e) => setMarketplaceFee(Math.min(Math.max(Number(e.target.value), 0), 99))}
+                    className="glass-input w-full"
+                    placeholder="Taxa %"
+                    aria-label="Taxa do marketplace em porcentagem"
+                  />
+                  <CurrencyInput
+                    value={String(marketplaceFixedFee || "")}
+                    onChange={(v) => setMarketplaceFixedFee(v === "" ? 0 : Math.max(Number(v), 0))}
+                    placeholder="Taxa fixa por venda"
+                  />
+                </div>
                 {marketplaceFee >= 99 && (
                   <p className="text-[11px] text-amber-400">Taxa limitada a 99% — acima disso o preço não faz sentido matematicamente.</p>
                 )}
               </div>
             </Field>
 
-            {riskTiers.length > 0 && (
-              <Field label="Nível de risco (opcional)">
-                <select
-                  value={selectedRiskTierId}
-                  onChange={(e) => setSelectedRiskTierId(e.target.value)}
-                  className="glass-input w-full"
-                >
-                  <option value="" className="bg-bg-raised">
-                    Nenhum
-                  </option>
+            <Field label="Margem de risco e falhas (%, opcional)">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={riskPercent || ""}
+                onChange={(e) => setRiskPercent(Math.min(Math.max(Number(e.target.value), 0), 100))}
+                className="glass-input w-full"
+                placeholder="Ex.: 10"
+              />
+              <p className="mt-1.5 text-[11px] text-text-muted">
+                Reforço no preço final pra cobrir impressões que falham, peças que quebram no acabamento ou no envio.
+                Um campo só: não some outra margem de falha por fora. Referência: 5–10% pra peças simples, 15–30%
+                pra complexas ou frágeis.
+              </p>
+              {riskTiers.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
                   {riskTiers.map((r) => (
-                    <option key={r.id} value={r.id} className="bg-bg-raised">
+                    <button
+                      key={r.id}
+                      type="button"
+                      title={r.description ?? undefined}
+                      onClick={() => setRiskPercent(r.extra_margin_percent)}
+                      className={cn(
+                        "rounded-pill border px-3 py-1 text-[11px] transition-colors",
+                        riskPercent === r.extra_margin_percent
+                          ? "border-neon-pink/50 bg-neon-pink/10 text-text-primary"
+                          : "border-border-glass text-text-secondary hover:text-text-primary"
+                      )}
+                    >
                       {r.name} (+{r.extra_margin_percent}%)
-                    </option>
+                    </button>
                   ))}
-                </select>
-                {selectedRiskTier?.description && (
-                  <p className="mt-1.5 text-[11px] text-text-muted">{selectedRiskTier.description}</p>
-                )}
-              </Field>
-            )}
+                </div>
+              )}
+            </Field>
           </GlassCard>
 
         </div>
@@ -1127,11 +1139,11 @@ export default function CalculatorPage() {
               {suppliesCost > 0 && <SummaryRow label="Insumos" value={formatBRL(calc.suppliesCost)} />}
               <div className="my-2 h-px bg-border-glass" />
               <SummaryRow label={isLoteOnly ? "Custo Total da Mesa" : "Custo por Unidade"} value={formatBRL(calc.costPerUnit)} />
-              {selectedRiskTier ? (
+              {riskPercent > 0 ? (
                 <>
                   <SummaryRow label="Preço com margem" value={formatBRL(calc.pricePerUnitBeforeRisk)} />
                   <SummaryRow
-                    label={`+${selectedRiskTier.extra_margin_percent}% risco ${selectedRiskTier.name}`}
+                    label={`+${riskPercent}% risco e falhas`}
                     value={formatBRL(calc.pricePerUnit)}
                   />
                 </>
@@ -1154,10 +1166,10 @@ export default function CalculatorPage() {
                 Total do Pedido {quantity > 1 && `(${quantity} unidades)`}
               </p>
               <SummaryRow label="Custo Total do Pedido" value={formatBRL(calc.orderCost)} />
-              {marketplaceFee > 0 && (
+              {(marketplaceFee > 0 || marketplaceFixedFee > 0) && (
                 <SummaryRow
-                  label={`Desconto Marketplace (${marketplaceFee}%)`}
-                  value={formatBRL((calc.orderPrice * Math.min(marketplaceFee, 99)) / 100)}
+                  label={`Desconto Marketplace (${describeMarketplaceFee(Math.min(marketplaceFee, 99), marketplaceFixedFee)})`}
+                  value={formatBRL(calc.marketplaceFeeAmount)}
                 />
               )}
             </div>
@@ -1168,6 +1180,16 @@ export default function CalculatorPage() {
               {quantity > 1 && (
                 <p className="font-numeric text-xs text-text-muted">{formatBRL(calc.pricePerUnit)} / unidade</p>
               )}
+            </div>
+
+            <div className="space-y-2 text-sm">
+              <SummaryRow label="Você recebe (após taxas)" value={formatBRL(calc.netReceived)} />
+              <SummaryRow label="Lucro sobre o custo" value={formatBRL(calc.netReceived - calc.orderCost)} />
+              <p className="text-[11px] text-text-muted">
+                Preço mínimo: <span className="font-numeric text-text-secondary">{formatBRL(calc.minOrderPrice)}</span>.
+                Abaixo disso, depois da taxa do marketplace, o que sobra não cobre nem o custo — você trabalha de graça
+                ou no prejuízo.
+              </p>
             </div>
 
             <p className="text-center text-[11px] text-text-muted">
@@ -1333,7 +1355,7 @@ const TIP_COLUMNS: { icon: typeof Weight; title: string; items: string[] }[] = [
     items: [
       "Use o tempo total do fatiador",
       "Considere tempo de aquecimento",
-      "Use a margem de segurança para prever falhas (5-10%)",
+      "Use a margem de risco e falhas (5-10%) para prever impressões perdidas",
     ],
   },
   {

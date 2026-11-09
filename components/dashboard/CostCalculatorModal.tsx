@@ -11,6 +11,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { createClient } from "@/lib/supabase/client";
 import { formatBRL, cn } from "@/lib/utils";
 import { calculateCost, bedCostBreakdown, type CalcBed, type CalcMixedItem } from "@/lib/costCalculator";
+import { describeMarketplaceFee, parseMarketplaceFees, type MarketplaceFee } from "@/lib/marketplaceFees";
 import type { CalcInputs, Filament, Supply, PrinterAsset, RiskTier } from "@/lib/types";
 
 type BedModelType = "A" | "B" | "C";
@@ -47,7 +48,6 @@ function newBed(index: number): Bed {
     watts: 200,
     filamentId: "",
     printerAssetId: "",
-    safetyMarginPercent: 0,
     modelType: "B",
     piecesInBed: 1,
     mixedItems: [],
@@ -80,11 +80,12 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
   const [paintedByHand, setPaintedByHand] = useState(false);
   const [paintCost, setPaintCost] = useState(35);
   const [marginPercent, setMarginPercent] = useState(50);
-  const [marketplaces, setMarketplaces] = useState<{ name: string; fee: number }[]>([]);
+  const [marketplaces, setMarketplaces] = useState<MarketplaceFee[]>([]);
   const [selectedMarketplace, setSelectedMarketplace] = useState("");
   const [marketplaceFee, setMarketplaceFee] = useState(0);
+  const [marketplaceFixedFee, setMarketplaceFixedFee] = useState(0);
   const [riskTiers, setRiskTiers] = useState<RiskTier[]>([]);
-  const [selectedRiskTierId, setSelectedRiskTierId] = useState("");
+  const [riskPercent, setRiskPercent] = useState(0);
   const [filaments, setFilaments] = useState<Filament[]>([]);
   const [printerAssets, setPrinterAssets] = useState<PrinterAsset[]>([]);
   const [supplies, setSupplies] = useState<Supply[]>([]);
@@ -96,7 +97,8 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
     setMarginPercent(50);
     setSelectedMarketplace("");
     setMarketplaceFee(0);
-    setSelectedRiskTierId("");
+    setMarketplaceFixedFee(0);
+    setRiskPercent(0);
     setSupplyLines([]);
     setLaborHours(0.5);
     setExtras(0);
@@ -123,8 +125,7 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
 
     if (settings?.electricity_kwh_rate != null) setKwhRate(Number(settings.electricity_kwh_rate));
     if (settings?.hourly_work_rate != null) setHourlyRate(Number(settings.hourly_work_rate));
-    const feesObj = settings?.marketplace_fees_json ?? {};
-    setMarketplaces(Object.entries(feesObj).map(([name, fee]) => ({ name, fee: Number(fee) })));
+    setMarketplaces(parseMarketplaceFees(settings?.marketplace_fees_json));
     setFilaments((filamentsData as Filament[]) ?? []);
     setPrinterAssets((printerAssetsData as PrinterAsset[]) ?? []);
     setSupplies((suppliesData as Supply[]) ?? []);
@@ -169,7 +170,10 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
   function handleSelectMarketplace(name: string) {
     setSelectedMarketplace(name);
     const mp = marketplaces.find((m) => m.name === name);
-    if (mp) setMarketplaceFee(mp.fee);
+    if (mp) {
+      setMarketplaceFee(mp.fee);
+      setMarketplaceFixedFee(mp.fixed);
+    }
   }
 
   function addSupplyLine() {
@@ -199,7 +203,6 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
         timeM: b.timeM,
         watts: b.watts,
         filamentPricePerKg: filaments.find((f) => f.id === b.filamentId)?.price_per_kg ?? filamentPricePerKg,
-        safetyMarginPercent: b.safetyMarginPercent,
         modelType: b.modelType,
         piecesInBed: b.piecesInBed,
         mixedItems: b.mixedItems,
@@ -214,8 +217,6 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
   const unitBeds = beds.filter((b) => b.modelType !== "C");
   const isLoteOnly = unitBeds.length > 0 && unitBeds.every((b) => b.modelType === "A");
 
-  const selectedRiskTier = riskTiers.find((r) => r.id === selectedRiskTierId) ?? null;
-
   const calc = useMemo(
     () =>
       calculateCost({
@@ -228,11 +229,12 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
         paintCost,
         suppliesCost,
         marketplaceFee,
+        marketplaceFixedFee,
         marginPercent,
-        riskMarginPercent: selectedRiskTier?.extra_margin_percent ?? 0,
+        riskMarginPercent: riskPercent,
         quantity: 1,
       }),
-    [calcBeds, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, suppliesCost, marketplaceFee, marginPercent, selectedRiskTier]
+    [calcBeds, kwhRate, laborHours, hourlyRate, extras, paintedByHand, paintCost, suppliesCost, marketplaceFee, marketplaceFixedFee, marginPercent, riskPercent]
   );
 
   // Custo/preço "cheios" pra aplicar no produto — soma mão de obra, pintura e
@@ -240,11 +242,11 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
   // (filamento+energia+insumos), já que aqui quantity é sempre 1 (produto no
   // catálogo é sempre "por unidade", sem o multiplicador do pedido).
   const fullUnitCost = calc.costPerUnit + calc.fixedCosts;
-  const fullUnitPrice = calc.pricePerUnit + calc.fixedCosts;
+  const fullUnitPrice = calc.pricePerUnit + calc.fixedCostsPrice;
 
   function handleApply() {
     const calcInputs: CalcInputs = {
-      beds: beds.map(({ name, weightG, timeH, timeM, watts, filamentId, modelType, piecesInBed, mixedItems, safetyMarginPercent }) => ({
+      beds: beds.map(({ name, weightG, timeH, timeM, watts, filamentId, modelType, piecesInBed, mixedItems }) => ({
         name,
         weightG,
         timeH,
@@ -254,7 +256,6 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
         modelType,
         piecesInBed,
         mixedItems,
-        safetyMarginPercent,
       })),
       kwhRate,
       laborHours,
@@ -263,7 +264,9 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
       paintedByHand,
       paintCost,
       marketplaceFee,
+      marketplaceFixedFee,
       marginPercent,
+      riskMarginPercent: riskPercent,
       quantity: 1,
     };
     onApply(fullUnitCost, fullUnitPrice, calcInputs);
@@ -301,7 +304,6 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
                       timeM: bed.timeM,
                       watts: bed.watts,
                       filamentPricePerKg: bedFilamentPricePerKg,
-                      safetyMarginPercent: bed.safetyMarginPercent,
                     },
                     kwhRate,
                     bedFilamentPricePerKg
@@ -408,17 +410,6 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <MiniField label="Margem de segurança (%, opcional)">
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={bed.safetyMarginPercent || ""}
-                    onChange={(e) => updateBed(bed.id, { safetyMarginPercent: Math.max(0, Number(e.target.value)) })}
-                    className="glass-input w-full"
-                    placeholder="5-10%"
-                  />
-                </MiniField>
                 <MiniField label="Filamento">
                   <select
                     value={bed.filamentId}
@@ -655,40 +646,64 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
                 </option>
                 {marketplaces.map((mp) => (
                   <option key={mp.name} value={mp.name} className="bg-bg-raised">
-                    {mp.name} ({mp.fee}%)
+                    {mp.name} ({describeMarketplaceFee(mp.fee, mp.fixed)})
                   </option>
                 ))}
               </select>
-              <input
-                type="number"
-                min={0}
-                max={99}
-                value={marketplaceFee || ""}
-                onChange={(e) => setMarketplaceFee(Math.min(Math.max(Number(e.target.value), 0), 99))}
-                className="glass-input w-full"
-                placeholder="Ajustar % manualmente"
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  max={99}
+                  value={marketplaceFee || ""}
+                  onChange={(e) => setMarketplaceFee(Math.min(Math.max(Number(e.target.value), 0), 99))}
+                  className="glass-input w-full"
+                  placeholder="Taxa %"
+                  aria-label="Taxa do marketplace em porcentagem"
+                />
+                <CurrencyInput
+                  value={String(marketplaceFixedFee || "")}
+                  onChange={(v) => setMarketplaceFixedFee(v === "" ? 0 : Math.max(Number(v), 0))}
+                  placeholder="Taxa fixa por venda"
+                />
+              </div>
             </div>
           </MiniField>
 
-          {riskTiers.length > 0 && (
-            <MiniField label="Nível de risco (opcional)">
-              <select
-                value={selectedRiskTierId}
-                onChange={(e) => setSelectedRiskTierId(e.target.value)}
-                className="glass-input w-full"
-              >
-                <option value="" className="bg-bg-raised">
-                  Nenhum
-                </option>
+          <MiniField label="Margem de risco e falhas (%, opcional)">
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={riskPercent || ""}
+              onChange={(e) => setRiskPercent(Math.min(Math.max(Number(e.target.value), 0), 100))}
+              className="glass-input w-full"
+              placeholder="Ex.: 10"
+            />
+            <p className="mt-1 text-[11px] text-text-muted">
+              Reforço no preço final pra cobrir falhas de impressão e peças que quebram. Um campo só — não some outra
+              margem de falha por fora.
+            </p>
+            {riskTiers.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
                 {riskTiers.map((r) => (
-                  <option key={r.id} value={r.id} className="bg-bg-raised">
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setRiskPercent(r.extra_margin_percent)}
+                    className={cn(
+                      "rounded-pill border px-3 py-1 text-[11px] transition-colors",
+                      riskPercent === r.extra_margin_percent
+                        ? "border-neon-pink/50 bg-neon-pink/10 text-text-primary"
+                        : "border-border-glass text-text-secondary hover:text-text-primary"
+                    )}
+                  >
                     {r.name} (+{r.extra_margin_percent}%)
-                  </option>
+                  </button>
                 ))}
-              </select>
-            </MiniField>
-          )}
+              </div>
+            )}
+          </MiniField>
         </div>
 
         {/* Resumo */}
@@ -707,15 +722,15 @@ export function CostCalculatorModal({ open, onClose, onApply }: CostCalculatorMo
           )}
           <SummaryRow label="Custo Total (com fixos)" value={formatBRL(fullUnitCost)} strong />
           <div className="my-1 h-px bg-border-glass" />
-          {selectedRiskTier ? (
+          {riskPercent > 0 ? (
             <>
               <SummaryRow
                 label="Preço com margem + taxa (com fixos)"
-                value={formatBRL(calc.pricePerUnitBeforeRisk + calc.fixedCosts)}
+                value={formatBRL(calc.pricePerUnitBeforeRisk + calc.fixedCostsPrice)}
               />
               <div className="flex items-center justify-between pt-1">
                 <span className="text-text-secondary">
-                  Preço de Venda Sugerido (+{selectedRiskTier.extra_margin_percent}% risco)
+                  Preço de Venda Sugerido (+{riskPercent}% risco e falhas)
                 </span>
                 <span className="neon-text font-numeric text-xl font-semibold">{formatBRL(fullUnitPrice)}</span>
               </div>

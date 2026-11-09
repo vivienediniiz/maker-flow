@@ -45,6 +45,8 @@ export interface CalcInput {
   /** Soma do custo de insumos (supplies) por UNIDADE — multiplica por `quantity`. Opcional — default 0. */
   suppliesCost?: number;
   marketplaceFee: number;
+  /** R$ cobrados por venda, além do percentual (ex.: Shopee). Entra no preço antes da divisão por (1 − taxa), igual ao percentual. Opcional — default 0. */
+  marketplaceFixedFee?: number;
   marginPercent: number;
   /** % extra da faixa de risco operacional selecionada (opcional) — aplicado sobre o preço já com margem+taxa de marketplace, não sobre o custo. */
   riskMarginPercent?: number;
@@ -83,10 +85,18 @@ export interface CalcResult {
   pricePerUnitBeforeRisk: number;
   /** Preço de Venda Sugerido por Unidade — inclui o acréscimo de risco quando uma faixa é selecionada. É esse valor que flui pra Criar Pedido/PDF/Link de Cobrança. */
   pricePerUnit: number;
+  /** Fixos já "inflados" pela taxa percentual do marketplace (fixedCosts ÷ (1 − taxa%)), pra que a taxa retida sobre eles não saia do seu bolso. Sem marketplace, igual a fixedCosts. */
+  fixedCostsPrice: number;
   /** Custo Total do Pedido = costPerUnit × quantity + fixedCosts. */
   orderCost: number;
-  /** Valor Total do Pedido = pricePerUnit × quantity + fixedCosts. */
+  /** Valor Total do Pedido = pricePerUnit × quantity + fixedCostsPrice. */
   orderPrice: number;
+  /** Quanto o marketplace retém do Valor Total do Pedido: percentual sobre o total + taxa fixa × quantidade. */
+  marketplaceFeeAmount: number;
+  /** Quanto sobra depois da taxa do marketplace: orderPrice − marketplaceFeeAmount. */
+  netReceived: number;
+  /** Preço mínimo do pedido: abaixo dele, depois da taxa, o que sobra não cobre nem o custo (lucro zero). Não inclui margem nem risco. */
+  minOrderPrice: number;
   /** Mesas Modelo C (mix de peças diferentes) — ficam FORA do custo por unidade acima; rateio informativo por item, na mesma ordem das mesas `C` do input. */
   mixedBreakdowns: CalcMixedBedBreakdown[];
 }
@@ -176,12 +186,22 @@ export function calculateCost(input: CalcInput): CalcResult {
   const priceWithMargin = costPerUnit / (1 - clampedMargin / 100);
   // Mesma proteção da margem: taxa >= 100% faz o preço virar Infinity/negativo.
   const clampedFee = Math.min(Math.max(marketplaceFee, 0), 99);
-  const pricePerUnitBeforeRisk = clampedFee > 0 ? priceWithMargin / (1 - clampedFee / 100) : priceWithMargin;
+  // Taxa fixa por venda: soma ao alvo ANTES de dividir por (1 − %), porque o
+  // percentual também incide sobre o preço que cobre a taxa fixa.
+  const fixedFee = Math.max(input.marketplaceFixedFee ?? 0, 0);
+  const pricePerUnitBeforeRisk = (priceWithMargin + fixedFee) / (1 - clampedFee / 100);
   const pricePerUnit = pricePerUnitBeforeRisk * (1 + riskMarginPercent / 100);
 
   const qty = Math.max(quantity, 1);
   const orderCost = costPerUnit * qty + fixedCosts;
-  const orderPrice = pricePerUnit * qty + fixedCosts;
+  // A taxa percentual incide sobre o valor total cobrado, inclusive mão de
+  // obra/pintura/extras — por isso os fixos também sobem por (1 − taxa%),
+  // sem margem de lucro (continuam sendo repasse do valor exato).
+  const fixedCostsPrice = fixedCosts / (1 - clampedFee / 100);
+  const orderPrice = pricePerUnit * qty + fixedCostsPrice;
+  const marketplaceFeeAmount = (orderPrice * clampedFee) / 100 + fixedFee * qty;
+  const netReceived = orderPrice - marketplaceFeeAmount;
+  const minOrderPrice = (orderCost + fixedFee * qty) / (1 - clampedFee / 100);
 
   return {
     totalWeightG,
@@ -194,10 +214,14 @@ export function calculateCost(input: CalcInput): CalcResult {
     laborCost,
     paint,
     fixedCosts,
+    fixedCostsPrice,
     pricePerUnitBeforeRisk,
     pricePerUnit,
     orderCost,
     orderPrice,
+    marketplaceFeeAmount,
+    netReceived,
+    minOrderPrice,
     mixedBreakdowns,
   };
 }
