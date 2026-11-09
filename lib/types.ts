@@ -602,6 +602,7 @@ export interface OnboardingProgress {
   carousel_seen: boolean;
   supplies_skipped: boolean;
   fixed_expenses_skipped: boolean;
+  pix_key_skipped: boolean;
   updated_at: string;
 }
 

@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { NeonButton } from "@/components/ui/NeonButton";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { createClient } from "@/lib/supabase/client";
+import { normalizePixKey } from "@/lib/pixBrCode";
 import type { Profile } from "@/lib/types";
 
 interface CompanyProfileModalProps {
@@ -36,6 +37,11 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
   const [instagram, setInstagram] = useState("");
   const [website, setWebsite] = useState("");
   const [bio, setBio] = useState("");
+  // Chave Pix da loja: mora em store_settings (a mesma linha que "Minha Loja" lê),
+  // então o que for cadastrado aqui já aparece preenchido lá.
+  const [pixKey, setPixKey] = useState("");
+  const [pixHolder, setPixHolder] = useState("");
+  const [pixCity, setPixCity] = useState("");
 
   const [newPassword, setNewPassword] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
@@ -63,6 +69,15 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
       )
       .eq("id", user.id)
       .single();
+
+    const { data: storeData } = await supabase
+      .from("store_settings")
+      .select("pix_key, pix_holder_name, pix_city")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    setPixKey(storeData?.pix_key ?? "");
+    setPixHolder(storeData?.pix_holder_name ?? "");
+    setPixCity(storeData?.pix_city ?? "");
 
     if (data) {
       setFullName(data.full_name ?? "");
@@ -142,6 +157,16 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
       return;
     }
 
+    let normalizedPixKey: string | null = null;
+    if (pixKey.trim()) {
+      normalizedPixKey = normalizePixKey(pixKey);
+      if (!normalizedPixKey) {
+        setError("Chave Pix inválida. Use CPF, CNPJ, e-mail, telefone com +55 (ex.: +5582999990000) ou chave aleatória.");
+        setSaving(false);
+        return;
+      }
+    }
+
     const avatarUrlToSave = avatarUrl ? avatarUrl.split("?")[0] : null;
     const officialAddress = [street, streetNumber, complement, state].filter(Boolean).join(", ");
 
@@ -167,10 +192,26 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
       })
       .eq("id", user.id);
 
+    if (updateError) {
+      setSaving(false);
+      setError(updateError.message);
+      return;
+    }
+
+    // Nome do recebedor e cidade do QR Code do Pix saem do próprio perfil, a menos que a pessoa
+    // já tenha ajustado manualmente em "Minha Loja" (nesse caso o valor dela é preservado).
+    const { error: pixSaveError } = await supabase.from("store_settings").upsert({
+      user_id: user.id,
+      pix_key: normalizedPixKey,
+      pix_holder_name: normalizedPixKey ? pixHolder.trim() || studioName.trim() || fullName.trim() || null : null,
+      pix_city: normalizedPixKey ? pixCity.trim() || city.trim() || null : null,
+      updated_at: new Date().toISOString(),
+    });
+
     setSaving(false);
 
-    if (updateError) {
-      setError(updateError.message);
+    if (pixSaveError) {
+      setError(pixSaveError.message);
       return;
     }
 
@@ -382,6 +423,20 @@ export function CompanyProfileModal({ open, onClose, onSaved }: CompanyProfileMo
                 className="glass-input w-full resize-none"
                 placeholder="Aparece em PDFs de orçamento, por exemplo."
               />
+            </div>
+
+            <div className="border-t border-border-glass pt-4">
+              <label className="mb-1.5 block text-xs text-text-muted">Chave Pix da loja</label>
+              <input
+                value={pixKey}
+                onChange={(e) => setPixKey(e.target.value)}
+                className="glass-input w-full"
+                placeholder="CPF, CNPJ, e-mail, +5582999990000 ou chave aleatória"
+              />
+              <p className="mt-1.5 text-[11px] text-text-muted">
+                Opcional. É a chave onde seus clientes pagam via Pix na Loja Online — o dinheiro cai direto na sua conta,
+                sem taxa. Já aparece preenchida em Minha Loja.
+              </p>
             </div>
 
             {error && <p className="text-xs text-red-400">{error}</p>}

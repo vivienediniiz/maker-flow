@@ -1,8 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MapPin, Zap, Clock, Printer, Box, Package, Banknote, type LucideIcon } from "lucide-react";
+import { MapPin, Zap, Clock, Printer, Box, Package, Banknote, QrCode, type LucideIcon } from "lucide-react";
 
 export type OnboardingStepKey =
   | "profile_completed"
+  | "pix_key_registered"
   | "energy_rate_completed"
   | "labor_rate_completed"
   | "printer_registered"
@@ -32,6 +33,14 @@ export const ONBOARDING_STEPS: OnboardingStepConfig[] = [
     title: "Completar dados da Minha Conta",
     description: "Endereço e CEP do seu estúdio — usados no PDF de orçamento e na cotação de frete.",
     icon: MapPin,
+    action: () => window.dispatchEvent(new Event("open-account-modal")),
+  },
+  {
+    key: "pix_key_registered",
+    title: "Cadastrar a Chave Pix da loja",
+    description: "Pra receber pelo Pix direto na sua conta na Loja Online, sem taxa. Fica no Perfil do Estúdio.",
+    icon: QrCode,
+    optional: true,
     action: () => window.dispatchEvent(new Event("open-account-modal")),
   },
   {
@@ -92,9 +101,10 @@ export type OnboardingStatus = Record<OnboardingStepKey, boolean>;
  * marcados como "pulado" (não dá pra derivar isso dos dados).
  */
 export async function computeOnboardingStatus(supabase: SupabaseClient, userId: string): Promise<OnboardingStatus> {
-  const [{ data: profile }, { data: settings }, printers, filaments, supplies, fixedExpenses] = await Promise.all([
+  const [{ data: profile }, { data: settings }, { data: storeSettings }, printers, filaments, supplies, fixedExpenses] = await Promise.all([
     supabase.from("profiles").select("cep, street, city, state").eq("id", userId).maybeSingle(),
     supabase.from("settings").select("electricity_kwh_rate, hourly_work_rate").eq("user_id", userId).maybeSingle(),
+    supabase.from("store_settings").select("pix_key").eq("user_id", userId).maybeSingle(),
     supabase.from("printer_assets").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("filaments").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("supplies").select("id", { count: "exact", head: true }).eq("user_id", userId),
@@ -103,6 +113,7 @@ export async function computeOnboardingStatus(supabase: SupabaseClient, userId: 
 
   return {
     profile_completed: !!(profile?.cep && profile?.street && profile?.city && profile?.state),
+    pix_key_registered: !!storeSettings?.pix_key,
     energy_rate_completed: settings?.electricity_kwh_rate != null,
     labor_rate_completed: settings?.hourly_work_rate != null,
     printer_registered: (printers.count ?? 0) > 0,
@@ -112,12 +123,21 @@ export async function computeOnboardingStatus(supabase: SupabaseClient, userId: 
   };
 }
 
-/** Marca um passo opcional como "pulado" — só existe pros 2 opcionais, já que os obrigatórios não têm essa opção. */
+export type SkippableOnboardingStep = "supplies_registered" | "fixed_expenses_registered" | "pix_key_registered";
+
+/** Coluna de `onboarding_progress` que guarda o "pulado" de cada passo opcional. */
+export const SKIP_COLUMNS: Record<SkippableOnboardingStep, "supplies_skipped" | "fixed_expenses_skipped" | "pix_key_skipped"> = {
+  supplies_registered: "supplies_skipped",
+  fixed_expenses_registered: "fixed_expenses_skipped",
+  pix_key_registered: "pix_key_skipped",
+};
+
+/** Marca um passo opcional como "pulado" — só existe pros opcionais, já que os obrigatórios não têm essa opção. */
 export async function markOnboardingStepSkipped(
   supabase: SupabaseClient,
   userId: string,
-  step: "supplies_registered" | "fixed_expenses_registered"
+  step: SkippableOnboardingStep
 ): Promise<void> {
-  const column = step === "supplies_registered" ? "supplies_skipped" : "fixed_expenses_skipped";
+  const column = SKIP_COLUMNS[step];
   await supabase.from("onboarding_progress").upsert({ user_id: userId, [column]: true }, { onConflict: "user_id" });
 }

@@ -13,6 +13,8 @@ import {
   ONBOARDING_REQUIRED_STEPS,
   computeOnboardingStatus,
   markOnboardingStepSkipped,
+  SKIP_COLUMNS,
+  type SkippableOnboardingStep,
   type OnboardingStatus,
   type OnboardingStepConfig,
 } from "@/lib/onboarding";
@@ -27,6 +29,7 @@ function emptyProgress(userId: string): OnboardingProgress {
     carousel_seen: false,
     supplies_skipped: false,
     fixed_expenses_skipped: false,
+    pix_key_skipped: false,
     updated_at: new Date().toISOString(),
   };
 }
@@ -115,9 +118,9 @@ export function OnboardingChecklistCard() {
     }
   }
 
-  async function handleSkip(step: "supplies_registered" | "fixed_expenses_registered") {
+  async function handleSkip(step: SkippableOnboardingStep) {
     if (!userId) return;
-    const column = step === "supplies_registered" ? "supplies_skipped" : "fixed_expenses_skipped";
+    const column = SKIP_COLUMNS[step];
     setProgress((prev) => ({ ...(prev ?? emptyProgress(userId)), [column]: true }));
     await markOnboardingStepSkipped(supabase, userId, step);
   }
@@ -136,8 +139,7 @@ export function OnboardingChecklistCard() {
 
   function isDone(step: OnboardingStepConfig): boolean {
     if (status![step.key]) return true;
-    if (step.key === "supplies_registered") return !!progress?.supplies_skipped;
-    if (step.key === "fixed_expenses_registered") return !!progress?.fixed_expenses_skipped;
+    if (step.key in SKIP_COLUMNS) return !!progress?.[SKIP_COLUMNS[step.key as SkippableOnboardingStep]];
     return false;
   }
 
@@ -230,7 +232,7 @@ export function OnboardingChecklistCard() {
                 {step.optional && !done && (
                   <button
                     type="button"
-                    onClick={() => handleSkip(step.key as "supplies_registered" | "fixed_expenses_registered")}
+                    onClick={() => handleSkip(step.key as SkippableOnboardingStep)}
                     className="text-[11px] text-text-muted transition-colors hover:text-text-secondary"
                   >
                     Pular
