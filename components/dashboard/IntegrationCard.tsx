@@ -26,8 +26,9 @@ const PLATFORM_DESCRIPTIONS: Record<IntegrationPlatform, string> = {
   melhor_envio: "Conecte sua conta pra cotar frete, comprar e imprimir etiquetas direto pelo StudioMaker.",
 };
 
-// Todas as plataformas já conectam de verdade via OAuth.
-const AVAILABLE_PLATFORMS: IntegrationPlatform[] = ["mercado_pago", "mercado_livre", "melhor_envio", "shopee", "tiktok_shop"];
+// TikTok Shop está implementado, mas fica desativado na UI ("Em breve") até a
+// aprovação do app no Partner Center — pra reativar, adicione "tiktok_shop" aqui.
+const AVAILABLE_PLATFORMS: IntegrationPlatform[] = ["mercado_pago", "mercado_livre", "melhor_envio", "shopee"];
 
 // As pastas de rota de /api/integrations/*/connect usam hífen (padrão de URL),
 // mas o valor do tipo/enum usa underscore (padrão de coluna) — os dois nomes
@@ -118,13 +119,13 @@ export function IntegrationCard({
             {!paid && <Lock size={14} />} Conectar
           </NeonButton>
         ) : (
-          <NeonButton size="sm" disabled className="opacity-40" title="Aguardando aprovação do app na plataforma">
-            Conectar
+          <NeonButton size="sm" disabled className="opacity-40" title="Em breve">
+            Em breve
           </NeonButton>
         )}
       </div>
       {!available && status !== "connected" && (
-        <p className="text-[11px] text-amber-400">Aguardando aprovação do app — em breve.</p>
+        <p className="text-[11px] text-amber-400">Em breve — essa integração ainda não está disponível.</p>
       )}
       {available && !paid && status !== "connected" && (
         <p className="text-[11px] text-amber-400">Recurso pago — assine um plano pra conectar.</p>

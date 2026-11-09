@@ -46,10 +46,10 @@ const STATUS_FILTERS: { key: "all" | QuoteStatus | "awaiting_shipment"; label: s
   { key: "cancelled", label: QUOTE_STATUS_LABELS.cancelled },
 ];
 
-const SOURCE_FILTERS: { key: "all" | QuoteSource; label: string }[] = [
+const SOURCE_FILTERS: { key: "all" | QuoteSource; label: string; comingSoon?: boolean }[] = [
   { key: "all", label: "Todas as Origens" },
   { key: "mercado_livre", label: QUOTE_SOURCE_LABELS.mercado_livre },
-  { key: "tiktok_shop", label: QUOTE_SOURCE_LABELS.tiktok_shop },
+  { key: "tiktok_shop", label: `${QUOTE_SOURCE_LABELS.tiktok_shop} (em breve)`, comingSoon: true },
   { key: "shopee", label: QUOTE_SOURCE_LABELS.shopee },
   { key: "mercado_pago", label: QUOTE_SOURCE_LABELS.mercado_pago },
   { key: "loja_online", label: QUOTE_SOURCE_LABELS.loja_online },
@@ -132,10 +132,12 @@ export default function OrdersPage() {
 
   async function handleSync() {
     setSyncing(true);
-    // Shopee/TikTok Shop ainda não têm API liberada (app aguardando
-    // aprovação) — pra essas, isso só recarrega o que já está no Supabase.
-    // Mercado Pago tem reconciliação de verdade contra a API deles.
-    await fetch("/api/integrations/mercado-pago/sync", { method: "POST" }).catch(() => {});
+    // Mercado Pago e TikTok Shop reconciliam de verdade contra a API deles;
+    // as demais origens só recarregam o que já está no Supabase.
+    await Promise.all([
+      fetch("/api/integrations/mercado-pago/sync", { method: "POST" }).catch(() => {}),
+      fetch("/api/integrations/tiktok-shop/sync", { method: "POST" }).catch(() => {}),
+    ]);
     await loadAll();
     setSyncing(false);
   }
@@ -296,7 +298,7 @@ export default function OrdersPage() {
             className="glass-input"
           >
             {SOURCE_FILTERS.map((f) => (
-              <option key={f.key} value={f.key} className="bg-bg-raised">
+              <option key={f.key} value={f.key} disabled={f.comingSoon} className="bg-bg-raised">
                 {f.label}
               </option>
             ))}

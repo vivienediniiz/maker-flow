@@ -1,3 +1,4 @@
+import { saveMarketplaceSales } from "@/lib/marketplaceSales";
 import crypto from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { deleteIntegrationCredential, getIntegrationCredential, setIntegrationCredential } from "@/lib/vault";
@@ -255,10 +256,10 @@ export async function upsertQuoteFromShopeeOrder(admin: SupabaseClient, userId: 
   if (!status) return null;
 
   const firstItem = order.item_list?.[0];
-  const { data, error } = await admin
-    .from("quotes")
-    .upsert(
-      {
+  // Venda nova entra completa; existente só ajusta status (edições do maker ficam).
+  return saveMarketplaceSales(admin, [
+    {
+      row: {
         user_id: userId,
         project_name: firstItem?.item_name || "Venda Shopee",
         final_price: Number(order.total_amount ?? 0),
@@ -277,13 +278,8 @@ export async function upsertQuoteFromShopeeOrder(admin: SupabaseClient, userId: 
         filament_cost: 0,
         margin_percent: 0,
       },
-      { onConflict: "user_id,source,external_order_id" }
-    )
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-  return data;
+    },
+  ]);
 }
 
 /** Authorization do push = HMAC-SHA256(partner_key, URL + "|" + corpo cru), hex. A URL é a cadastrada no Console. */
