@@ -305,7 +305,14 @@ function StorePageContent({ slug }: { slug: string }) {
                   </p>
                   <button
                     type="button"
-                    onClick={() => (p.allows_customization ? setViewingProduct(p) : addToCart(p, null))}
+                    onClick={() => {
+                      if (p.allows_customization) {
+                        setViewingProduct(p);
+                        return;
+                      }
+                      addToCart(p, null);
+                      setCartOpen(true);
+                    }}
                     className="flex w-full items-center justify-center gap-1.5 rounded-full py-2 text-xs font-semibold text-white transition-transform hover:scale-[1.01]"
                     style={{ backgroundColor: primaryColor }}
                   >
